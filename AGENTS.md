@@ -11,7 +11,8 @@ This repository contains the APAC demo for DIAM's sales-performance dashboard. I
 - Put business rules in `lib/` and keep pages/components focused on presentation and interaction.
 - Add or update documentation when a data grain, permission rule, or import contract changes.
 - Use the DIAM assets in `DIAM Logos/`; do not add credentials or copied US staging session data.
-- Preserve the original source files. Demo seed data is a normalized, intentionally small derivative.
+- Preserve the original source files. `data/apac-dashboard.json` is a generated, reviewable derivative; regenerate it with `npm run extract:source` after replacing a workbook.
+- Do not silently fill missing source values. Keep missing annual budgets/readiness visible as `Review` and document the source limitation.
 
 ## Data handling
 
@@ -31,4 +32,4 @@ This repository contains the APAC demo for DIAM's sales-performance dashboard. I
 
 ## Demo limits
 
-Mock login, JSON state, in-process mutations, and seeded brand data are demo mechanisms. Real SSO, audit logs, database transactions, object storage, Vercel deployment, domain setup, and permanent import storage belong to the roadmap.
+Mock login, JSON state, in-process mutations, and seeded brand data are demo mechanisms. The current dashboard snapshot is extracted from the three workbooks in `Dashboard/`; the brand page remains a replaceable demo source until formal APAC brand data is supplied. Real SSO, audit logs, database transactions, object storage, Vercel deployment, domain setup, and permanent import storage belong to the roadmap.

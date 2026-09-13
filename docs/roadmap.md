@@ -3,9 +3,11 @@
 ## Demo milestone (current)
 
 - APAC Sales Performance overview, analysis, business units/entities, management checks, export, and Sales by Brand base page.
-- Mock login with superadmin, APAC admin, editor, and viewer personas.
+- Mock login with superadmin, two APAC admins, entity editors, viewer, and audit read-only personas.
 - Account-level view/edit permission matrix and region-admin cross-region switch.
-- Excel-shaped import review and manual entity-week entry, validation, and publish simulation.
+- Excel-derived snapshot from the supplied DDC, DEHK, and Global Follow Up workbooks; rerunnable extraction via `npm run extract:source`.
+- Real `.xlsx` export with dashboard summary and monthly phasing sheets.
+- Workbook-aware import review and manual entity-week entry, validation, and publish simulation.
 - Project context, architecture, and contributor rules.
 
 ## Production milestone

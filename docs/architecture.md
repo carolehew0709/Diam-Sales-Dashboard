@@ -9,9 +9,9 @@ Next.js App Router, React, TypeScript, CSS modules-free global styling, and luci
 1. `app/`: routes and API handlers.
 2. `components/`: dashboard shell, charts, tables, import/admin panels.
 3. `lib/`: types, seed repository, aggregation, permission checks, and import validation.
-4. `data/`: normalized demo seed JSON.
+4. `data/`: generated source snapshot JSON. `scripts/extract-apac-source.mjs` reads the supplied workbooks without changing them and writes the normalized snapshot.
 
-The repository adapter exposes dashboard reads, user/permission reads, and import lifecycle operations. Today it is an in-memory JSON-backed demo. The adapter boundary is the migration point for Postgres/Supabase later.
+The repository adapter exposes dashboard reads, user/permission reads, and import lifecycle operations. Dashboard metrics use the latest non-empty weekly snapshot rather than summing YTD snapshots, and monthly phasing comes from the source workbook when present. Today it is an in-memory JSON-backed demo. The adapter boundary is the migration point for Postgres/Supabase later.
 
 ## Permission model
 
@@ -19,7 +19,7 @@ The repository adapter exposes dashboard reads, user/permission reads, and impor
 
 ## Import flow
 
-Excel and manual entry both create an `ImportBatch` in `review` state. Normalization and validation produce findings and completeness. Only an authorized publish operation moves the batch into the active snapshot. The demo uses a client-side workbook-shape parser for `.xlsx` file names and a structured manual form; production should replace this with a server-side parser and durable object storage.
+Excel and manual entry both create an `ImportBatch` in `review` state. The demo parser recognizes `Data Weekly`, `Synth`, `Budget Recap`, and supporting workbook sheets, then reports sheet/row/week coverage, findings, and completeness. Normalization and validation produce findings and completeness. Only an authorized publish operation moves the batch into the active snapshot. Production should replace the in-memory lifecycle with server-side parsing and durable object storage.
 
 ## Production path
 

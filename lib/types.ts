@@ -1,4 +1,4 @@
-export type Role = 'superadmin' | 'apac_admin' | 'editor' | 'viewer';
+export type Role = 'superadmin' | 'apac_admin' | 'editor' | 'viewer' | 'audit_viewer';
 export type Permission = 'view' | 'edit';
 export type Scenario = 'Sales' | 'Sales + P1';
 
@@ -20,6 +20,7 @@ export type Entity = {
   businessUnit: string;
   source: string;
   status: 'Ready' | 'Review' | 'Missing';
+  budget?: number;
 };
 
 export type WeeklyRecord = {
@@ -31,6 +32,9 @@ export type WeeklyRecord = {
   forecast: number;
   p1: number;
   source: string;
+  monthValues?: number[];
+  budgetMonthValues?: number[];
+  isSnapshot?: boolean;
 };
 
 export type BrandRecord = { brand: string; sales: number; budget: number; region: string; trend: number };

@@ -1,24 +1,19 @@
+import sourceData from '@/data/apac-dashboard.json';
 import { BrandRecord, Entity, ImportBatch, User, WeeklyRecord } from './types';
 
-export const entities: Entity[] = [
-  { id: 'cn', name: 'Diam China', code: 'DDC', region: 'APAC', businessUnit: 'Asia / PDA', source: 'Dashboard 2026 - DDC.xlsx', status: 'Ready' },
-  { id: 'hk', name: 'DE Hong Kong', code: 'DEHK', region: 'APAC', businessUnit: 'Asia / PDA', source: 'Dashboard 2026 - DEHK.xlsx', status: 'Ready' },
-  { id: 'sg', name: 'Diam Singapore', code: 'SG', region: 'APAC', businessUnit: 'Asia / Commercial', source: 'Global Follow Up W35', status: 'Review' },
-  { id: 'jp', name: 'Diam Japan', code: 'JP', region: 'APAC', businessUnit: 'Asia / Commercial', source: 'Global Follow Up W35', status: 'Missing' },
-  { id: 'au', name: 'Diam Australia', code: 'AU', region: 'APAC', businessUnit: 'Asia / Commercial', source: 'Global Follow Up W35', status: 'Review' },
-];
+type SourceEntity = (typeof sourceData.entities)[number];
+type SourceRecord = (typeof sourceData.records)[number];
 
-const base: Record<string, [number, number, number, number, number]> = {
-  cn: [420, 408, 126, 452, 46], hk: [270, 286, 84, 302, 21], sg: [178, 164, 51, 190, 18], jp: [225, 201, 73, 232, 27], au: [144, 152, 42, 160, 12],
-};
+export const entities: Entity[] = sourceData.entities.map((entity: SourceEntity) => ({
+  id: entity.id, name: entity.name, code: entity.code, region: entity.region,
+  businessUnit: entity.businessUnit, source: entity.source, status: entity.status as Entity['status'], budget: entity.budget,
+}));
 
-export const weekly: WeeklyRecord[] = Array.from({ length: 12 }, (_, index) =>
-  entities.flatMap((entity) => {
-    const [budget, sales, orderbook, forecast, p1] = base[entity.id];
-    const pulse = Math.sin(index * 0.8 + entity.id.length) * 18;
-    return { entityId: entity.id, week: 26 + index, budget: budget / 4.3, sales: sales / 4.3 + pulse, orderbook: orderbook / 4.3, forecast: forecast / 4.3 + pulse / 2, p1: p1 / 4.3, source: entity.source };
-  }),
-).flat();
+export const weekly: WeeklyRecord[] = sourceData.records.map((record: SourceRecord) => ({
+  entityId: record.entityId, week: record.week, budget: record.budget, sales: record.sales,
+  orderbook: record.orderbook, forecast: record.forecast, p1: record.p1, source: record.source,
+  monthValues: record.monthValues, budgetMonthValues: record.budgetMonthValues, isSnapshot: record.isSnapshot,
+}));
 
 export const brands: BrandRecord[] = [
   { brand: 'DIAM', sales: 624, budget: 650, region: 'APAC', trend: 8.2 },
@@ -28,13 +23,17 @@ export const brands: BrandRecord[] = [
 ];
 
 export const users: User[] = [
-  { id: 'u1', name: 'Carole Hew', email: 'superadmin@diam.demo', role: 'superadmin', region: 'APAC', crossRegionView: true, permissions: { cn: ['view', 'edit'], hk: ['view', 'edit'], sg: ['view', 'edit'], jp: ['view', 'edit'], au: ['view', 'edit'] } },
-  { id: 'u2', name: 'APAC Regional Admin', email: 'apac.admin@diam.demo', role: 'apac_admin', region: 'APAC', crossRegionView: false, permissions: { cn: ['view', 'edit'], hk: ['view', 'edit'], sg: ['view', 'edit'], jp: ['view'], au: ['view'] } },
-  { id: 'u3', name: 'Sales Editor', email: 'editor@diam.demo', role: 'editor', region: 'APAC', crossRegionView: false, permissions: { cn: ['view', 'edit'], hk: ['view', 'edit'], sg: ['view'], jp: [], au: [] } },
-  { id: 'u4', name: 'Executive Viewer', email: 'viewer@diam.demo', role: 'viewer', region: 'APAC', crossRegionView: false, permissions: { cn: ['view'], hk: ['view'], sg: ['view'], jp: [], au: [] } },
+  { id: 'u1', name: 'Carole Hew', email: 'superadmin@diam.demo', role: 'superadmin', region: 'APAC', crossRegionView: true, permissions: { pda: ['view', 'edit'], ddc: ['view', 'edit'], dehk: ['view', 'edit'] } },
+  { id: 'u2', name: 'APAC Regional Admin', email: 'apac.admin@diam.demo', role: 'apac_admin', region: 'APAC', crossRegionView: false, permissions: { pda: ['view', 'edit'], ddc: ['view', 'edit'], dehk: ['view'] } },
+  { id: 'u5', name: 'China Entity Admin', email: 'china.admin@diam.demo', role: 'apac_admin', region: 'APAC', crossRegionView: false, permissions: { pda: ['view'], ddc: ['view', 'edit'], dehk: [] } },
+  { id: 'u6', name: 'Hong Kong Editor', email: 'hk.editor@diam.demo', role: 'editor', region: 'APAC', crossRegionView: false, permissions: { pda: ['view'], ddc: [], dehk: ['view', 'edit'] } },
+  { id: 'u3', name: 'Sales Editor', email: 'editor@diam.demo', role: 'editor', region: 'APAC', crossRegionView: false, permissions: { pda: ['view', 'edit'], ddc: ['view', 'edit'], dehk: ['view'] } },
+  { id: 'u4', name: 'Executive Viewer', email: 'viewer@diam.demo', role: 'viewer', region: 'APAC', crossRegionView: false, permissions: { pda: ['view'], ddc: ['view'], dehk: ['view'] } },
+  { id: 'u7', name: 'Audit Read-only', email: 'audit@diam.demo', role: 'audit_viewer', region: 'APAC', crossRegionView: true, permissions: { pda: ['view'], ddc: ['view'], dehk: ['view'] } },
 ];
 
 export const importBatches: ImportBatch[] = [
   { id: 'IMP-2409', fileName: 'APAC_W37_manual_review', submittedBy: 'Sales Editor', submittedAt: '2026-09-13 09:42', status: 'review', sourceType: 'Manual', records: 3, completeness: 86, findings: ['Japan forecast is missing', 'Singapore source note needs confirmation'] },
-  { id: 'IMP-2408', fileName: 'Dashboard 2026 - DDC.xlsx', submittedBy: 'APAC Regional Admin', submittedAt: '2026-09-12 16:10', status: 'published', sourceType: 'Excel', records: 52, completeness: 100, findings: [] },
+  { id: 'IMP-2408', fileName: 'Dashboard 2026 - DDC.xlsx', submittedBy: 'APAC Regional Admin', submittedAt: '2026-09-12 16:10', status: 'published', sourceType: 'Excel', records: 37, completeness: 94, findings: ['Annual budget is not present in source workbook'] },
+  { id: 'IMP-2407', fileName: 'DIAM_Global_Follow_Up_2026_W35.xlsx', submittedBy: 'APAC Regional Admin', submittedAt: '2026-09-11 15:20', status: 'published', sourceType: 'Excel', records: 35, completeness: 100, findings: [] },
 ];

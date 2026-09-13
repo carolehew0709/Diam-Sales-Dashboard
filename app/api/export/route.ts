@@ -1,29 +1,87 @@
 import { NextResponse } from 'next/server';
-import { getDashboardSnapshot } from '@/lib/dashboard';
 import * as XLSX from 'xlsx';
+import { getDashboardSnapshot } from '@/lib/dashboard';
+import { entities, weekly } from '@/lib/seed';
+
+const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+const sourceWeek = 37;
+const title = `W${sourceWeek} · 11 Sep 2026 · APAC view · All sales · Sales + P1 · Reporting unit EUR K · FX 1 EUR = 1.18 USD`;
+
+function sheet(rows: unknown[][], merges: ReadonlyArray<XLSX.Range> = []) {
+  const ws = XLSX.utils.aoa_to_sheet(rows);
+  ws['!merges'] = [...merges];
+  ws['!cols'] = rows[0]?.map(() => ({ wch: 16 }));
+  return ws;
+}
+
+function addHeaderStyle(ws: XLSX.WorkSheet, row = 0) {
+  const range = XLSX.utils.decode_range(ws['!ref'] ?? 'A1:A1');
+  for (let column = range.s.c; column <= range.e.c; column += 1) {
+    const address = XLSX.utils.encode_cell({ r: row, c: column });
+    if (ws[address]) ws[address].s = { font: { bold: true, color: { rgb: 'FFFFFF' } }, fill: { fgColor: { rgb: '1C1E1A' } }, alignment: { vertical: 'center' } };
+  }
+}
+
+function formatPercent(value: number | null) { return value === null ? null : `${(value * 100).toFixed(1)}%`; }
+function latestRecord(entityId: string) { return weekly.filter((row) => row.entityId === entityId && (row.sales !== 0 || row.forecast !== 0 || row.orderbook !== 0)).sort((a, b) => b.week - a.week)[0]; }
 
 export function GET(request: Request) {
   const url = new URL(request.url);
-  const entity = url.searchParams.get('entity') ?? 'all';
+  const entityFilter = url.searchParams.get('entity') ?? 'all';
   const scenario = url.searchParams.get('scenario') === 'Sales + P1' ? 'Sales + P1' : 'Sales';
-  const snapshot = getDashboardSnapshot(entity, scenario);
+  const snapshot = getDashboardSnapshot(entityFilter, scenario);
+  const selected = snapshot.entities;
+
   const summary = [
-    ['DIAM APAC SALES PERFORMANCE', ''],
-    ['Scenario', scenario], ['Reporting unit', 'EUR K'], ['Active source week', 'W35 / W37 source snapshots'], ['Source mode', 'Excel-derived demo snapshot'], [],
-    ['Entity', 'Budget kEUR', 'Sales kEUR', 'P1 kEUR', 'Sales + P1 kEUR', 'Coverage', 'Gap kEUR', 'Source'],
-    ...snapshot.entities.map((item) => {
-      const row = snapshot.records.find((record) => record.entityId === item.id);
-      const budget = item.budget ?? 0;
-      const sales = row?.sales ?? 0;
-      const p1 = row?.p1 ?? 0;
-      const combined = sales + p1;
-      return [item.name, budget, sales, p1, combined, budget ? combined / budget : null, budget ? budget - combined : null, item.source];
+    ['DIAM · APAC FOLLOW UP'], [], [title], [],
+    ['Annual budget', null, 'Sales to date', null, 'Dashboard', null, 'P1 · W36 carried', null, 'Sales + P1', null, 'Residual gap'],
+    [snapshot.totals.budget, null, snapshot.totals.sales, null, snapshot.totals.orderbook, null, snapshot.totals.p1, null, snapshot.totals.salesPlusP1, null, snapshot.totals.gap],
+    [], ['Source mode', 'Excel-derived APAC snapshot', 'Selected entities', selected.length, 'Latest usable source', `W${Math.max(...snapshot.records.map((row) => row.week), 0)}`], [],
+    ['Business Unit', 'Region', 'Budget', 'Sales', 'P1', 'Sales + P1', 'Coverage', 'Residual gap', 'Source'],
+    ...selected.map((entity) => {
+      const row = snapshot.records.find((record) => record.entityId === entity.id);
+      const budget = entity.budget ?? 0;
+      const combined = (row?.sales ?? 0) + (row?.p1 ?? 0);
+      return [entity.name, entity.region, budget || null, row?.sales ?? 0, row?.p1 ?? 0, combined, formatPercent(budget ? combined / budget : null), budget ? budget - combined : null, entity.source];
     }),
   ];
-  const monthly = [['Month', 'Budget kEUR', 'Sales kEUR', 'Forecast kEUR'], ...snapshot.monthly.map((row) => [row.label, row.budget, row.sales, row.forecast])];
+
+  const selectedPda = snapshot.records.find((row) => row.entityId === 'pda') ?? snapshot.records[0];
+  const weeklyReview = [
+    ['DIAM · WEEKLY REVIEW'], [], [title], [], ['Business Unit', selectedPda ? 'PDA' : 'APAC', null, null, null, null, null, null, null, 'Change the selector to update the full matrix.'],
+    ['W05–W26 use the frozen source history. Current workbook values are retained as source snapshots; missing fields remain visible for review.'],
+    ['WEEKLY MONTHLY PROFILE · EUR K'], ['Snapshot', ...months, 'FY Total', 'Coverage', 'WoW', 'Source'],
+    ...snapshot.records.filter((row) => row.entityId === (selectedPda?.entityId ?? '')).map((row, index, rows) => [
+      `W${String(row.week).padStart(2, '0')}`, ...(row.monthValues ?? months.map(() => null)), row.monthValues?.reduce((sum, value) => sum + value, 0) ?? row.sales, row.budget ? formatPercent(row.sales / row.budget) : null, index ? row.sales - rows[index - 1].sales : null, row.source,
+    ]),
+  ];
+
+  const dataWeekly: unknown[][] = [['Scope', 'Business Unit', 'Region', 'Record', 'Week', ...months, 'FY Total', 'Coverage', 'WoW', 'Source']];
+  for (const entity of selected) {
+    const records = weekly.filter((row) => row.entityId === entity.id).sort((a, b) => a.week - b.week);
+    const budget = entity.budget ?? 0;
+    if (budget) dataWeekly.push([entity.code, entity.name, entity.region, 'Budget', 0, ...(records.find((row) => row.budgetMonthValues)?.budgetMonthValues ?? months.map(() => null)), budget, null, null, entity.source]);
+    records.forEach((row, index) => dataWeekly.push([entity.code, entity.name, entity.region, `W${String(row.week).padStart(2, '0')}`, row.week, ...(row.monthValues ?? months.map(() => null)), row.monthValues?.reduce((sum, value) => sum + value, 0) ?? row.sales, budget ? formatPercent(row.sales / budget) : null, index ? row.sales - records[index - 1].sales : null, row.source]));
+  }
+
+  const budgetRecap: unknown[][] = [['DIAM · BUDGET RECAP'], [], [title], [], ['MONTHLY POSITION · EUR K'], ['APAC monthly position. Budget comes from the source workbook; entity budgets that are not supplied remain blank.'], ['Region', 'Business Unit', 'Metric', ...months, 'FY Total', 'Coverage', 'Gap']];
+  const rowsByMetric = (metric: string, values: number[]) => ['APAC', selected.length === 1 ? selected[0].name : 'APAC visible entities', metric, ...values, values.reduce((sum, value) => sum + value, 0), null, null];
+  budgetRecap.push(rowsByMetric('Budget', snapshot.monthly.map((row) => row.budget)));
+  budgetRecap.push(rowsByMetric('Sales', snapshot.monthly.map((row) => row.sales)));
+  budgetRecap.push(rowsByMetric('Sales + P1', snapshot.monthly.map((row) => row.forecast)));
+
+  const cumulative = (key: 'budget' | 'sales' | 'forecast') => { let running = 0; return snapshot.monthly.map((row) => { running += row[key]; return Number(running.toFixed(1)); }); };
+  const chartData: unknown[][] = [['Region', 'Metric', ...months, null, 'Business Unit', 'Metric', ...months, null, 'Month', 'Budget', 'Sales', 'Sales + P1'], ...['Budget', 'Sales', 'Sales + P1'].map((metric, index) => ['APAC', metric, ...cumulative(index === 0 ? 'budget' : index === 1 ? 'sales' : 'forecast'), null, 'APAC', metric, ...cumulative(index === 0 ? 'budget' : index === 1 ? 'sales' : 'forecast'), null, ...months.map((month, monthIndex) => [month, snapshot.monthly[monthIndex].budget, snapshot.monthly[monthIndex].sales, snapshot.monthly[monthIndex].forecast]).flat()])];
+
+  const checks: unknown[][] = [['DIAM · MANAGEMENT CHECKS'], [], [title], [], [`${selected.filter((entity) => entity.status !== 'Ready').length + 1} item(s) to review`], [], ['Priority', 'BU', 'Check', 'Source', 'Compared', 'Difference', 'Reference'], ['REVIEW', 'GLOBAL', 'P1 W37 pending - previous P1 retained', null, snapshot.totals.p1 || null, null, 'Expected dedicated P1 W37 workbook · Last validated P1 baseline'], ...selected.filter((entity) => entity.status !== 'Ready').map((entity) => ['REVIEW', entity.code, 'Annual budget is not present in source workbook', entity.source, null, null, 'Provide approved annual budget before production publish'])];
+
   const workbook = XLSX.utils.book_new();
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(summary), 'Dashboard Export');
-  XLSX.utils.book_append_sheet(workbook, XLSX.utils.aoa_to_sheet(monthly), 'Monthly Phasing');
-  const bytes = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx' });
-  return new NextResponse(bytes, { headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename="diam-apac-dashboard-export.xlsx"' } });
+  const sheets = [
+    ['Executive Summary', summary, [XLSX.utils.decode_range('A1:K1'), XLSX.utils.decode_range('A3:K3')]],
+    ['Weekly Review', weeklyReview, [XLSX.utils.decode_range('A1:Q1'), XLSX.utils.decode_range('A3:Q3'), XLSX.utils.decode_range('A7:Q7')]],
+    ['Data Weekly', dataWeekly, []], ['Budget Recap', budgetRecap, [XLSX.utils.decode_range('A1:R1'), XLSX.utils.decode_range('A3:R3'), XLSX.utils.decode_range('A5:R5')]], ['Chart Data', chartData, []], ['Management Checks', checks, [XLSX.utils.decode_range('A1:G1'), XLSX.utils.decode_range('A3:G3')]],
+  ] as const;
+  sheets.forEach(([name, rows, merges]) => { const ws = sheet(rows, merges); addHeaderStyle(ws, rows.findIndex((row) => row[0] === 'Scope' || row[0] === 'Priority' || row[0] === 'Region' || row[0] === 'Snapshot')); XLSX.utils.book_append_sheet(workbook, ws, name); });
+  const bytes = XLSX.write(workbook, { type: 'buffer', bookType: 'xlsx', cellStyles: true });
+  return new NextResponse(bytes, { headers: { 'Content-Type': 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'Content-Disposition': 'attachment; filename="DIAM_APAC_Follow_Up_2026_W37.xlsx"' } });
 }

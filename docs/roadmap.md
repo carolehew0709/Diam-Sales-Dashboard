@@ -6,7 +6,7 @@
 - Mock login with superadmin, two APAC admins, entity editors, viewer, and audit read-only personas.
 - Account-level view/edit permission matrix and region-admin cross-region switch.
 - Excel-derived snapshot from the supplied DDC, DEHK, and Global Follow Up workbooks; rerunnable extraction via `npm run extract:source`.
-- Real `.xlsx` export with dashboard summary and monthly phasing sheets.
+- US-shaped `.xlsx` export with six sheets: Executive Summary, Weekly Review, Data Weekly, Budget Recap, Chart Data, and Management Checks.
 - Workbook-aware import review and manual entity-week entry, validation, and publish simulation.
 - Project context, architecture, and contributor rules.
 

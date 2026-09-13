@@ -21,6 +21,10 @@ The repository adapter exposes dashboard reads, user/permission reads, and impor
 
 Excel and manual entry both create an `ImportBatch` in `review` state. The demo parser recognizes `Data Weekly`, `Synth`, `Budget Recap`, and supporting workbook sheets, then reports sheet/row/week coverage, findings, and completeness. Normalization and validation produce findings and completeness. Only an authorized publish operation moves the batch into the active snapshot. Production should replace the in-memory lifecycle with server-side parsing and durable object storage.
 
+## Export contract
+
+`GET /api/export` produces an Excel workbook patterned after the US export: `Executive Summary`, `Weekly Review`, `Data Weekly`, `Budget Recap`, `Chart Data`, and `Management Checks`. The workbook carries the selected scenario/entity context, monthly phasing, coverage, WoW, source references, and unresolved source findings so it can be reviewed outside the web dashboard.
+
 ## Production path
 
 Keep the page contracts stable while replacing the adapter with Postgres/Supabase, add real identity/SSO, server-side file parsing, audit events, row-level security, background jobs, and Vercel/domain configuration.

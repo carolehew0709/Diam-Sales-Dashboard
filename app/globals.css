@@ -24,4 +24,5 @@ html{scroll-behavior:smooth;scroll-padding-top:86px}.topnav button,.product-swit
 .topbar{padding-right:220px}
 @media(max-width:760px){.topbar{padding-right:70px}}
 @media(max-width:1100px){.topnav{display:none}.topbar{padding-right:235px!important}.brand-product{display:none}}
+@media(max-width:1300px){.topnav{display:none}.topbar{padding-right:235px!important}.brand-product{display:none}}
 @media(max-width:760px){.topbar{padding-right:70px!important}.account-menu{max-width:calc(100vw - 24px)}.account-trigger{max-width:calc(100vw - 24px)}}

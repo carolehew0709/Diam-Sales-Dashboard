@@ -8,6 +8,7 @@ import { canEdit, canView, roleLabel, togglePermission } from '@/lib/permissions
 import { validateManualImport } from '@/lib/import-validation';
 import type { Scenario, User } from '@/lib/types';
 import { AccountMenu, DemoLogin } from '@/components/account-menu';
+import { ImportPortal } from '@/components/import-portal';
 
 type Tab = 'overview' | 'analysis' | 'entities' | 'checks' | 'brand' | 'imports' | 'admin';
 
@@ -33,7 +34,7 @@ function DashboardView({ tab, currentUser, setTab }: { tab: Tab; currentUser: Us
   const visibleEntities = entities.filter((entity) => canView(currentUser, entity));
   const totals = snapshot.totals;
   if (regionFilter === 'Europe' || regionFilter === 'Americas') return <section className="mock-region-page"><div className="eyebrow">REGION DEMO / MOCK DATA</div><div className="hero-row"><div><h1>{regionFilter} performance</h1><p>This region is mocked for the demo until its source workbook is supplied. APAC Excel data remains unchanged.</p></div><span className="status review">Mock source</span></div><div className="metric-grid"><MetricCard label="Annual budget" value={regionFilter === 'Europe' ? '40,915k' : '35,468k'} note="Mock regional baseline" tone="blue"/><MetricCard label="Sales & Dashboard" value={regionFilter === 'Europe' ? '34,032k' : '35,672k'} note="Mock current snapshot" tone="green"/><MetricCard label="Coverage" value={regionFilter === 'Europe' ? '83.2%' : '100.6%'} note="Mock scenario coverage" tone="purple"/><MetricCard label="Residual gap" value={regionFilter === 'Europe' ? '−6,883k' : '+204k'} note="Mock gap to plan" tone="orange"/></div><div className="panel mock-region-panel"><div className="panel-heading"><div><span className="kicker">Contribution to performance · mock</span><h2>Gap by region</h2></div><button className="text-button" onClick={() => setRegionFilter('APAC')}>Back to APAC</button></div><div className="gap-list"><div className="gap-row"><div><strong>{regionFilter}</strong><small>Mock regional aggregate</small></div><div className="gap-bar"><i style={{ width: regionFilter === 'Europe' ? '16.8%' : '4%' }}/></div><b className={regionFilter === 'Europe' ? 'warning' : 'positive'}>{regionFilter === 'Europe' ? '−6,883k' : '+204k'}</b></div></div><div className="notice success">Mock data is isolated from the Excel-backed APAC snapshot and is not included in APAC export totals.</div></div></section>;
-  if (tab === 'imports') return <ImportCenter currentUser={currentUser} />;
+  if (tab === 'imports') return <ImportPortal currentUser={currentUser} />;
   if (tab === 'admin') return <AdminPanel currentUser={currentUser} />;
   if (tab === 'brand') return <BrandView />;
   return <>

@@ -1,4 +1,4 @@
-export type ManualImport = { entityId: string; week: string; turnover: string; orderbook: string; forecast: string; p1: string; source: string; customerType?: 'External' | 'Group' };
+export type ManualImport = { entityId: string; week: string; turnover: string; orderbook: string; forecast: string; p1: string; source: string; customerType?: 'External' | 'Group'; lines?: { product?: string; customer?: string; total2026?: string | number }[] };
 
 export function validateManualImport(input: ManualImport) {
   const findings: string[] = [];
@@ -6,5 +6,6 @@ export function validateManualImport(input: ManualImport) {
   if (!input.week || Number(input.week) < 1 || Number(input.week) > 53) findings.push('Week must be between 1 and 53');
   for (const [label, value] of [['Turnover', input.turnover], ['Order book', input.orderbook], ['Forecast', input.forecast]]) if (!value || Number.isNaN(Number(value))) findings.push(`${label} must be a number`);
   if (!input.source.trim()) findings.push('Source note is required');
+  if (input.lines?.some((line) => !line.product?.trim() || !line.customer?.trim())) findings.push('Every order line needs a product and customer');
   return { valid: findings.length === 0, findings, completeness: Math.round((7 - findings.length) / 7 * 100) };
 }

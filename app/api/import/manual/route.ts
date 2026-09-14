@@ -23,7 +23,7 @@ export async function POST(request: Request) {
     total2026: Number(line.total2026 || 0),
     total2027: Number(line.total2027 || 0),
     monthly2026: Array.from({ length: 12 }, (_, monthIndex) => Number(line.monthly2026?.[monthIndex] || 0)),
-    monthly2027: Array(12).fill(0),
+    monthly2027: Array.from({ length: 12 }, (_, monthIndex) => Number(line.monthly2027?.[monthIndex] || 0)),
     sourceFile: `Manual W${body.week}`,
     sourceSheet: 'Manual entry',
     sourceRow: index + 1,

@@ -11,7 +11,7 @@ DIAM is consolidating sales budget, forecast, order book, and follow-up reportin
 - `Dashboard/DIAM_Global_Follow_Up_2026_W35.xlsx`: Executive Summary, Weekly Review, Data Weekly, Budget Recap, Chart Data, and Management Checks.
 - `DIAM-BRANDBOOK (ENG).pdf`: DIAM visual reference.
 
-The demo normalizes the source concepts into APAC entities and weekly records. It uses kEUR as the visible unit, keeps monthly phasing, and exposes source/readiness caveats instead of hiding missing data.
+The demo normalizes the source concepts into APAC entities, entity-week snapshots, and orderbook lines. W1-W52 sheets are treated as immutable weekly source snapshots: order-level fields and 2026/2027 monthly phasing remain available, while dashboard KPIs aggregate from the normalized snapshot layer. It uses kEUR as the visible unit, keeps monthly phasing, and exposes source/readiness caveats instead of hiding missing data.
 
 ## US parity target
 

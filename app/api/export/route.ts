@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import * as XLSX from 'xlsx-js-style';
 import { getDashboardSnapshot } from '@/lib/dashboard';
 import { entities, weekly } from '@/lib/seed';
+import { repository } from '@/lib/repository';
 
 const months = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 const sourceWeek = 37;
@@ -77,6 +78,21 @@ export function GET(request: Request) {
     records.forEach((row, index) => dataWeekly.push([entity.code, entity.name, entity.region, `W${String(row.week).padStart(2, '0')}`, row.week, ...(row.monthValues ?? months.map(() => null)), row.monthValues?.reduce((sum, value) => sum + value, 0) ?? row.sales, budget ? formatPercent(row.sales / budget) : null, index ? row.sales - records[index - 1].sales : null, row.source]));
   }
 
+  const orderBookLines = repository.getOrderBookLines().filter((line) => selected.some((entity) => entity.id === line.entityId));
+  const orderBookDetail: unknown[][] = [
+    ['DIAM · ORDERBOOK DETAIL'], [], [title], [],
+    ['Entity', 'Week', 'Product / order', 'Customer', 'External / Group', 'DGC', 'Quantity', 'Total orderbook', 'Total 2026', 'Total 2027', ...months.map((month) => `${month} 2026`), ...months.map((month) => `${month} 2027`), 'Source sheet', 'Source row'],
+    ...orderBookLines.map((line) => [line.entityName, `W${line.week}`, line.product, line.customer, line.customerType, line.dgc, line.quantity ?? null, line.total2026 + line.total2027, line.total2026, line.total2027, ...line.monthly2026, ...line.monthly2027, line.sourceSheet, line.sourceRow]),
+  ];
+  if (orderBookLines.length === 0) orderBookDetail.push(['No published W1-W52 order lines in the current demo snapshot. Upload and publish a weekly workbook to populate this sheet.']);
+
+  const entitySnapshots = repository.getSnapshots().filter((snapshot) => selected.some((entity) => entity.id === snapshot.entityId));
+  const snapshotRows: unknown[][] = [
+    ['DIAM · ENTITY WEEK SNAPSHOT'], [], [title], [],
+    ['Entity', 'Week', 'Month', 'YTD turnover external', 'YTD turnover group', 'Current month external', 'Current month group', 'Orderbook 2026 external', 'Orderbook 2026 group', 'Orderbook 2027 external', 'Orderbook 2027 group', 'Forecast 2026', 'New orders 2026', 'Check', 'Source'],
+    ...entitySnapshots.map((snapshot) => [snapshot.entityName, `W${snapshot.week}`, snapshot.month, snapshot.ytdTurnoverExternal, snapshot.ytdTurnoverGroup, snapshot.currentMonthTurnoverExternal, snapshot.currentMonthTurnoverGroup, snapshot.orderbook2026External, snapshot.orderbook2026Group, snapshot.orderbook2027External, snapshot.orderbook2027Group, snapshot.forecast2026, snapshot.newOrders2026, snapshot.sourceCheck, `${snapshot.sourceFile} · ${snapshot.sourceSheet}`]),
+  ];
+
   const budgetRecap: unknown[][] = [['DIAM · BUDGET RECAP'], [], [title], [], ['MONTHLY POSITION · EUR K'], ['APAC monthly position. Budget comes from the source workbook; entity budgets that are not supplied remain blank.'], ['Region', 'Business Unit', 'Metric', ...months, 'FY Total', 'Coverage', 'Gap']];
   const rowsByMetric = (metric: string, values: number[]) => ['APAC', selected.length === 1 ? selected[0].name : 'APAC visible entities', metric, ...values, values.reduce((sum, value) => sum + value, 0), null, null];
   budgetRecap.push(rowsByMetric('Budget', snapshot.monthly.map((row) => row.budget)));
@@ -95,6 +111,8 @@ export function GET(request: Request) {
     ['Executive Summary', summary, [XLSX.utils.decode_range('A1:K1'), XLSX.utils.decode_range('A3:K3')], [14, 28, 15, 15, 15, 15, 15, 15, 15, 15, 15], 8],
     ['Weekly Review', weeklyReview, [XLSX.utils.decode_range('A1:Q1'), XLSX.utils.decode_range('A3:Q3'), XLSX.utils.decode_range('A7:Q7')], [19, ...Array(16).fill(12)], 7],
     ['Data Weekly', dataWeekly, [], [12, 29, 12, 12, 8, ...Array(12).fill(11), 12, 12, 12, 34], 0],
+    ['Orderbook Detail', orderBookDetail, [XLSX.utils.decode_range('A1:AL1'), XLSX.utils.decode_range('A3:AL3')], [18, 8, 28, 24, 16, 8, 12, 15, 15, 15, ...Array(24).fill(11), 16, 10], 4],
+    ['Entity Snapshots', snapshotRows, [XLSX.utils.decode_range('A1:O1'), XLSX.utils.decode_range('A3:O3')], [24, 8, 12, ...Array(10).fill(17), 10, 34], 4],
     ['Budget Recap', budgetRecap, [XLSX.utils.decode_range('A1:R1'), XLSX.utils.decode_range('A3:R3'), XLSX.utils.decode_range('A5:R5')], [13, 29, 15, ...Array(12).fill(12), 12, 12, 12], 6],
     ['Chart Data', chartData, [], Array(39).fill(12), 0], ['Management Checks', checks, [XLSX.utils.decode_range('A1:G1'), XLSX.utils.decode_range('A3:G3')], [12, 11, 38, 16, 16, 16, 42], 6],
   ] as const;

@@ -37,6 +37,45 @@ export type WeeklyRecord = {
   isSnapshot?: boolean;
 };
 
+export type OrderBookLine = {
+  id: string;
+  entityId: string;
+  entityName: string;
+  week: number;
+  product: string;
+  customer: string;
+  customerType: 'External' | 'Group' | 'Unclassified';
+  dgc: 'E' | 'G' | 'Unclassified';
+  quantity?: number;
+  total2026: number;
+  total2027: number;
+  monthly2026: number[];
+  monthly2027: number[];
+  sourceFile: string;
+  sourceSheet: string;
+  sourceRow: number;
+};
+
+export type EntityWeekSnapshot = {
+  entityId: string;
+  entityName: string;
+  week: number;
+  month: string;
+  ytdTurnoverExternal: number;
+  ytdTurnoverGroup: number;
+  currentMonthTurnoverExternal: number;
+  currentMonthTurnoverGroup: number;
+  orderbook2026External: number;
+  orderbook2026Group: number;
+  orderbook2027External: number;
+  orderbook2027Group: number;
+  forecast2026: number;
+  newOrders2026: number;
+  sourceFile: string;
+  sourceSheet: string;
+  sourceCheck: 'OK' | 'Review';
+};
+
 export type BrandRecord = { brand: string; sales: number; budget: number; region: string; trend: number };
 
 export type ImportBatch = {
@@ -49,4 +88,9 @@ export type ImportBatch = {
   records: number;
   completeness: number;
   findings: string[];
+  sheets?: { name: string; rows: number; weeks?: string[]; kind: string }[];
+  entityId?: string;
+  week?: number;
+  parsedLines?: OrderBookLine[];
+  parsedSnapshots?: EntityWeekSnapshot[];
 };

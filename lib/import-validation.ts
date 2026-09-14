@@ -1,4 +1,4 @@
-export type ManualImport = { entityId: string; week: string; turnover: string; orderbook: string; forecast: string; p1: string; source: string };
+export type ManualImport = { entityId: string; week: string; turnover: string; orderbook: string; forecast: string; p1: string; source: string; customerType?: 'External' | 'Group' };
 
 export function validateManualImport(input: ManualImport) {
   const findings: string[] = [];

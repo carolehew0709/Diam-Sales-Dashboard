@@ -24,8 +24,8 @@ export const brands: BrandRecord[] = [
 
 export const users: User[] = [
   { id: 'u1', name: 'Carole Hew', email: 'superadmin@diam.demo', role: 'superadmin', region: 'APAC', crossRegionView: true, permissions: { pda: ['view', 'edit'], ddc: ['view', 'edit'], dehk: ['view', 'edit'] } },
-  { id: 'u2', name: 'APAC Regional Admin', email: 'apac.admin@diam.demo', role: 'apac_admin', region: 'APAC', crossRegionView: false, permissions: { pda: ['view', 'edit'], ddc: ['view', 'edit'], dehk: ['view'] } },
-  { id: 'u5', name: 'China Entity Admin', email: 'china.admin@diam.demo', role: 'apac_admin', region: 'APAC', crossRegionView: false, permissions: { pda: ['view'], ddc: ['view', 'edit'], dehk: [] } },
+  { id: 'u2', name: 'APAC Regional Admin', email: 'apac.admin@diam.demo', role: 'region_admin', region: 'APAC', crossRegionView: false, permissions: { pda: ['view', 'edit'], ddc: ['view', 'edit'], dehk: ['view'] } },
+  { id: 'u5', name: 'China Region Admin', email: 'china.admin@diam.demo', role: 'region_admin', region: 'APAC', crossRegionView: false, permissions: { pda: ['view'], ddc: ['view', 'edit'], dehk: [] } },
   { id: 'u6', name: 'Hong Kong Editor', email: 'hk.editor@diam.demo', role: 'editor', region: 'APAC', crossRegionView: false, permissions: { pda: ['view'], ddc: [], dehk: ['view', 'edit'] } },
   { id: 'u3', name: 'Sales Editor', email: 'editor@diam.demo', role: 'editor', region: 'APAC', crossRegionView: false, permissions: { pda: ['view', 'edit'], ddc: ['view', 'edit'], dehk: ['view'] } },
   { id: 'u4', name: 'Executive Viewer', email: 'viewer@diam.demo', role: 'viewer', region: 'APAC', crossRegionView: false, permissions: { pda: ['view'], ddc: ['view'], dehk: ['view'] } },

@@ -24,7 +24,7 @@ This repository contains the APAC demo for DIAM's sales-performance dashboard. I
 ## Permission rules
 
 - `superadmin` can manage users and permissions across the APAC boundary.
-- `apac_admin` can manage APAC data and users only when explicitly granted admin scope.
+- `region_admin` can manage data only inside assigned Region scope; only `superadmin` manages users and permissions.
 - `editor` can submit and review imports for permitted accounts but cannot publish or manage users.
 - `viewer` can view permitted dashboard data and export it, but cannot import, publish, or manage users.
 - Visibility is the intersection of region scope and account-level `view`; editing additionally requires `edit`.

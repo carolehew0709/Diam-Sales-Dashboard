@@ -1,4 +1,4 @@
-export type Role = 'superadmin' | 'apac_admin' | 'editor' | 'viewer' | 'audit_viewer';
+export type Role = 'superadmin' | 'region_admin' | 'editor' | 'viewer' | 'audit_viewer';
 export type Permission = 'view' | 'edit';
 export type Scenario = 'Sales' | 'Sales + P1';
 

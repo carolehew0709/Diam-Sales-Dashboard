@@ -19,4 +19,4 @@ The reviewed US staging dashboard contains Sales Performance navigation, executi
 
 ## Demo audience
 
-Superadmins configure access. Regional admins operate APAC submissions. Editors prepare imports. Viewers consume and export dashboard information.
+Superadmins configure access. Region admins operate only their assigned Region submissions. Global editors can prepare data for every Region. Viewers consume and export dashboard information.

@@ -15,7 +15,7 @@ The repository adapter exposes dashboard reads, user/permission reads, and impor
 
 ## Permission model
 
-`User` has a role, region scope, and account permissions. Visibility requires a matching region or an explicit cross-region grant, plus `view` on the account. Editing requires `edit`. The UI hides unavailable actions, while API handlers repeat authorization checks.
+`User` has a role, region scope, and account permissions. Visibility requires a matching region or an explicit cross-region grant, plus `view` on the account. `superadmin` and `editor` have global edit capability; `region_admin` can edit only granted entities inside the assigned Region. Publishing remains a separate capability. The UI hides unavailable actions, while API handlers repeat authorization checks.
 
 ## Import flow
 

@@ -7,11 +7,14 @@ export function useDashboardNavigation(page: Page, locale: Locale) {
   const header = useRef<HTMLElement>(null);
   const [active, setActive] = useState<DashboardSection>("overview");
   useEffect(() => {
-    if (!header.current) return;
-    const measure = () => document.documentElement.style.setProperty("--dashboard-header-height", `${header.current!.getBoundingClientRect().height}px`);
+    const element = header.current;
+    if (!element) return;
+    const measure = () => {
+      if (element.isConnected) document.documentElement.style.setProperty("--dashboard-header-height", `${element.getBoundingClientRect().height}px`);
+    };
     measure();
     const observer = new ResizeObserver(measure);
-    observer.observe(header.current);
+    observer.observe(element);
     return () => observer.disconnect();
   }, []);
 
@@ -21,7 +24,8 @@ export function useDashboardNavigation(page: Page, locale: Locale) {
     let frame = 0;
     let requested: DashboardSection | null = null;
     const updateActive = () => {
-      const offset = (header.current?.getBoundingClientRect().bottom ?? 120) + 24;
+      const filterHeight = document.querySelector(".filter-bar")?.getBoundingClientRect().height ?? 0;
+      const offset = (header.current?.getBoundingClientRect().bottom ?? 120) + filterHeight + 24;
       let current: DashboardSection = "overview";
       for (const id of dashboardSections) {
         const element = document.getElementById(id);

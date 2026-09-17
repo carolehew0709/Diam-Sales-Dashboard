@@ -3,7 +3,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { loginDestination, pagePath, parsePagePath, type Page } from "@/lib/routes";
 import { useI18n } from "@/components/i18n-provider";
 import { matchesRegion } from "@/lib/entities";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
@@ -169,6 +169,40 @@ function DashboardView({
     [frequency, setFrequency] = useState("month"),
     [matrixLevel, setMatrixLevel] = useState("entity"),
     [customer, setCustomer] = useState("all");
+  const snapshotWrapper = useRef<HTMLDivElement>(null);
+  const filterBar = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const element = filterBar.current;
+    if (!element) return;
+    const measure = () => {
+      if (element.isConnected) document.documentElement.style.setProperty("--dashboard-filter-height", `${element.getBoundingClientRect().height}px`);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(element);
+    return () => {
+      observer.disconnect();
+      document.documentElement.style.removeProperty("--dashboard-filter-height");
+    };
+  }, []);
+  useEffect(() => {
+    if (!readiness) return;
+    const outside = (event: PointerEvent) => {
+      if (!snapshotWrapper.current?.contains(event.target as Node)) setReadiness(false);
+    };
+    const escape = (event: KeyboardEvent) => {
+      if (event.key === "Escape") {
+        setReadiness(false);
+        snapshotWrapper.current?.querySelector<HTMLButtonElement>(".snapshot-cluster")?.focus();
+      }
+    };
+    document.addEventListener("pointerdown", outside);
+    document.addEventListener("keydown", escape);
+    return () => {
+      document.removeEventListener("pointerdown", outside);
+      document.removeEventListener("keydown", escape);
+    };
+  }, [readiness]);
   const t = data.totals;
   const partial = (key: Dashboard["partialKeys"][number]) =>
     data.partialKeys.includes(key) ? tr("metric.partialSource") : "";
@@ -177,7 +211,7 @@ function DashboardView({
       ...filters,
       region: "China",
       bu: id === "all" ? "all" : id.toUpperCase(),
-      entity: id,
+      entity: "all",
     });
   const totalRows = [
     {
@@ -216,11 +250,12 @@ function DashboardView({
           <h1>{tr("overview.salesYear", { year: filters.year })}</h1>
           <p className="executive-subtitle">{tr("overview.subtitle")}</p>
         </div>
-        <div className="snapshot-wrapper">
+        <div className="snapshot-wrapper" ref={snapshotWrapper}>
           <button
             className="snapshot-cluster"
             onClick={() => setReadiness(!readiness)}
             aria-expanded={readiness}
+            aria-controls="snapshot-readiness"
           >
             <span className="snapshot-main">
               <span>{tr("snapshot.active")}</span>
@@ -263,9 +298,9 @@ function DashboardView({
             <span>⌄</span>
           </button>
           {readiness && (
-            <section className="snapshot-readiness-panel">
+            <section className="snapshot-readiness-panel" id="snapshot-readiness" aria-labelledby="snapshot-readiness-title">
               <div className="readiness-panel-head">
-                <h2>{tr("snapshot.readiness")}</h2>
+                <h2 id="snapshot-readiness-title">{tr("snapshot.readiness")}</h2>
                 <button
                   className="readiness-close"
                   aria-label={tr("snapshot.close")}
@@ -311,7 +346,7 @@ function DashboardView({
           )}
         </div>
       </section>
-      <section className="filter-bar" aria-label={tr("filters.global")}>
+      <section className="filter-bar" ref={filterBar} aria-label={tr("filters.global")}>
         <div className="filter-field">
           <label htmlFor="region">{tr("filters.region")}</label>
           <select
@@ -334,7 +369,7 @@ function DashboardView({
           </select>
         </div>
         <div className="filter-field">
-          <label htmlFor="bu">{tr("common.bu")}</label>
+          <label htmlFor="bu">{tr("filters.businessUnitEntity")}</label>
           <select
             id="bu"
             value={filters.bu}
@@ -352,27 +387,6 @@ function DashboardView({
             ].map((b) => (
               <option key={b}>{b}</option>
             ))}
-          </select>
-        </div>
-        <div className="filter-field">
-          <label htmlFor="entity">{tr("common.entity")}</label>
-          <select
-            id="entity"
-            value={filters.entity}
-            onChange={(e) => setFilters({ ...filters, entity: e.target.value })}
-          >
-            <option value="all">{tr("filters.allEntities")}</option>
-            {data.entities
-              .filter(
-                (e) =>
-                  matchesRegion(e, filters.region) &&
-                  (filters.bu === "all" || e.businessUnit === filters.bu),
-              )
-              .map((e) => (
-                <option key={e.id} value={e.id}>
-                  {e.code}
-                </option>
-              ))}
           </select>
         </div>
         <Segmented
@@ -431,7 +445,7 @@ function DashboardView({
         {data.china.map((r) => (
           <button
             key={r.entity.id}
-            className={filters.entity === r.entity.id ? "selected" : ""}
+            className={filters.bu === r.entity.businessUnit ? "selected" : ""}
             onClick={() => selectEntity(r.entity.id)}
           >
             <small>

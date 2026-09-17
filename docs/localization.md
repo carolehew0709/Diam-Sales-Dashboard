@@ -27,6 +27,13 @@ scroll animation. Manual scrolling highlights the current section without adding
 history entries. Coverage and residual gap carry `metric.byYear` labels;
 remaining this month carries `metric.byMonth`. Calculation rules are unchanged.
 
+The filter bar sticks below the measured header. Its measured height is included
+in anchor offsets and section highlighting. Narrow screens use a horizontally
+scrollable single-row filter bar to keep dashboard content visible. The single
+Business Unit Entity selector replaces the separate Entity selector; changes
+clear the internal entity filter. Snapshot readiness stays above the filter bar
+and data cards, but below the primary navigation.
+
 `displayText` is a compatibility boundary for existing API validation messages,
 enum labels, months, and entity descriptions. It maps known values to catalog
 keys without changing API payloads, stored roles, filter values, or source data.

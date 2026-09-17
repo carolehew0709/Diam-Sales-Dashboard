@@ -1,4 +1,5 @@
 {
+  "filters.businessUnitEntity": "业务单元实体",
   "metric.byYear": "按年度",
   "metric.byMonth": "按月",
   "errors.superadmin": "需要超级管理员权限",

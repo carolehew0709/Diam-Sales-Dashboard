@@ -1,4 +1,5 @@
 {
+  "filters.businessUnitEntity": "Business Unit Entity",
   "metric.byYear": "By year",
   "metric.byMonth": "By month",
   "errors.superadmin": "Superadmin access required",

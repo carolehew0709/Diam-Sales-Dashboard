@@ -4504,13 +4504,18 @@ input {
 .account-popover small {
   color: var(--muted);
 }
-.account-popover button {
+.account-popover button,
+.account-popover a {
   padding: 10px;
   text-align: left;
   border: 1px solid var(--line);
   background: white;
   border-radius: 6px;
 }
+.account-popover a { color: inherit; text-decoration: none; }
+.account-page-links { display: none; }
+@media (max-width: 1000px) { .account-page-links { display: grid; gap: 6px; } }
+.topnav a[aria-current="page"] { color: var(--gold); font-weight: 700; }
 .filter-bar {
   grid-template-columns: 1fr 1fr 1fr 1fr 1.5fr 1.5fr;
 }
@@ -5140,3 +5145,4 @@ html[lang="zh-CN"] .kpi-topline { line-height: 1.5; }
     min-width: 0;
   }
 }
+[hidden] { display: none !important; }

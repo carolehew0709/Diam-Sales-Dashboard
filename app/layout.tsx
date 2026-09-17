@@ -1,4 +1,5 @@
 import "./globals.css";
+import DashboardApp from "@/components/dashboard-app";
 import { I18nProvider } from "@/components/i18n-provider";
 export const metadata = {
   title: "DIAM APAC · Sales Performance",
@@ -12,7 +13,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <body>
-        <I18nProvider>{children}</I18nProvider>
+        <I18nProvider><DashboardApp />{children}</I18nProvider>
       </body>
     </html>
   );

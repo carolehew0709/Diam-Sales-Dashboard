@@ -10,10 +10,14 @@ parameters. Add new interface copy to both catalogs rather than using inline
 language conditionals. Do not concatenate translated words to construct new
 sentences; use named interpolation such as `{year}` or `{amount}`.
 
-The provider defaults to English for server rendering, then restores the
-browser's `diam.dashboard.locale` preference. Switching updates the HTML lang
-attribute without navigating or clearing filters and forms. Storage failure
-does not prevent switching. Login and the dashboard header expose the control.
+The URL is authoritative: `/en/overview` and `/zh-CN/overview` select the locale.
+Pages are `overview`, `analysis`, `business-units`, `management-checks`, `imports`,
+`admin`, `brand`, and `login`. The root redirects using the `diam_locale` cookie
+(English by default). Language switching retains the page, query and fragment;
+the persistent application shell retains filters and form drafts. Refreshing
+retains the page but not unsaved drafts. Unknown routes return 404.
+Unauthenticated deep links go to login with a validated local return path.
+Page visibility is not authorization: API permission checks remain authoritative.
 
 `displayText` is a compatibility boundary for existing API validation messages,
 enum labels, months, and entity descriptions. It maps known values to catalog

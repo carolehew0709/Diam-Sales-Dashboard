@@ -1,18 +1,18 @@
 "use client";
 import { useI18n } from "@/components/i18n-provider";
 import { useState } from "react";
+import Link from "next/link";
+import { pagePath } from "@/lib/routes";
 import { canManageUsers } from "@/lib/permissions";
 import type { User } from "@/lib/types";
 export function AccountMenu({
   user,
-  onAdmin,
   onLogout,
 }: {
   user: User;
-  onAdmin: () => void;
   onLogout: () => void;
 }) {
-  const { tr, display } = useI18n();
+  const { tr, display, locale } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     <div className="apac-account">
@@ -39,15 +39,21 @@ export function AccountMenu({
               </p>
             ))}
           </details>
+          <nav className="account-page-links" aria-label={tr("nav.area")}>
+            <Link href={pagePath(locale, "overview")} onClick={() => setOpen(false)}>{tr("nav.overview")}</Link>
+            <Link href={pagePath(locale, "analysis")} onClick={() => setOpen(false)}>{tr("nav.analysis")}</Link>
+            <Link href={pagePath(locale, "business-units")} onClick={() => setOpen(false)}>{tr("nav.entities")}</Link>
+            <Link href={pagePath(locale, "management-checks")} onClick={() => setOpen(false)}>{tr("nav.checks")}</Link>
+            <Link href={pagePath(locale, "brand")} onClick={() => setOpen(false)}>{tr("nav.brand")}</Link>
+          </nav>
           {canManageUsers(user) && (
-            <button
+            <Link href={pagePath(locale, "admin")}
               onClick={() => {
                 setOpen(false);
-                onAdmin();
               }}
             >
               {tr("account.manage")}
-            </button>
+            </Link>
           )}
           <button onClick={onLogout}>{tr("account.signOut")}</button>
         </div>

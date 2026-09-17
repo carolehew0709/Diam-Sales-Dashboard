@@ -4,8 +4,9 @@ import {
   useCallback,
   useContext,
   useEffect,
-  useState,
 } from "react";
+import { usePathname, useRouter } from "next/navigation";
+import { switchLanguagePath } from "@/lib/routes";
 import {
   displayText,
   isLocale,
@@ -24,32 +25,22 @@ type I18n = {
 };
 const Context = createContext<I18n | null>(null);
 export function I18nProvider({ children }: { children: React.ReactNode }) {
-  const [locale, updateLocale] = useState<Locale>("en");
-  useEffect(() => {
-    try {
-      const saved = localStorage.getItem(localeStorageKey);
-      if (isLocale(saved)) updateLocale(saved);
-    } catch {
-      /* Language switching also works when browser storage is blocked. */
-    }
-    const sync = (event: StorageEvent) => {
-      if (event.key === localeStorageKey && isLocale(event.newValue))
-        updateLocale(event.newValue);
-    };
-    window.addEventListener("storage", sync);
-    return () => window.removeEventListener("storage", sync);
-  }, []);
+  const pathname = usePathname();
+  const router = useRouter();
+  const segment = pathname.split("/")[1];
+  const locale: Locale = isLocale(segment) ? segment : "en";
   useEffect(() => {
     document.documentElement.lang = locale;
+    document.cookie = `diam_locale=${locale}; Path=/; Max-Age=31536000; SameSite=Lax`;
   }, [locale]);
   const setLocale = useCallback((next: Locale) => {
-    updateLocale(next);
+    router.push(switchLanguagePath(window.location.pathname + window.location.search + window.location.hash, next), { scroll: false });
     try {
       localStorage.setItem(localeStorageKey, next);
     } catch {
       /* Optional preference persistence. */
     }
-  }, []);
+  }, [router]);
   const tr = useCallback(
     (key: MessageKey, params?: MessageParams) => translate(locale, key, params),
     [locale],

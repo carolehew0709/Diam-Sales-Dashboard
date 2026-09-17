@@ -1,6 +1,8 @@
 "use client";
 import { useI18n } from "@/components/i18n-provider";
 import Image from "next/image";
+import Link from "next/link";
+import { pagePath, type Page } from "@/lib/routes";
 import { Download, FileUp } from "lucide-react";
 import type { Filters, User } from "@/lib/types";
 import { AccountMenu } from "./account-menu";
@@ -8,23 +10,17 @@ import { LanguageSwitcher } from "./language-switcher";
 export function DashboardShell({
   user,
   filters,
-  onImport,
-  onAdmin,
   onLogout,
-  onBrand,
-  onOverview,
+  page,
   children,
 }: {
   user: User;
   filters: Filters;
-  onImport: () => void;
-  onAdmin: () => void;
   onLogout: () => void;
-  onBrand: () => void;
-  onOverview: () => void;
+  page: Page;
   children: React.ReactNode;
 }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
   const query = new URLSearchParams(
     Object.entries(filters).map(([k, v]) => [k, String(v)]),
   );
@@ -32,7 +28,7 @@ export function DashboardShell({
     <>
       <header className="topbar">
         <div className="brand">
-          <a className="brand-home" href="#overview" onClick={onOverview}>
+          <Link className="brand-home" href={pagePath(locale, "overview")}>
             <Image
               className="brand-logo"
               src="/diam-logo.png"
@@ -40,13 +36,13 @@ export function DashboardShell({
               height={30}
               alt="DIAM"
             />
-          </a>
+          </Link>
           <span className="brand-divider" />
           <nav className="product-switcher" aria-label={tr("nav.area")}>
-            <a href="#overview" aria-current="page" onClick={onOverview}>
+            <Link href={pagePath(locale, "overview")} aria-current={page !== "brand" ? "page" : undefined}>
               {tr("nav.performance")}
-            </a>
-            <button onClick={onBrand}>{tr("nav.brand")}</button>
+            </Link>
+            <Link href={pagePath(locale, "brand")} aria-current={page === "brand" ? "page" : undefined}>{tr("nav.brand")}</Link>
           </nav>
         </div>
         <nav className="topnav">
@@ -55,25 +51,25 @@ export function DashboardShell({
               ["overview", tr("nav.overview")],
               ["analysis", tr("nav.analysis")],
               ["business-units", tr("nav.entities")],
-              ["data-quality", tr("nav.checks")],
+              ["management-checks", tr("nav.checks")],
             ].map(([id, label]) => (
-              <a key={id} href={`#${id}`} onClick={onOverview}>
+              <Link key={id} href={pagePath(locale, id as Page)} aria-current={page === id ? "page" : undefined}>
                 {label}
-              </a>
+              </Link>
             ))}
           </span>
         </nav>
         <div className="topbar-actions">
           {["superadmin", "region_admin", "editor"].includes(user.role) && (
-            <button
+            <Link
               className="import-data"
-              onClick={onImport}
+              href={pagePath(locale, "imports")}
               title={tr("nav.import")}
               aria-label={tr("nav.import")}
             >
               <FileUp size={15} />
               <span>{tr("nav.import")}</span>
-            </button>
+            </Link>
           )}
           <a
             className="excel-export"
@@ -84,7 +80,7 @@ export function DashboardShell({
             <Download size={15} />
             <span>{tr("nav.export")}</span>
           </a>
-          <AccountMenu user={user} onAdmin={onAdmin} onLogout={onLogout} />
+          <AccountMenu user={user} onLogout={onLogout} />
           <LanguageSwitcher />
         </div>
       </header>

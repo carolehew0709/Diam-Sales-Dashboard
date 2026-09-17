@@ -7,6 +7,7 @@ This repository contains the APAC demo for DIAM's sales-performance dashboard. I
 ## Working rules
 
 - Keep the dashboard focused on sales performance, planning, order book, Prospect (source P1), source readiness, and management checks.
+- Keep interface copy in `locales/en.json` and `locales/zh-CN.json` using semantic keys and `useI18n().tr`. Translate display labels only; preserve API enum values and source evidence. See `docs/localization.md`.
 - Preserve APAC (Total) -> China (DHK/DCP/DDC), Singapore (DSI), India (DDI), Japan (DDJ). Keep China totals and entity detail visible within the user's scope. Map DEHK to DHK and the approved PDA source to DCP; retain its source limitations.
 - Annual Dashboard means approved annual budget. Coverage and Residual Gap use annual values; Remaining this month uses monthly uninvoiced amounts. Missing entity data stays blank.
 - Keep metric names and units explicit. The source workbooks use kEUR and entity/week reporting.

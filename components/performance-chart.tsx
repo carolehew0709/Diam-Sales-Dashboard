@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/components/i18n-provider";
 import type { Amount } from "@/lib/types";
 import { formatK } from "@/lib/dashboard";
 export function PerformanceChart({
@@ -8,6 +9,7 @@ export function PerformanceChart({
   rows: { label: string; budget: Amount; base: Amount; scenario: Amount }[];
   cumulative?: boolean;
 }) {
+  const { tr, display } = useI18n();
   const values = rows
     .flatMap((r) => [r.budget, r.base, r.scenario])
     .filter((v): v is number => v !== null);
@@ -18,19 +20,19 @@ export function PerformanceChart({
     {
       key: "budget" as const,
       color: "#9d9a91",
-      label: "Annual Dashboard",
+      label: tr("metric.budget"),
       dash: "6 5",
     },
     {
       key: "base" as const,
       color: "#171813",
-      label: "Sales & Dashboard",
+      label: tr("metric.base"),
       dash: "",
     },
     {
       key: "scenario" as const,
       color: "#a77a35",
-      label: "Selected scenario",
+      label: tr("metric.scenario"),
       dash: "",
     },
   ];
@@ -40,7 +42,7 @@ export function PerformanceChart({
         viewBox="0 0 720 260"
         role="img"
         aria-label={
-          cumulative ? "Cumulative annual performance" : "Monthly performance"
+          cumulative ? tr("chart.cumulativeA11y") : tr("chart.monthlyA11y")
         }
       >
         {[0, 0.25, 0.5, 0.75, 1].map((f) => (
@@ -96,7 +98,7 @@ export function PerformanceChart({
                     stroke={s.color}
                   >
                     <title>
-                      {r.label} · {s.label}: {formatK(r[s.key])} kEUR
+                      {display(r.label)} · {s.label}: {formatK(r[s.key])} kEUR
                     </title>
                   </circle>
                 ),
@@ -113,15 +115,15 @@ export function PerformanceChart({
             fill="#706f67"
             fontSize="10"
           >
-            {r.label}
+            {display(r.label)}
           </text>
         ))}
       </svg>
       {!values.length && (
         <div className="chart-empty">
-          Monthly source detail is incomplete.
+          {tr("chart.empty")}
           <br />
-          Annual figures remain available below.
+          {tr("chart.annualAvailable")}
         </div>
       )}
       <div className="apac-legend">
@@ -131,10 +133,7 @@ export function PerformanceChart({
             {s.label}
           </span>
         ))}
-        <small className="chart-note">
-          Gaps indicate unavailable source values; no estimated monthly
-          allocation.
-        </small>
+        <small className="chart-note">{tr("chart.gaps")}</small>
       </div>
     </div>
   );

@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/components/i18n-provider";
 import { useEffect, useState } from "react";
 import { entities } from "@/lib/entities";
 import { canEdit, canPublish } from "@/lib/permissions";
@@ -24,6 +25,7 @@ export function ImportPortal({
   onPublished: () => void;
   writable: boolean;
 }) {
+  const { tr, display, locale } = useI18n();
   const editable = entities.filter((e) => canEdit(currentUser, e));
   const [form, setForm] = useState({
     entityId: editable[0]?.id ?? "",
@@ -54,7 +56,7 @@ export function ImportPortal({
       if (j.ok) setBatches(j.batches);
       else setMessage(j.error);
     } catch {
-      setMessage("Unable to load review batches");
+      setMessage(tr("import.loadError"));
     }
   };
   useEffect(() => {
@@ -89,9 +91,7 @@ export function ImportPortal({
       body: JSON.stringify({ id: review?.id, acknowledge: ack }),
     });
     if (j) {
-      setMessage(
-        "Snapshot published. Dashboard and exports now read this revision.",
-      );
+      setMessage(tr("import.published"));
       onPublished();
     }
   };
@@ -99,33 +99,22 @@ export function ImportPortal({
     <section className="apac-workspace">
       <div className="panel-heading">
         <div>
-          <p className="panel-kicker">Weekly import center</p>
-          <h1>Review and publish data</h1>
-          <p>
-            Validate entity workbooks or manual entries, review source
-            limitations, then publish.
-          </p>
+          <p className="panel-kicker">{tr("import.center")}</p>
+          <h1>{tr("import.title")}</h1>
+          <p>{tr("import.subtitle")}</p>
         </div>
         <button className="apac-button" onClick={onClose}>
-          Back to dashboard
+          {tr("common.backDashboard")}
         </button>
       </div>
-      {!writable && (
-        <p className="apac-notice">
-          Persistent storage is not configured. Import and publication are
-          unavailable until a database is connected.
-        </p>
-      )}
+      {!writable && <p className="apac-notice">{tr("import.storage")}</p>}
       <div className="dashboard-grid dashboard-grid-secondary">
         <section className="panel">
-          <p className="panel-kicker">Step 01 · Excel</p>
-          <h2>Upload workbook</h2>
-          <p className="muted">
-            W1–W52 entity workbook or Global Follow Up. Original files are
-            preserved.
-          </p>
+          <p className="panel-kicker">{tr("import.excelStep")}</p>
+          <h2>{tr("import.upload")}</h2>
+          <p className="muted">{tr("import.workbookNote")}</p>
           <label className="upload-zone">
-            Choose .xlsx workbook
+            {tr("import.choose")}
             <input
               type="file"
               accept=".xlsx"
@@ -142,25 +131,25 @@ export function ImportPortal({
           </label>
         </section>
         <section className="panel">
-          <p className="panel-kicker">Manual submission · kEUR</p>
-          <h2>Entity and reporting period</h2>
+          <p className="panel-kicker">{tr("import.manualUnit")}</p>
+          <h2>{tr("import.period")}</h2>
           <div className="form-grid">
             <label>
-              Entity
+              {tr("common.entity")}
               <select
                 value={form.entityId}
                 onChange={(e) => setForm({ ...form, entityId: e.target.value })}
               >
                 {editable.map((e) => (
                   <option key={e.id} value={e.id}>
-                    {e.code} · {e.description}
+                    {e.code} · {display(e.description)}
                   </option>
                 ))}
               </select>
             </label>
             {[
-              ["week", "ISO week"],
-              ["month", "Reporting month"],
+              ["week", tr("import.isoWeek")],
+              ["month", tr("import.month")],
             ].map(([key, label]) => (
               <label key={key}>
                 {label}
@@ -177,26 +166,23 @@ export function ImportPortal({
       <section className="panel">
         <div className="panel-heading">
           <div>
-            <p className="panel-kicker">Step 01 · Manual</p>
-            <h2>Sales and annual planning</h2>
-            <p>
-              Enter zero only when confirmed; leave unavailable budgets and
-              Prospect blank.
-            </p>
+            <p className="panel-kicker">{tr("import.manualStep")}</p>
+            <h2>{tr("import.planning")}</h2>
+            <p>{tr("import.zeroNote")}</p>
           </div>
         </div>
         <div className="form-grid">
           {[
-            ["turnoverExternal", "YTD invoiced · external"],
-            ["turnoverGroup", "YTD invoiced · group"],
-            ["monthTurnoverExternal", "MTD invoiced · external"],
-            ["monthTurnoverGroup", "MTD invoiced · group"],
-            ["monthEstimateExternal", "Full-month estimate · external"],
-            ["monthEstimateGroup", "Full-month estimate · group"],
-            ["annualBudget", "Annual Dashboard 2026"],
-            ["prospect", "Prospect 2026"],
-            ["nextAnnualBudget", "Annual Dashboard 2027"],
-            ["nextProspect", "Prospect 2027"],
+            ["turnoverExternal", tr("import.ytdExternal")],
+            ["turnoverGroup", tr("import.ytdGroup")],
+            ["monthTurnoverExternal", tr("import.mtdExternal")],
+            ["monthTurnoverGroup", tr("import.mtdGroup")],
+            ["monthEstimateExternal", tr("import.estimateExternal")],
+            ["monthEstimateGroup", tr("import.estimateGroup")],
+            ["annualBudget", tr("import.budget2026")],
+            ["prospect", tr("import.prospect2026")],
+            ["nextAnnualBudget", tr("import.budget2027")],
+            ["nextProspect", tr("import.prospect2027")],
           ].map(([key, label]) => (
             <label key={key}>
               {label}
@@ -208,7 +194,7 @@ export function ImportPortal({
             </label>
           ))}
           <label className="wide">
-            Source note
+            {tr("import.sourceNote")}
             <input
               value={form.source}
               onChange={(e) => setForm({ ...form, source: e.target.value })}
@@ -216,28 +202,23 @@ export function ImportPortal({
           </label>
         </div>
         <div className="panel-heading">
-          <h2>Committed orderbook</h2>
+          <h2>{tr("import.orderbook")}</h2>
           <button
             className="apac-button"
             onClick={() => setLines([...lines, emptyLine()])}
           >
-            Add order line
+            {tr("import.addLine")}
           </button>
         </div>
-        {!lines.length && (
-          <p className="muted">
-            No order lines. Submitting this state explicitly records zero
-            committed orderbook.
-          </p>
-        )}
+        {!lines.length && <p className="muted">{tr("import.noLines")}</p>}
         {lines.map((line, index) => (
           <fieldset className="order-entry" key={index}>
-            <legend>Order {index + 1}</legend>
+            <legend>{tr("order.number", { number: index + 1 })}</legend>
             <div className="form-grid">
               {(["product", "customer", "total2026", "total2027"] as const).map(
                 (key) => (
                   <label key={key}>
-                    {key}
+                    {display(key)}
                     <input
                       value={line[key]}
                       onChange={(e) =>
@@ -252,7 +233,7 @@ export function ImportPortal({
                 ),
               )}
               <label>
-                Sales type
+                {tr("filters.type")}
                 <select
                   value={line.customerType}
                   onChange={(e) =>
@@ -265,26 +246,32 @@ export function ImportPortal({
                     )
                   }
                 >
-                  <option>External</option>
-                  <option>Group</option>
+                  <option value="External">{tr("common.external")}</option>
+                  <option value="Group">{tr("common.group")}</option>
                 </select>
               </label>
               <button
                 className="apac-button"
                 onClick={() => setLines(lines.filter((_, i) => i !== index))}
               >
-                Remove line
+                {tr("import.remove")}
               </button>
             </div>
             {(["monthly2026", "monthly2027"] as const).map((key) => (
               <div className="allocation" key={key}>
-                <strong>{key.slice(-4)} allocation</strong>
+                <strong>
+                  {tr("order.allocation", { year: key.slice(-4) })}
+                </strong>
                 <div>
                   {months.map((m, i) => (
                     <label key={m}>
-                      {m}
+                      {display(m)}
                       <input
-                        aria-label={`Order ${index + 1} ${m} ${key.slice(-4)}`}
+                        aria-label={tr("order.input", {
+                          number: index + 1,
+                          month: display(m),
+                          year: key.slice(-4),
+                        })}
                         inputMode="decimal"
                         value={line[key][i]}
                         onChange={(e) =>
@@ -314,27 +301,30 @@ export function ImportPortal({
           disabled={busy || !writable || !editable.length}
           onClick={() => void submit()}
         >
-          Analyze manual submission
+          {tr("import.analyze")}
         </button>
       </section>
       {review && (
         <section className="panel review-panel">
-          <p className="panel-kicker">Step 02 · Review</p>
+          <p className="panel-kicker">{tr("import.reviewStep")}</p>
           <h2>{review.fileName}</h2>
           <p>
-            {review.snapshots.length} entity-week snapshots ·{" "}
-            {review.lines.length} order lines · {review.status}
+            {tr("import.summary", {
+              snapshots: review.snapshots.length,
+              lines: review.lines.length,
+              status: display(review.status),
+            })}
           </p>
           <div className="table-wrap">
             <table className="bu-table">
               <thead>
                 <tr>
-                  <th>Entity</th>
-                  <th>Week</th>
-                  <th>YTD external</th>
-                  <th>YTD group</th>
-                  <th>Prospect</th>
-                  <th>Source</th>
+                  <th>{tr("common.entity")}</th>
+                  <th>{tr("common.week")}</th>
+                  <th>{tr("import.ytdExternalShort")}</th>
+                  <th>{tr("import.ytdGroupShort")}</th>
+                  <th>{tr("metric.prospect")}</th>
+                  <th>{tr("common.source")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -354,8 +344,13 @@ export function ImportPortal({
           <ul className="findings-list">
             {review.findings.map((f, i) => (
               <li key={i}>
-                <b>{f.severity === "error" ? "Error" : "Review"}:</b>{" "}
-                {f.message}
+                <b>
+                  {f.severity === "error"
+                    ? tr("common.error")
+                    : tr("common.review")}
+                  :
+                </b>{" "}
+                {display(f.message)}
               </li>
             ))}
           </ul>
@@ -367,8 +362,7 @@ export function ImportPortal({
                   checked={ack}
                   onChange={(e) => setAck(e.target.checked)}
                 />
-                I have reviewed the source limitations. Missing values remain
-                visible.
+                {tr("import.ack")}
               </label>
               <button
                 className="apac-button primary"
@@ -385,7 +379,7 @@ export function ImportPortal({
                 }
                 onClick={() => void publish()}
               >
-                Publish reviewed snapshot
+                {tr("import.publish")}
               </button>
             </>
           )}
@@ -393,14 +387,14 @@ export function ImportPortal({
       )}
       {message && (
         <p className="apac-notice" role="status">
-          {message}
+          {display(message)}
         </p>
       )}
       <section className="panel">
-        <p className="panel-kicker">Import history</p>
-        <h2>Review batches and revisions</h2>
+        <p className="panel-kicker">{tr("import.history")}</p>
+        <h2>{tr("import.revisions")}</h2>
         {!batches.length ? (
-          <p>No submissions yet.</p>
+          <p>{tr("import.empty")}</p>
         ) : (
           batches.map((b) => (
             <button
@@ -416,10 +410,12 @@ export function ImportPortal({
                 {b.entityIds.map((id) => id.toUpperCase()).join(", ")}
               </span>
               <span>
-                {b.status}
-                {b.revision ? ` · revision ${b.revision}` : ""}
+                {display(b.status)}
+                {b.revision
+                  ? ` · ${tr("notes.revision", { revision: b.revision })}`
+                  : ""}
               </span>
-              <small>{new Date(b.submittedAt).toLocaleString()}</small>
+              <small>{new Date(b.submittedAt).toLocaleString(locale)}</small>
             </button>
           ))
         )}

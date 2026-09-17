@@ -5061,6 +5061,71 @@ input {
   content: url("/diam-logo-black.png");
   height: auto;
 }
+
+.language-switcher {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  flex-shrink: 0;
+  white-space: nowrap;
+  color: inherit;
+}
+.language-switcher button {
+  min-width: 34px;
+  height: 32px;
+  padding: 0 6px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: inherit;
+  background: transparent;
+  font: inherit;
+  font-size: 12px;
+  cursor: pointer;
+}
+.language-switcher button[aria-pressed="true"] {
+  color: #171813;
+  background: #dec78e;
+}
+.language-switcher button:focus-visible {
+  outline: 2px solid #a77a35;
+  outline-offset: 2px;
+}
+.login-language {
+  position: absolute;
+  top: 20px;
+  right: 24px;
+}
+/* Keep the language and account controls in normal layout at every width. */
+.topbar {
+  gap: 12px;
+  grid-template-columns: minmax(0, auto) minmax(0, 1fr) auto;
+}
+.topbar-actions { gap: 10px; }
+.topnav-links { flex-wrap: wrap; justify-content: center; }
+html[lang="zh-CN"] body { font-family: "Microsoft YaHei", "PingFang SC", Arial, sans-serif; }
+html[lang="zh-CN"] .kpi-topline { line-height: 1.5; }
+@media (max-width: 1450px) {
+  .topbar-actions .import-data span,
+  .topbar-actions .excel-export span { display: none; }
+  .topbar-actions .import-data,
+  .topbar-actions .excel-export { padding: 10px; }
+}
+@media (max-width: 1250px) {
+  .filter-field:has(.segmented) { min-width: 230px; }
+}
+@media (max-width: 1000px) {
+  .topbar { grid-template-columns: minmax(0, 1fr) auto; }
+}
+@media (max-width: 480px) {
+  .topbar { padding-inline: 10px; gap: 6px; }
+  .topbar-actions { gap: 5px; }
+  .topbar .brand { gap: 0; }
+  .topbar .brand-divider { display: none; }
+  .topbar .brand-logo { width: 62px; height: auto; }
+  .account-trigger { max-width: 72px; padding-inline: 6px; }
+  .language-switcher { gap: 0; }
+  .language-switcher > svg { display: none; }
+}
 @media (max-width: 760px) {
   .filter-field:has(.segmented) {
     min-width: 220px;

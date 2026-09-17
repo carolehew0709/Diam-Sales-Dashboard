@@ -1,8 +1,10 @@
 "use client";
+import { useI18n } from "@/components/i18n-provider";
 import Image from "next/image";
 import { Download, FileUp } from "lucide-react";
 import type { Filters, User } from "@/lib/types";
 import { AccountMenu } from "./account-menu";
+import { LanguageSwitcher } from "./language-switcher";
 export function DashboardShell({
   user,
   filters,
@@ -22,6 +24,7 @@ export function DashboardShell({
   onOverview: () => void;
   children: React.ReactNode;
 }) {
+  const { tr } = useI18n();
   const query = new URLSearchParams(
     Object.entries(filters).map(([k, v]) => [k, String(v)]),
   );
@@ -39,20 +42,20 @@ export function DashboardShell({
             />
           </a>
           <span className="brand-divider" />
-          <nav className="product-switcher" aria-label="Dashboard area">
+          <nav className="product-switcher" aria-label={tr("nav.area")}>
             <a href="#overview" aria-current="page" onClick={onOverview}>
-              Sales Performance
+              {tr("nav.performance")}
             </a>
-            <button onClick={onBrand}>Sales by Brand (BO)</button>
+            <button onClick={onBrand}>{tr("nav.brand")}</button>
           </nav>
         </div>
         <nav className="topnav">
           <span className="topnav-links">
             {[
-              ["overview", "Executive overview"],
-              ["analysis", "Analysis"],
-              ["business-units", "Business Units Entities"],
-              ["data-quality", "Management checks"],
+              ["overview", tr("nav.overview")],
+              ["analysis", tr("nav.analysis")],
+              ["business-units", tr("nav.entities")],
+              ["data-quality", tr("nav.checks")],
             ].map(([id, label]) => (
               <a key={id} href={`#${id}`} onClick={onOverview}>
                 {label}
@@ -62,16 +65,27 @@ export function DashboardShell({
         </nav>
         <div className="topbar-actions">
           {["superadmin", "region_admin", "editor"].includes(user.role) && (
-            <button className="import-data" onClick={onImport}>
+            <button
+              className="import-data"
+              onClick={onImport}
+              title={tr("nav.import")}
+              aria-label={tr("nav.import")}
+            >
               <FileUp size={15} />
-              <span>Import Data</span>
+              <span>{tr("nav.import")}</span>
             </button>
           )}
-          <a className="excel-export" href={`/api/export?${query}`}>
+          <a
+            className="excel-export"
+            href={`/api/export?${query}`}
+            title={tr("nav.export")}
+            aria-label={tr("nav.export")}
+          >
             <Download size={15} />
-            <span>Export Excel</span>
+            <span>{tr("nav.export")}</span>
           </a>
           <AccountMenu user={user} onAdmin={onAdmin} onLogout={onLogout} />
+          <LanguageSwitcher />
         </div>
       </header>
       {children}

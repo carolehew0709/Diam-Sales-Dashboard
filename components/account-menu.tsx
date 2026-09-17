@@ -1,4 +1,5 @@
 "use client";
+import { useI18n } from "@/components/i18n-provider";
 import { useState } from "react";
 import { canManageUsers } from "@/lib/permissions";
 import type { User } from "@/lib/types";
@@ -11,6 +12,7 @@ export function AccountMenu({
   onAdmin: () => void;
   onLogout: () => void;
 }) {
+  const { tr, display } = useI18n();
   const [open, setOpen] = useState(false);
   return (
     <div className="apac-account">
@@ -26,13 +28,14 @@ export function AccountMenu({
           <strong>{user.name}</strong>
           <small>{user.email}</small>
           <small>
-            {user.role} · {user.region}
+            {display(user.role)} · {display(user.region)}
           </small>
           <details>
-            <summary>My permissions</summary>
+            <summary>{tr("account.permissions")}</summary>
             {Object.entries(user.permissions).map(([id, p]) => (
               <p key={id}>
-                {id.toUpperCase()}: {p.join(", ") || "No access"}
+                {id.toUpperCase()}:{" "}
+                {p.map(display).join(", ") || tr("common.noAccess")}
               </p>
             ))}
           </details>
@@ -43,10 +46,10 @@ export function AccountMenu({
                 onAdmin();
               }}
             >
-              Accounts & permissions
+              {tr("account.manage")}
             </button>
           )}
-          <button onClick={onLogout}>Sign out</button>
+          <button onClick={onLogout}>{tr("account.signOut")}</button>
         </div>
       )}
     </div>

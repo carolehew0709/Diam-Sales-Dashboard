@@ -1,10 +1,12 @@
 "use client";
+import { useI18n } from "@/components/i18n-provider";
 import { matchesRegion } from "@/lib/entities";
 import { useEffect, useState } from "react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
 import { PerformanceChart } from "@/components/performance-chart";
+import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   defaultFilters,
   formatK,
@@ -54,18 +56,20 @@ function MetricCard({
   note,
   children,
   accent = false,
+  unit = "kEUR",
 }: {
   label: string;
   value: string;
   note: string;
   children?: React.ReactNode;
   accent?: boolean;
+  unit?: "kEUR" | "FY";
 }) {
   return (
     <article className={`kpi-card ${accent ? "kpi-accent" : ""}`}>
       <div className="kpi-topline">
         <span>{label}</span>
-        <small>{label === "Coverage" ? "FY" : "kEUR"}</small>
+        <small>{unit}</small>
       </div>
       <strong>{value}</strong>
       {children}
@@ -86,19 +90,20 @@ function MetricsTable({
   }[];
   onSelect?: (id: string) => void;
 }) {
+  const { tr, display } = useI18n();
   return (
     <div className="table-wrap">
       <table className="bu-table">
         <thead>
           <tr>
-            <th>BU / Entity</th>
-            <th className="numeric">Annual Dashboard</th>
-            <th className="numeric">Sales & Dashboard</th>
-            <th className="numeric">Prospect</th>
-            <th className="numeric">Selected scenario</th>
-            <th className="numeric">Coverage</th>
-            <th className="numeric">Residual gap</th>
-            <th className="numeric">Remaining · month</th>
+            <th>{tr("common.buEntity")}</th>
+            <th className="numeric">{tr("metric.budget")}</th>
+            <th className="numeric">{tr("metric.base")}</th>
+            <th className="numeric">{tr("metric.prospect")}</th>
+            <th className="numeric">{tr("metric.scenario")}</th>
+            <th className="numeric">{tr("metric.coverage")}</th>
+            <th className="numeric">{tr("metric.gap")}</th>
+            <th className="numeric">{tr("metric.remainingShort")}</th>
           </tr>
         </thead>
         <tbody>
@@ -116,7 +121,7 @@ function MetricsTable({
                   <strong>{r.name}</strong>
                 )}
                 <small>
-                  {r.description}
+                  {r.description && display(r.description)}
                   {r.week ? ` · W${r.week}` : ""}
                 </small>
               </td>
@@ -126,10 +131,12 @@ function MetricsTable({
               <td className="numeric">
                 {formatK(r.metrics.scenario)}
                 {!r.metrics.scenarioComplete && (
-                  <small>Partial · Prospect/source pending</small>
+                  <small>{tr("metric.partial")}</small>
                 )}
               </td>
-              <td className="numeric">{percent(r.metrics.coverage)}</td>
+              <td className="numeric">
+                {display(percent(r.metrics.coverage))}
+              </td>
               <td className="numeric">{formatK(r.metrics.gap)}</td>
               <td className="numeric">{formatK(r.metrics.remaining)}</td>
             </tr>
@@ -148,13 +155,14 @@ function DashboardView({
   filters: Filters;
   setFilters: (f: Filters) => void;
 }) {
+  const { tr, display, locale } = useI18n();
   const [readiness, setReadiness] = useState(false),
     [frequency, setFrequency] = useState("month"),
     [matrixLevel, setMatrixLevel] = useState("entity"),
     [customer, setCustomer] = useState("all");
   const t = data.totals;
   const partial = (key: Dashboard["partialKeys"][number]) =>
-    data.partialKeys.includes(key) ? " · partial source coverage" : "";
+    data.partialKeys.includes(key) ? tr("metric.partialSource") : "";
   const selectEntity = (id: string) =>
     setFilters({
       ...filters,
@@ -165,8 +173,11 @@ function DashboardView({
   const totalRows = [
     {
       id: "china",
-      name: "China total",
-      description: `${data.china.filter((r) => r.snapshot).length}/${data.china.length} sources · known values`,
+      name: tr("china.total"),
+      description: tr("notes.sources", {
+        count: data.china.filter((r) => r.snapshot).length,
+        total: data.china.length,
+      }),
       metrics: data.chinaTotal,
     },
     ...data.china.map((r) => ({
@@ -190,12 +201,11 @@ function DashboardView({
     <>
       <section className="executive-head" id="overview">
         <div>
-          <p className="eyebrow">Business performance · {filters.year}</p>
-          <h1>Sales {filters.year}</h1>
-          <p className="executive-subtitle">
-            A weekly and monthly view of Annual Dashboard, Sales and Prospect by
-            BU and Entity.
+          <p className="eyebrow">
+            {tr("overview.performance")} {filters.year}
           </p>
+          <h1>{tr("overview.salesYear", { year: filters.year })}</h1>
+          <p className="executive-subtitle">{tr("overview.subtitle")}</p>
         </div>
         <div className="snapshot-wrapper">
           <button
@@ -204,29 +214,41 @@ function DashboardView({
             aria-expanded={readiness}
           >
             <span className="snapshot-main">
-              <span>Active snapshot</span>
+              <span>{tr("snapshot.active")}</span>
               <strong>
                 {data.weeks.length
                   ? data.weeks.map((w) => `W${w}`).join(" / ")
-                  : "No source"}
+                  : tr("snapshot.none")}
               </strong>
             </span>
             <span className="snapshot-detail">
               <span>
                 {data.weeks.length > 1
-                  ? "Mixed source weeks"
-                  : "Source snapshot"}{" "}
+                  ? tr("snapshot.mixed")
+                  : tr("snapshot.source")}{" "}
                 · 2026
               </span>
-              <span>EUR K · revision {data.revision}</span>
+              <span>
+                EUR K · {tr("notes.revision", { revision: data.revision })}
+              </span>
             </span>
             <span className="snapshot-readiness-compact">
               <strong>
-                {data.sourceCount}/{data.rows.length} sources available
+                {tr("snapshot.count", {
+                  count: data.sourceCount,
+                  total: data.rows.length,
+                })}
               </strong>
-              <small>{data.checks.length} source checks</small>
+              <small>
+                {tr("snapshot.checkCount", { count: data.checks.length })}
+              </small>
               <strong>
-                Prospect {t.prospect === null ? "pending" : "partly supplied"}
+                {tr("snapshot.prospectState", {
+                  state:
+                    t.prospect === null
+                      ? tr("snapshot.pending")
+                      : tr("snapshot.partial"),
+                })}
               </strong>
             </span>
             <span>⌄</span>
@@ -234,10 +256,10 @@ function DashboardView({
           {readiness && (
             <section className="snapshot-readiness-panel">
               <div className="readiness-panel-head">
-                <h2>Data readiness</h2>
+                <h2>{tr("snapshot.readiness")}</h2>
                 <button
                   className="readiness-close"
-                  aria-label="Close data readiness"
+                  aria-label={tr("snapshot.close")}
                   onClick={() => setReadiness(false)}
                 >
                   ×
@@ -247,16 +269,17 @@ function DashboardView({
                 {data.rows.map((r) => (
                   <div className="readiness-item" key={r.entity.id}>
                     <strong>
-                      {r.entity.code} · {r.snapshot ? "Review" : "Missing"}
+                      {r.entity.code} ·{" "}
+                      {r.snapshot ? tr("common.review") : tr("common.missing")}
                     </strong>
                     <p>
                       {r.snapshot
                         ? `${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}`
-                        : "Source not supplied"}
+                        : tr("snapshot.notSupplied")}
                     </p>
                     {r.snapshot && (
                       <details>
-                        <summary>Show source details</summary>
+                        <summary>{tr("snapshot.details")}</summary>
                         <p>{r.snapshot.sourceNote}</p>
                         {Object.entries(r.snapshot.sourceCells).map(
                           ([key, value]) => (
@@ -267,7 +290,7 @@ function DashboardView({
                         )}
                         <ul>
                           {r.snapshot.findings.map((f, i) => (
-                            <li key={i}>{f}</li>
+                            <li key={i}>{display(f)}</li>
                           ))}
                         </ul>
                       </details>
@@ -279,9 +302,9 @@ function DashboardView({
           )}
         </div>
       </section>
-      <section className="filter-bar" aria-label="Global filters">
+      <section className="filter-bar" aria-label={tr("filters.global")}>
         <div className="filter-field">
-          <label htmlFor="region">Region</label>
+          <label htmlFor="region">{tr("filters.region")}</label>
           <select
             id="region"
             value={filters.region}
@@ -296,13 +319,13 @@ function DashboardView({
           >
             {data.regions.map((r) => (
               <option key={r} value={r}>
-                {r === "APAC" ? "APAC (Total)" : r}
+                {r === "APAC" ? tr("filters.apac") : display(r)}
               </option>
             ))}
           </select>
         </div>
         <div className="filter-field">
-          <label htmlFor="bu">Business Unit</label>
+          <label htmlFor="bu">{tr("common.bu")}</label>
           <select
             id="bu"
             value={filters.bu}
@@ -310,7 +333,7 @@ function DashboardView({
               setFilters({ ...filters, bu: e.target.value, entity: "all" })
             }
           >
-            <option value="all">All BUs</option>
+            <option value="all">{tr("filters.allBU")}</option>
             {[
               ...new Set(
                 data.entities
@@ -323,13 +346,13 @@ function DashboardView({
           </select>
         </div>
         <div className="filter-field">
-          <label htmlFor="entity">Entity</label>
+          <label htmlFor="entity">{tr("common.entity")}</label>
           <select
             id="entity"
             value={filters.entity}
             onChange={(e) => setFilters({ ...filters, entity: e.target.value })}
           >
-            <option value="all">All entities</option>
+            <option value="all">{tr("filters.allEntities")}</option>
             {data.entities
               .filter(
                 (e) =>
@@ -344,7 +367,7 @@ function DashboardView({
           </select>
         </div>
         <Segmented
-          label="Analysis years"
+          label={tr("filters.years")}
           value={String(filters.year)}
           options={[
             { value: "2026", label: "2026" },
@@ -353,30 +376,30 @@ function DashboardView({
           onChange={(v) => setFilters({ ...filters, year: Number(v) })}
         />
         <Segmented
-          label="Scenario"
+          label={tr("filters.scenario")}
           value={filters.scenario}
           options={[
-            { value: "Sales", label: "Sales" },
-            { value: "Sales + Prospect", label: "Sales + Prospect" },
+            { value: "Sales", label: tr("metric.sales") },
+            { value: "Sales + Prospect", label: tr("metric.salesProspect") },
           ]}
           onChange={(v) =>
             setFilters({ ...filters, scenario: v as Filters["scenario"] })
           }
         />
         <Segmented
-          label="Sales type"
+          label={tr("filters.type")}
           value={filters.salesType}
           options={[
-            { value: "all", label: "All sales" },
-            { value: "external", label: "External" },
-            { value: "group", label: "Group" },
+            { value: "all", label: tr("filters.allSales") },
+            { value: "external", label: tr("common.external") },
+            { value: "group", label: tr("common.group") },
           ]}
           onChange={(v) =>
             setFilters({ ...filters, salesType: v as Filters["salesType"] })
           }
         />
       </section>
-      <section className="china-strip" aria-label="China total and entities">
+      <section className="china-strip" aria-label={tr("china.details")}>
         <button
           onClick={() => selectEntity("all")}
           className={
@@ -387,11 +410,14 @@ function DashboardView({
               : ""
           }
         >
-          <small>CHINA TOTAL · {filters.year}</small>
+          <small>
+            {tr("china.totalUpper")}
+            {filters.year}
+          </small>
           <strong>
             {formatK(data.chinaTotal.base)} <em>kEUR</em>
           </strong>
-          <span>Sales & Dashboard · known sources</span>
+          <span>{tr("china.known")}</span>
         </button>
         {data.china.map((r) => (
           <button
@@ -400,65 +426,66 @@ function DashboardView({
             onClick={() => selectEntity(r.entity.id)}
           >
             <small>
-              {r.entity.code} · {r.entity.description}
+              {r.entity.code} · {display(r.entity.description)}
             </small>
             <strong>
               {formatK(r.metrics.base)} <em>kEUR</em>
             </strong>
             <span>
               {r.snapshot
-                ? `W${r.snapshot.week} · ${r.metrics.budget === null ? "Budget review" : "Source review"}`
-                : "Source pending"}
+                ? `W${r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`
+                : tr("china.pending")}
             </span>
           </button>
         ))}
       </section>
       {!data.rows.length && (
-        <p className="apac-notice">
-          No permitted source data for this selection. Choose APAC or China to
-          view available records.
-        </p>
+        <p className="apac-notice">{tr("overview.noData")}</p>
       )}
       <section className="kpi-grid">
         <MetricCard
-          label="Annual Dashboard"
+          label={tr("metric.budget")}
           value={formatK(t.budget)}
-          note={`Approved annual budget ${filters.year}${t.budget === null ? " · Review missing budgets" : ""}`}
+          note={tr("notes.budget", {
+            year: filters.year,
+            note: t.budget === null ? tr("notes.missingBudget") : "",
+          })}
         />
         <MetricCard
-          label="Sales & Dashboard (OB)"
+          label={tr("metric.baseOB")}
           value={formatK(t.base)}
-          note={`YTD invoiced + committed annual OB${partial("base")}`}
+          note={tr("notes.base", { note: partial("base") })}
         >
           <div className="kpi-sales-split">
             <div>
-              <span>Sales to date</span>
+              <span>{tr("metric.salesDate")}</span>
               <strong>{formatK(t.sales)}</strong>
             </div>
             <div>
-              <span>Dashboard (OB)</span>
+              <span>{tr("metric.ob")}</span>
               <strong>{formatK(t.orderbook)}</strong>
             </div>
           </div>
-          <small>Split excludes unsplit legacy DCP data</small>
+          <small>{tr("metric.unsplit")}</small>
         </MetricCard>
         <MetricCard
-          label="Sales + Prospect"
+          label={tr("metric.salesProspect")}
           value={formatK(t.scenario)}
           accent
-          note={`${filters.scenario === "Sales" ? "Sales scenario selected" : "Expected annual sales including Prospect"}${partial("scenario")}`}
+          note={`${filters.scenario === "Sales" ? tr("metric.salesSelected") : tr("metric.expected")}${partial("scenario")}`}
         >
           <div className="kpi-sales-split">
             <div>
-              <span>Known Prospect</span>
+              <span>{tr("metric.knownProspect")}</span>
               <strong>{formatK(t.prospect)}</strong>
             </div>
           </div>
         </MetricCard>
         <MetricCard
-          label="Coverage"
-          value={percent(t.coverage)}
-          note={`Selected annual scenario / approved annual budget ${filters.year}`}
+          label={tr("metric.coverage")}
+          unit="FY"
+          value={display(percent(t.coverage))}
+          note={tr("notes.coverage", { year: filters.year })}
         >
           <div className="kpi-meter">
             <span
@@ -467,41 +494,47 @@ function DashboardView({
           </div>
         </MetricCard>
         <MetricCard
-          label="Residual Gap"
+          label={tr("metric.gapTitle")}
           value={formatK(t.gap)}
-          note={`Annual budget less selected scenario · ${filters.year}${t.gap === null ? " · Review" : ""}`}
+          note={tr("notes.gap", {
+            year: filters.year,
+            note: t.gap === null ? tr("notes.reviewSuffix") : "",
+          })}
         />
         <MetricCard
-          label="Remaining this month"
+          label={tr("metric.remaining")}
           value={formatK(t.remaining)}
-          note={`Full-month estimate less MTD invoiced${partial("remaining")}${filters.year === 2027 ? " · future year unavailable" : ""}`}
+          note={tr("notes.remaining", {
+            note: partial("remaining"),
+            future: filters.year === 2027 ? tr("notes.future") : "",
+          })}
         />
       </section>
       <section className="briefing-strip">
         <div className="briefing-title">
           <span className="briefing-mark">↗</span>
           <div>
-            <p>Executive summary</p>
-            <h2>What requires attention this week</h2>
+            <p>{tr("overview.summary")}</p>
+            <h2>{tr("overview.attention")}</h2>
           </div>
         </div>
         <div className="briefing-points">
           <span>
             <b>{data.rows.filter((r) => r.metrics.budget === null).length}</b>{" "}
-            annual budgets unavailable
+            {tr("overview.budgetsMissing")}
           </span>
           <span>
             <b>{data.rows.filter((r) => r.metrics.prospect === null).length}</b>{" "}
-            Prospect inputs pending
+            {tr("overview.prospectPending")}
           </span>
           <span>
             {data.partialKeys.length
-              ? "Partial totals: known source values only"
-              : "Source values available"}{" "}
+              ? tr("overview.partial")
+              : tr("overview.available")}{" "}
             ·{" "}
             {data.weeks.length > 1
-              ? "mixed reporting weeks"
-              : "weekly snapshot"}
+              ? tr("overview.mixed")
+              : tr("overview.weekly")}
           </span>
         </div>
       </section>
@@ -509,31 +542,34 @@ function DashboardView({
         <article className="panel cumulative-panel">
           <div className="panel-heading">
             <div>
-              <p className="panel-kicker">Annual trajectory · EUR K</p>
-              <h2>Annual Dashboard vs cumulative scenario</h2>
+              <p className="panel-kicker">{tr("chart.trajectory")}</p>
+              <h2>{tr("chart.cumulativeTitle")}</h2>
               <p>
-                {filters.bu} · {filters.year} · {filters.salesType}
+                {filters.bu === "all" ? tr("filters.allBU") : filters.bu} ·{" "}
+                {filters.year} ·{" "}
+                {filters.salesType === "all"
+                  ? tr("filters.allSales")
+                  : display(filters.salesType)}
               </p>
             </div>
           </div>
           <PerformanceChart rows={t.cumulative} cumulative />
           <div className="panel-foot">
             <span>
-              Annual selected scenario {formatK(t.scenario)} kEUR · gap{" "}
-              {formatK(t.gap)} kEUR
+              {tr("notes.annualScenario", {
+                scenario: formatK(t.scenario),
+                gap: formatK(t.gap),
+              })}
             </span>
-            <span className="source-note">
-              Current YTD anchor + monthly committed orders. Missing Prospect
-              phasing remains blank.
-            </span>
+            <span className="source-note">{tr("chart.anchor")}</span>
           </div>
           <details className="analysis-disclosure">
             <summary>
               <span>
-                <strong>Compare performance</strong>
-                <small>Annual scenario for each Business Unit Entity</small>
+                <strong>{tr("chart.compare")}</strong>
+                <small>{tr("chart.compareNote")}</small>
               </span>
-              <span className="disclosure-action">Explore comparison →</span>
+              <span className="disclosure-action">{tr("chart.explore")}</span>
             </summary>
             <div className="analysis-disclosure-body comparison-grid">
               {data.rows.map((r) => (
@@ -548,8 +584,8 @@ function DashboardView({
         <article className="panel gap-panel">
           <div className="panel-heading">
             <div>
-              <p className="panel-kicker">Contribution to performance</p>
-              <h2>Gap by BU</h2>
+              <p className="panel-kicker">{tr("chart.contribution")}</p>
+              <h2>{tr("chart.gapBU")}</h2>
             </div>
           </div>
           <div className="gap-list">
@@ -567,22 +603,24 @@ function DashboardView({
                   />
                 </div>
                 <b>
-                  {b.metrics.gap === null ? "Review" : formatK(b.metrics.gap)}
+                  {b.metrics.gap === null
+                    ? tr("common.review")
+                    : formatK(b.metrics.gap)}
                 </b>
               </div>
             ))}
           </div>
           <div className="gap-callout">
-            <span>Selected annual gap</span>
+            <span>{tr("chart.annualGap")}</span>
             <strong>{formatK(t.gap)}</strong>
           </div>
           <div className="sales-mix-block">
             <div className="sales-mix-heading">
               <div>
-                <span>Sales mix</span>
-                <strong>External vs Group</strong>
+                <span>{tr("chart.mix")}</span>
+                <strong>{tr("chart.externalGroup")}</strong>
               </div>
-              <small>Known classified source values</small>
+              <small>{tr("chart.classified")}</small>
             </div>
             <div className="apac-mix">
               <div
@@ -595,17 +633,19 @@ function DashboardView({
               >
                 <span>
                   {knownMix ? `${externalShare.toFixed(0)}%` : "—"}
-                  <small>External</small>
+                  <small>{tr("common.external")}</small>
                 </span>
               </div>
               <div>
                 <p>
-                  External <b>{formatK(data.external)}</b>
+                  {tr("common.external")}
+                  <b>{formatK(data.external)}</b>
                 </p>
                 <p>
-                  Group <b>{formatK(data.group)}</b>
+                  {tr("common.group")}
+                  <b>{formatK(data.group)}</b>
                 </p>
-                <small>DCP aggregate has no supplied split.</small>
+                <small>{tr("chart.dcpSplit")}</small>
               </div>
             </div>
           </div>
@@ -615,9 +655,9 @@ function DashboardView({
         <article className="panel monthly-panel">
           <div className="panel-heading">
             <div>
-              <p className="panel-kicker">Monthly phasing · EUR K</p>
-              <h2>Annual Dashboard vs monthly performance</h2>
-              <p>Sales and Prospect follow supplied monthly phasing</p>
+              <p className="panel-kicker">{tr("chart.monthly")}</p>
+              <h2>{tr("chart.monthlyTitle")}</h2>
+              <p>{tr("chart.phasing")}</p>
             </div>
           </div>
           <PerformanceChart rows={t.monthly} />
@@ -625,28 +665,30 @@ function DashboardView({
         <article className="panel weekly-panel">
           <div className="panel-heading">
             <div>
-              <p className="panel-kicker">Current month control · EUR K</p>
-              <h2>Invoice plan vs invoiced</h2>
+              <p className="panel-kicker">{tr("chart.control")}</p>
+              <h2>{tr("chart.invoice")}</h2>
               <p>
                 {[
                   ...new Set(
                     data.rows.flatMap((r) =>
                       r.snapshot && r.metrics.monthEstimate !== null
-                        ? [months[r.snapshot.month - 1]]
+                        ? [display(months[r.snapshot.month - 1])]
                         : [],
                     ),
                   ),
                 ].join(" / ")}{" "}
-                · source reporting month
+                {tr("chart.sourceMonth")}
               </p>
             </div>
           </div>
           <div className="apac-delivery">
             <strong>
               {formatK(t.monthSales)}
-              <small>invoiced MTD</small>
+              <small>{tr("chart.mtd")}</small>
             </strong>
-            <span>of {formatK(t.monthEstimate)} estimated</span>
+            <span>
+              {tr("notes.estimate", { amount: formatK(t.monthEstimate) })}
+            </span>
             <div className="delivery-track">
               <i
                 style={{
@@ -655,34 +697,30 @@ function DashboardView({
               />
             </div>
             <p>
-              Still to invoice <b>{formatK(t.remaining)} kEUR</b>
+              {tr("chart.stillInvoice")}
+              <b>{formatK(t.remaining)} kEUR</b>
             </p>
           </div>
           <div className="panel-foot">
-            <span>
-              Full-month estimate less MTD invoiced. Annual coverage and gap are
-              calculated separately.
-            </span>
-            <span className="source-note">
-              Partial when monthly invoicing inputs are unavailable.
-            </span>
+            <span>{tr("chart.monthNote")}</span>
+            <span className="source-note">{tr("chart.partialMonth")}</span>
           </div>
         </article>
       </section>
       <section className="panel commercial-panel">
         <div className="panel-heading">
           <div>
-            <p className="panel-kicker">Committed Dashboard exposure · EUR K</p>
-            <h2>Dashboard by customer and brand</h2>
-            <p>Largest committed exposures from order lines</p>
+            <p className="panel-kicker">{tr("commercial.exposure")}</p>
+            <h2>{tr("commercial.title")}</h2>
+            <p>{tr("commercial.largest")}</p>
           </div>
           <label className="commercial-filter">
-            <span>Customer</span>
+            <span>{tr("common.customer")}</span>
             <select
               value={customer}
               onChange={(e) => setCustomer(e.target.value)}
             >
-              <option value="all">All available</option>
+              <option value="all">{tr("filters.allAvailable")}</option>
               {data.commercial.map((c) => (
                 <option key={c.customer}>{c.customer}</option>
               ))}
@@ -710,63 +748,58 @@ function DashboardView({
             ))}
         </div>
         {!data.commercial.length && (
-          <p className="muted">
-            No customer detail supplied for this selection.
-          </p>
+          <p className="muted">{tr("commercial.empty")}</p>
         )}
-        <div className="panel-foot">
-          Committed orders only; Prospect excluded. Brand classification is not
-          supplied and is not inferred.
-        </div>
+        <div className="panel-foot">{tr("commercial.note")}</div>
       </section>
       <section className="panel matrix-panel" id="analysis">
         <details open>
           <summary>
             <span>
-              <p className="panel-kicker">Period analysis · EUR K</p>
-              <h2>Time matrix</h2>
-              <small>Monthly phasing and weekly annual scenario history</small>
+              <p className="panel-kicker">{tr("matrix.period")}</p>
+              <h2>{tr("matrix.title")}</h2>
+              <small>{tr("matrix.subtitle")}</small>
             </span>
-            <span className="disclosure-action">Explore time matrix →</span>
+            <span className="disclosure-action">{tr("matrix.explore")}</span>
           </summary>
           <div className="matrix-body">
             <div className="analysis-toolbar matrix-toolbar">
               <Segmented
-                label="Frequency"
+                label={tr("matrix.frequency")}
                 value={frequency}
                 options={[
-                  { value: "month", label: "Month" },
-                  { value: "week", label: "Week" },
+                  { value: "month", label: tr("common.month") },
+                  { value: "week", label: tr("common.week") },
                 ]}
                 onChange={setFrequency}
               />
               <Segmented
-                label="Rows"
+                label={tr("matrix.rows")}
                 value={matrixLevel}
                 options={[
-                  { value: "entity", label: "Entities" },
-                  { value: "bu", label: "Business Units" },
+                  { value: "entity", label: tr("common.entities") },
+                  { value: "bu", label: tr("common.bus") },
                 ]}
                 onChange={setMatrixLevel}
               />
               <p>
-                {filters.year} · {filters.scenario}
+                {filters.year} · {display(filters.scenario)}
               </p>
             </div>
             <div className="matrix-scroll">
               <table className="time-matrix">
                 <thead>
                   <tr>
-                    <th>BU / Entity</th>
+                    <th>{tr("common.buEntity")}</th>
                     {(frequency === "month"
                       ? months
                       : weeks.map((w) => `W${w}`)
                     ).map((m) => (
                       <th className="numeric" key={m}>
-                        {m}
+                        {display(m)}
                       </th>
                     ))}
-                    <th className="numeric">FY selected</th>
+                    <th className="numeric">{tr("matrix.fy")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -806,22 +839,16 @@ function DashboardView({
                 </tbody>
               </table>
             </div>
-            <p className="muted">
-              Blank cells mean unavailable source detail. Weekly snapshots are
-              never added together.
-            </p>
+            <p className="muted">{tr("matrix.note")}</p>
           </div>
         </details>
       </section>
       <section className="panel bu-panel" id="business-units">
         <div className="panel-heading">
           <div>
-            <p className="panel-kicker">China · Entity detail</p>
-            <h2>China total and entities</h2>
-            <p>
-              China remains visible across dashboard selections. Totals use
-              permitted entities and known values.
-            </p>
+            <p className="panel-kicker">{tr("china.entityDetail")}</p>
+            <h2>{tr("china.details")}</h2>
+            <p>{tr("china.note")}</p>
           </div>
         </div>
         <MetricsTable
@@ -844,26 +871,24 @@ function DashboardView({
         <details open>
           <summary>
             <div>
-              <p className="panel-kicker">Executive controls</p>
-              <h2>Management checks</h2>
+              <p className="panel-kicker">{tr("checks.controls")}</p>
+              <h2>{tr("nav.checks")}</h2>
             </div>
-            <span>{data.checks.length} items to review</span>
+            <span>{tr("checks.count", { count: data.checks.length })}</span>
           </summary>
-          <p className="quality-intro">
-            Coverage and annual gap stay unavailable until all selected entities
-            have comparable budgets and scenario inputs.
-          </p>
+          <p className="quality-intro">{tr("checks.note")}</p>
           <div className="quality-grid">
             {data.rows.map((r) => (
               <article className="apac-check" key={r.entity.id}>
                 <strong>
-                  {r.entity.code} · {r.snapshot ? "Review" : "Missing source"}
+                  {r.entity.code} ·{" "}
+                  {r.snapshot ? tr("common.review") : tr("snapshot.missing")}
                 </strong>
                 <ul>
                   {(
-                    r.snapshot?.findings ?? ["Source workbook not supplied"]
+                    r.snapshot?.findings ?? [tr("snapshot.workbookMissing")]
                   ).map((f, i) => (
-                    <li key={i}>{f}</li>
+                    <li key={i}>{display(f)}</li>
                   ))}
                 </ul>
               </article>
@@ -872,11 +897,13 @@ function DashboardView({
         </details>
       </section>
       <footer className="apac-footer">
-        <span>DIAM · APAC Sales Performance</span>
+        <span>{tr("footer.title")}</span>
         <span>
           {data.latestPublish
-            ? `Last publish ${new Date(data.latestPublish).toLocaleString()}`
-            : "Workbook baseline · no import published"}{" "}
+            ? tr("notes.lastPublish", {
+                date: new Date(data.latestPublish).toLocaleString(locale),
+              })
+            : tr("snapshot.baseline")}{" "}
           · kEUR
         </span>
       </footer>
@@ -884,6 +911,7 @@ function DashboardView({
   );
 }
 export default function Home() {
+  const { tr, display } = useI18n();
   const [user, setUser] = useState<User | null>(null),
     [sessionChecked, setSessionChecked] = useState(false),
     [filters, setFilters] = useState<Filters>(defaultFilters),
@@ -961,17 +989,20 @@ export default function Home() {
     setView("overview");
   };
   if (!sessionChecked)
-    return <main className="login-shell">Loading account…</main>;
+    return <main className="login-shell">{tr("auth.loading")}</main>;
   if (!user)
     return (
       <main className="login-shell">
+        <div className="login-language">
+          <LanguageSwitcher />
+        </div>
         <form className="panel login-panel" onSubmit={(e) => void login(e)}>
           <img src="/diam-logo.png" alt="DIAM" width="100" />
-          <p className="panel-kicker">APAC sales performance</p>
-          <h1>Sign in</h1>
-          <p>Access your permitted regions and entities.</p>
+          <p className="panel-kicker">{tr("auth.performance")}</p>
+          <h1>{tr("auth.signIn")}</h1>
+          <p>{tr("auth.access")}</p>
           <label>
-            Email
+            {tr("common.email")}
             <input
               type="email"
               autoComplete="username"
@@ -981,7 +1012,7 @@ export default function Home() {
             />
           </label>
           <label>
-            Password
+            {tr("common.password")}
             <input
               type="password"
               autoComplete="current-password"
@@ -991,11 +1022,11 @@ export default function Home() {
             />
           </label>
           <button className="apac-button primary" disabled={loading}>
-            Sign in
+            {tr("auth.signIn")}
           </button>
           {error && (
             <p role="alert" className="error-message">
-              {error}
+              {display(error)}
             </p>
           )}
         </form>
@@ -1014,12 +1045,12 @@ export default function Home() {
       <main className="page-shell">
         {error && (
           <p className="apac-notice" role="alert">
-            {error}
+            {display(error)}
           </p>
         )}
         {loading && (
           <div className="loading-strip" role="status">
-            Updating selected scope…
+            {tr("auth.updating")}
           </div>
         )}
         {view === "imports" ? (
@@ -1033,14 +1064,11 @@ export default function Home() {
           <AdminPanel onClose={() => setView("overview")} />
         ) : view === "brand" ? (
           <section className="panel apac-workspace">
-            <p className="panel-kicker">Sales by brand · APAC</p>
-            <h1>Brand source pending</h1>
-            <p>
-              No formal APAC brand source is present in the supplied workbooks.
-              Customer order detail is available on the overview.
-            </p>
+            <p className="panel-kicker">{tr("brand.title")}</p>
+            <h1>{tr("brand.pending")}</h1>
+            <p>{tr("brand.note")}</p>
             <button className="apac-button" onClick={() => setView("overview")}>
-              Back to overview
+              {tr("common.backOverview")}
             </button>
           </section>
         ) : data ? (
@@ -1055,7 +1083,7 @@ export default function Home() {
             />
           </div>
         ) : (
-          <p>Loading dashboard…</p>
+          <p>{tr("auth.dashboardLoading")}</p>
         )}
       </main>
     </DashboardShell>

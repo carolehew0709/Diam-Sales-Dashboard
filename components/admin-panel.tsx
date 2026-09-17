@@ -1,8 +1,10 @@
 "use client";
+import { useI18n } from "@/components/i18n-provider";
 import { useEffect, useState } from "react";
 import { entities } from "@/lib/entities";
 import type { User } from "@/lib/types";
 export function AdminPanel({ onClose }: { onClose: () => void }) {
+  const { tr, display } = useI18n();
   const [users, setUsers] = useState<User[]>([]),
     [active, setActive] = useState<User | null>(null),
     [password, setPassword] = useState(""),
@@ -23,9 +25,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
       body: JSON.stringify({ ...active, ...(password ? { password } : {}) }),
     });
     const j = await r.json();
-    setMessage(
-      j.ok ? "Account saved. Updated permissions apply immediately." : j.error,
-    );
+    setMessage(j.ok ? tr("admin.saved") : j.error);
     if (j.ok) {
       setActive(j.user);
       setPassword("");
@@ -36,11 +36,11 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
     <section className="panel apac-workspace">
       <div className="panel-heading">
         <div>
-          <p className="panel-kicker">Access control</p>
-          <h2>Accounts & permissions</h2>
+          <p className="panel-kicker">{tr("admin.access")}</p>
+          <h2>{tr("account.manage")}</h2>
         </div>
         <button className="apac-button" onClick={onClose}>
-          Back to dashboard
+          {tr("common.backDashboard")}
         </button>
       </div>
       <div className="admin-grid">
@@ -55,7 +55,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
               }}
             >
               <strong>{u.name}</strong>
-              <small>{u.role}</small>
+              <small>{display(u.role)}</small>
             </button>
           ))}
           <button
@@ -72,14 +72,14 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
               })
             }
           >
-            Add account
+            {tr("admin.add")}
           </button>
         </div>
         {active && (
           <div>
             <div className="form-grid">
               <label>
-                Name
+                {tr("common.name")}
                 <input
                   value={active.name}
                   onChange={(e) =>
@@ -88,7 +88,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
                 />
               </label>
               <label>
-                Email
+                {tr("common.email")}
                 <input
                   type="email"
                   value={active.email}
@@ -98,7 +98,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
                 />
               </label>
               <label>
-                Role
+                {tr("common.role")}
                 <select
                   value={active.role}
                   onChange={(e) =>
@@ -115,12 +115,14 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
                     "viewer",
                     "audit_viewer",
                   ].map((r) => (
-                    <option key={r}>{r}</option>
+                    <option key={r} value={r}>
+                      {display(r)}
+                    </option>
                   ))}
                 </select>
               </label>
               <label>
-                {active.id ? "New password (optional)" : "Password"}
+                {active.id ? tr("admin.password") : tr("common.password")}
                 <input
                   type="password"
                   minLength={12}
@@ -133,9 +135,9 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
             <table className="bu-table">
               <thead>
                 <tr>
-                  <th>Entity</th>
-                  <th>View</th>
-                  <th>Edit</th>
+                  <th>{tr("common.entity")}</th>
+                  <th>{tr("common.view")}</th>
+                  <th>{tr("common.edit")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -146,7 +148,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
                       <td key={p}>
                         <input
                           type="checkbox"
-                          aria-label={`${e.code} ${p}`}
+                          aria-label={`${e.code} ${display(p)}`}
                           checked={
                             active.permissions[e.id]?.includes(p) ?? false
                           }
@@ -180,12 +182,12 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
               </tbody>
             </table>
             <button className="apac-button primary" onClick={() => void save()}>
-              Save account
+              {tr("admin.save")}
             </button>
           </div>
         )}
       </div>
-      {message && <p role="status">{message}</p>}
+      {message && <p role="status">{display(message)}</p>}
     </section>
   );
 }

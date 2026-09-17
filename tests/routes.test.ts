@@ -1,6 +1,6 @@
 import { strict as assert } from "node:assert";
 import { test } from "node:test";
-import { pages, pagePath, parsePagePath, loginDestination, switchLanguagePath } from "../lib/routes";
+import { pages, pagePath, parsePagePath, loginDestination, switchLanguagePath, sectionPath, isDashboardSection } from "../lib/routes";
 test("every page has a bilingual address", () => {
   for (const locale of ["en", "zh-CN"] as const) for (const page of pages)
     assert.deepEqual(parsePagePath(pagePath(locale, page)), { locale, page });
@@ -14,4 +14,10 @@ test("language switch preserves page and URL state", () => {
 test("login return paths cannot redirect externally or loop", () => {
   for (const path of [null, "https://evil.test", "//evil.test", "/\\evil.test", "/en/login", "/en/unknown"])
     assert.equal(loginDestination(path, "en"), "/en/overview");
+});
+test("dashboard modules share a page and preserve anchors across language and login", () => {
+  assert.equal(sectionPath("en", "business-units"), "/en/overview#business-units");
+  assert.equal(switchLanguagePath("/en/overview#analysis", "zh-CN"), "/zh-CN/overview#analysis");
+  assert.equal(loginDestination("/en/overview#management-checks", "zh-CN"), "/zh-CN/overview#management-checks");
+  assert.equal(isDashboardSection("imports"), false);
 });

@@ -1,4 +1,6 @@
 {
+  "metric.byYear": "By year",
+  "metric.byMonth": "By month",
   "errors.superadmin": "Superadmin access required",
   "errors.accountFields": "Provide name, valid email, role and APAC scope",
   "errors.passwordLength": "Use a password of at least 12 characters",

@@ -11,13 +11,21 @@ language conditionals. Do not concatenate translated words to construct new
 sentences; use named interpolation such as `{year}` or `{amount}`.
 
 The URL is authoritative: `/en/overview` and `/zh-CN/overview` select the locale.
-Pages are `overview`, `analysis`, `business-units`, `management-checks`, `imports`,
-`admin`, `brand`, and `login`. The root redirects using the `diam_locale` cookie
+The dashboard is one continuous page with `#overview`, `#analysis`,
+`#business-units`, and `#management-checks` anchors under `/{locale}/overview`.
+Legacy section-only paths redirect to these anchors. `imports`, `admin`, `brand`,
+and `login` remain separate pages. The root redirects using the `diam_locale` cookie
 (English by default). Language switching retains the page, query and fragment;
 the persistent application shell retains filters and form drafts. Refreshing
 retains the page but not unsaved drafts. Unknown routes return 404.
 Unauthenticated deep links go to login with a validated local return path.
 Page visibility is not authorization: API permission checks remain authoritative.
+
+The fixed header separates account/product actions from section navigation.
+Its measured height offsets fragment scrolling; reduced-motion users skip the
+scroll animation. Manual scrolling highlights the current section without adding
+history entries. Coverage and residual gap carry `metric.byYear` labels;
+remaining this month carries `metric.byMonth`. Calculation rules are unchanged.
 
 `displayText` is a compatibility boundary for existing API validation messages,
 enum labels, months, and entity descriptions. It maps known values to catalog

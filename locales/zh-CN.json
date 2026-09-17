@@ -1,4 +1,6 @@
 {
+  "metric.byYear": "按年度",
+  "metric.byMonth": "按月",
   "errors.superadmin": "需要超级管理员权限",
   "errors.accountFields": "请提供姓名、有效邮箱、角色和亚太区范围",
   "errors.passwordLength": "密码至少需要 12 个字符",

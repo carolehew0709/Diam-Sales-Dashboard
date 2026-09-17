@@ -5146,3 +5146,64 @@ html[lang="zh-CN"] .kpi-topline { line-height: 1.5; }
   }
 }
 [hidden] { display: none !important; }
+
+/* Two independent rows keep section navigation separate from account actions. */
+:root { --dashboard-header-height: 112px; }
+html { scroll-padding-top: calc(var(--dashboard-header-height) + 16px); }
+.dashboard-header {
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-rows: minmax(64px, auto) 48px;
+  column-gap: 20px;
+  row-gap: 0;
+}
+.dashboard-header .brand { grid-column: 1; grid-row: 1; min-width: 0; }
+.dashboard-header .topbar-actions { grid-column: 2; grid-row: 1; }
+.dashboard-header .topnav {
+  display: flex;
+  grid-column: 1 / -1;
+  grid-row: 2;
+  min-width: 0;
+  height: 48px;
+  overflow-x: auto;
+  border-top: 1px solid #ffffff24;
+  scrollbar-width: thin;
+}
+.dashboard-header .topnav-links {
+  display: flex;
+  flex-wrap: nowrap;
+  justify-content: flex-start;
+  align-items: stretch;
+  gap: 32px;
+  width: max-content;
+}
+.dashboard-header .topnav-links a {
+  display: flex;
+  align-items: center;
+  flex-shrink: 0;
+  white-space: nowrap;
+  padding: 0 2px;
+  border-bottom: 3px solid transparent;
+  font-size: 14px;
+  font-weight: 500;
+  letter-spacing: 0;
+}
+.dashboard-header .topnav-links a[aria-current="location"] {
+  border-bottom-color: #dec78e;
+  color: #dec78e;
+}
+.page-shell { padding-top: var(--dashboard-header-height); }
+.china-strip { position: relative; top: auto; }
+.kpi-value-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin-top: 20px; }
+.kpi-value-row > strong { font-family: var(--font-display); font-size: 32px; font-weight: 600; letter-spacing: 0; overflow-wrap: anywhere; min-width: 0; }
+.kpi-period { font-size: 12px; line-height: 1.5; color: var(--muted); white-space: nowrap; }
+.kpi-period small { display: block; font-size: 11px; white-space: normal; }
+@media (min-width: 1001px) {
+  .dashboard-header .topbar-actions .import-data span,
+  .dashboard-header .topbar-actions .excel-export span { display: inline; }
+}
+@media (max-width: 640px) {
+  .dashboard-header { column-gap: 6px; }
+  .dashboard-header .topnav-links { gap: 24px; }
+  .dashboard-header .topnav-links a { font-size: 13px; }
+  .kpi-value-row > strong { font-size: 28px; }
+}

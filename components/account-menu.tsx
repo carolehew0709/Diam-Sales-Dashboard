@@ -2,7 +2,7 @@
 import { useI18n } from "@/components/i18n-provider";
 import { useState } from "react";
 import Link from "next/link";
-import { pagePath } from "@/lib/routes";
+import { pagePath, sectionPath } from "@/lib/routes";
 import { canManageUsers } from "@/lib/permissions";
 import type { User } from "@/lib/types";
 export function AccountMenu({
@@ -41,9 +41,9 @@ export function AccountMenu({
           </details>
           <nav className="account-page-links" aria-label={tr("nav.area")}>
             <Link href={pagePath(locale, "overview")} onClick={() => setOpen(false)}>{tr("nav.overview")}</Link>
-            <Link href={pagePath(locale, "analysis")} onClick={() => setOpen(false)}>{tr("nav.analysis")}</Link>
-            <Link href={pagePath(locale, "business-units")} onClick={() => setOpen(false)}>{tr("nav.entities")}</Link>
-            <Link href={pagePath(locale, "management-checks")} onClick={() => setOpen(false)}>{tr("nav.checks")}</Link>
+            <Link href={sectionPath(locale, "analysis")} onClick={() => setOpen(false)}>{tr("nav.analysis")}</Link>
+            <Link href={sectionPath(locale, "business-units")} onClick={() => setOpen(false)}>{tr("nav.entities")}</Link>
+            <Link href={sectionPath(locale, "management-checks")} onClick={() => setOpen(false)}>{tr("nav.checks")}</Link>
             <Link href={pagePath(locale, "brand")} onClick={() => setOpen(false)}>{tr("nav.brand")}</Link>
           </nav>
           {canManageUsers(user) && (

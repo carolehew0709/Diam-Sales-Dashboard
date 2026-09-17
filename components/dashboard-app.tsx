@@ -59,6 +59,8 @@ function MetricCard({
   children,
   accent = false,
   unit = "kEUR",
+  period,
+  periodDetail,
 }: {
   label: string;
   value: string;
@@ -66,6 +68,8 @@ function MetricCard({
   children?: React.ReactNode;
   accent?: boolean;
   unit?: "kEUR" | "FY";
+  period?: string;
+  periodDetail?: string;
 }) {
   return (
     <article className={`kpi-card ${accent ? "kpi-accent" : ""}`}>
@@ -73,7 +77,10 @@ function MetricCard({
         <span>{label}</span>
         <small>{unit}</small>
       </div>
-      <strong>{value}</strong>
+      <div className="kpi-value-row">
+        <strong>{value}</strong>
+        {period && <span className="kpi-period">{period}<small>{periodDetail}</small></span>}
+      </div>
       {children}
       <p>{note}</p>
     </article>
@@ -149,12 +156,10 @@ function MetricsTable({
   );
 }
 function DashboardView({
-  page,
   data,
   filters,
   setFilters,
 }: {
-  page: Page;
   data: Dashboard;
   filters: Filters;
   setFilters: (f: Filters) => void;
@@ -208,7 +213,7 @@ function DashboardView({
           <p className="eyebrow">
             {tr("overview.performance")} {filters.year}
           </p>
-          <h1>{page === "overview" ? tr("overview.salesYear", { year: filters.year }) : tr(page === "analysis" ? "nav.analysis" : page === "business-units" ? "nav.entities" : "nav.checks")}</h1>
+          <h1>{tr("overview.salesYear", { year: filters.year })}</h1>
           <p className="executive-subtitle">{tr("overview.subtitle")}</p>
         </div>
         <div className="snapshot-wrapper">
@@ -403,7 +408,7 @@ function DashboardView({
           }
         />
       </section>
-      <section hidden={!['overview', 'business-units'].includes(page)} className="china-strip" aria-label={tr("china.details")}>
+      <section className="china-strip" aria-label={tr("china.details")}>
         <button
           onClick={() => selectEntity("all")}
           className={
@@ -446,7 +451,7 @@ function DashboardView({
       {!data.rows.length && (
         <p className="apac-notice">{tr("overview.noData")}</p>
       )}
-      <section hidden={page !== 'overview'} className="kpi-grid">
+      <section className="kpi-grid" id="analysis">
         <MetricCard
           label={tr("metric.budget")}
           value={formatK(t.budget)}
@@ -487,6 +492,8 @@ function DashboardView({
         </MetricCard>
         <MetricCard
           label={tr("metric.coverage")}
+          period={tr("metric.byYear")}
+          periodDetail={String(filters.year)}
           unit="FY"
           value={display(percent(t.coverage))}
           note={tr("notes.coverage", { year: filters.year })}
@@ -499,6 +506,8 @@ function DashboardView({
         </MetricCard>
         <MetricCard
           label={tr("metric.gapTitle")}
+          period={tr("metric.byYear")}
+          periodDetail={String(filters.year)}
           value={formatK(t.gap)}
           note={tr("notes.gap", {
             year: filters.year,
@@ -507,6 +516,8 @@ function DashboardView({
         />
         <MetricCard
           label={tr("metric.remaining")}
+          period={tr("metric.byMonth")}
+          periodDetail={Array.from(new Set(data.rows.flatMap(r => r.snapshot && r.metrics.remaining !== null ? [`${display(months[r.snapshot.month - 1])} ${r.snapshot.year}`] : []))).join(" / ")}
           value={formatK(t.remaining)}
           note={tr("notes.remaining", {
             note: partial("remaining"),
@@ -514,7 +525,7 @@ function DashboardView({
           })}
         />
       </section>
-      <section hidden={page !== 'overview'} className="briefing-strip">
+      <section className="briefing-strip">
         <div className="briefing-title">
           <span className="briefing-mark">↗</span>
           <div>
@@ -542,7 +553,7 @@ function DashboardView({
           </span>
         </div>
       </section>
-      <section hidden={!['overview', 'analysis'].includes(page)} className="dashboard-grid dashboard-grid-main">
+      <section className="dashboard-grid dashboard-grid-main">
         <article className="panel cumulative-panel">
           <div className="panel-heading">
             <div>
@@ -655,7 +666,7 @@ function DashboardView({
           </div>
         </article>
       </section>
-      <section hidden={!['overview', 'analysis'].includes(page)} className="dashboard-grid dashboard-grid-secondary">
+      <section className="dashboard-grid dashboard-grid-secondary">
         <article className="panel monthly-panel">
           <div className="panel-heading">
             <div>
@@ -711,7 +722,7 @@ function DashboardView({
           </div>
         </article>
       </section>
-      <section hidden={!['overview', 'analysis'].includes(page)} className="panel commercial-panel">
+      <section className="panel commercial-panel">
         <div className="panel-heading">
           <div>
             <p className="panel-kicker">{tr("commercial.exposure")}</p>
@@ -756,7 +767,7 @@ function DashboardView({
         )}
         <div className="panel-foot">{tr("commercial.note")}</div>
       </section>
-      <section hidden={!['overview', 'analysis'].includes(page)} className="panel matrix-panel" id="analysis">
+      <section className="panel matrix-panel" id="time-matrix">
         <details open>
           <summary>
             <span>
@@ -847,7 +858,7 @@ function DashboardView({
           </div>
         </details>
       </section>
-      <section hidden={!['overview', 'business-units'].includes(page)} className="panel bu-panel" id="business-units">
+      <section className="panel bu-panel" id="business-units">
         <div className="panel-heading">
           <div>
             <p className="panel-kicker">{tr("china.entityDetail")}</p>
@@ -871,7 +882,7 @@ function DashboardView({
           />
         )}
       </section>
-      <section hidden={!['overview', 'management-checks'].includes(page)} className="quality-panel" id="data-quality">
+      <section className="quality-panel" id="management-checks">
         <details open>
           <summary>
             <div>
@@ -942,7 +953,7 @@ export default function Home() {
   useEffect(() => {
     if (!sessionChecked || !parsePagePath(pathname)) return;
     if (!user && view !== "login") {
-      router.replace(`${pagePath(locale, "login")}?next=${encodeURIComponent(pathname + window.location.search)}`);
+      router.replace(`${pagePath(locale, "login")}?next=${encodeURIComponent(pathname + window.location.search + window.location.hash)}`);
     } else if (user && view === "login") {
       router.replace(loginDestination(new URLSearchParams(window.location.search).get("next"), locale));
     }
@@ -1092,7 +1103,6 @@ export default function Home() {
             className={`dashboard-route dashboard-route-${view} ${loading ? "dashboard-updating" : ""}`}
           >
             <DashboardView
-              page={view}
               data={data}
               filters={filters}
               setFilters={setFilters}

@@ -1,6 +1,14 @@
 import { isLocale, type Locale } from "./i18n";
 export const pages = ["overview", "analysis", "business-units", "management-checks", "imports", "admin", "brand", "login"] as const;
 export type Page = (typeof pages)[number];
+export const dashboardSections = ["overview", "analysis", "business-units", "management-checks"] as const;
+export type DashboardSection = (typeof dashboardSections)[number];
+export function isDashboardSection(value: string): value is DashboardSection {
+  return dashboardSections.includes(value as DashboardSection);
+}
+export function sectionPath(locale: Locale, section: DashboardSection) {
+  return `${pagePath(locale, "overview")}#${section}`;
+}
 export function isPage(value: unknown): value is Page {
   return typeof value === "string" && pages.includes(value as Page);
 }

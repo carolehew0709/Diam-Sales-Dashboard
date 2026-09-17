@@ -1,3 +1,59 @@
+@font-face {
+  font-family: "DIAM Century Gothic";
+  src: url("/fonts/century-gothic/regular.woff") format("woff");
+  font-weight: 400;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DIAM Century Gothic";
+  src: url("/fonts/century-gothic/semibold.woff") format("woff");
+  font-weight: 600;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DIAM Century Gothic";
+  src: url("/fonts/century-gothic/bold.woff") format("woff");
+  font-weight: 700;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DIAM Century Gothic";
+  src: url("/fonts/century-gothic/extrabold.woff") format("woff");
+  font-weight: 800;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DIAM Century Gothic";
+  src: url("/fonts/century-gothic/black.woff") format("woff");
+  font-weight: 900;
+  font-style: normal;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DIAM Century Gothic";
+  src: url("/fonts/century-gothic/italic.woff") format("woff");
+  font-weight: 400;
+  font-style: italic;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "DIAM Century Gothic";
+  src: url("/fonts/century-gothic/bolditalic.woff") format("woff");
+  font-weight: 700;
+  font-style: italic;
+  font-display: swap;
+}
+
 :root {
   --ink: #171813;
   --ink-2: #292a24;
@@ -20,7 +76,9 @@
   --blue: #4e718b;
   --teal: #386b65;
   --shadow: 0 14px 38px rgba(31, 29, 23, 0.055);
-  --font-body: "Century Gothic", "Apple Gothic", "Segoe UI", Arial, sans-serif;
+  --font-body:
+    "DIAM Century Gothic", "Century Gothic", "Apple Gothic", "Segoe UI", Arial,
+    sans-serif;
   --font-display: var(--font-body);
 }
 

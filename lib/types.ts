@@ -1,7 +1,6 @@
-export type Role = 'superadmin' | 'region_admin' | 'editor' | 'viewer' | 'audit_viewer';
-export type Permission = 'view' | 'edit';
-export type Scenario = 'Sales' | 'Sales + P1';
-
+export type Role =
+  "superadmin" | "region_admin" | "editor" | "viewer" | "audit_viewer";
+export type Permission = "view" | "edit";
 export type User = {
   id: string;
   name: string;
@@ -10,87 +9,110 @@ export type User = {
   region: string;
   crossRegionView: boolean;
   permissions: Record<string, Permission[]>;
+  passwordHash?: string;
+  disabled?: boolean;
+  sessionVersion?: number;
 };
-
 export type Entity = {
   id: string;
-  name: string;
   code: string;
+  name: string;
   region: string;
+  reportingRegion: string;
   businessUnit: string;
-  source: string;
-  status: 'Ready' | 'Review' | 'Missing';
-  budget?: number;
+  description: string;
+  aliases: string[];
 };
-
-export type WeeklyRecord = {
-  entityId: string;
-  week: number;
-  budget: number;
-  sales: number;
-  orderbook: number;
-  forecast: number;
-  p1: number;
-  source: string;
-  monthValues?: number[];
-  budgetMonthValues?: number[];
-  isSnapshot?: boolean;
-};
-
+export type Amount = number | null;
+export type SalesType = "all" | "external" | "group";
+export type Scenario = "Sales" | "Sales + Prospect";
+export type Split = { external: Amount; group: Amount };
 export type OrderBookLine = {
   id: string;
   entityId: string;
-  entityName: string;
   week: number;
+  year: number;
   product: string;
   customer: string;
-  customerType: 'External' | 'Group' | 'Unclassified';
-  dgc: 'E' | 'G' | 'Unclassified';
-  quantity?: number;
+  customerType: "External" | "Group" | "Unclassified";
+  dgc: string;
+  quantity: Amount;
   total2026: number;
   total2027: number;
-  monthly2026: number[];
-  monthly2027: number[];
+  monthly2026: Amount[];
+  monthly2027: Amount[];
   sourceFile: string;
   sourceSheet: string;
   sourceRow: number;
 };
-
-export type EntityWeekSnapshot = {
+export type Snapshot = {
   entityId: string;
-  entityName: string;
+  year: number;
   week: number;
-  month: string;
-  ytdTurnoverExternal: number;
-  ytdTurnoverGroup: number;
-  currentMonthTurnoverExternal: number;
-  currentMonthTurnoverGroup: number;
-  orderbook2026External: number;
-  orderbook2026Group: number;
-  orderbook2027External: number;
-  orderbook2027Group: number;
-  forecast2026: number;
-  newOrders2026: number;
+  month: number;
+  asOfDate: string;
+  turnover: Split;
+  monthTurnover: Split;
+  monthEstimate: Split;
+  orderbook: Split;
+  nextOrderbook: Split;
+  baseOverride: Amount;
+  monthlyBaseOverride: Amount[] | null;
+  prospect: Amount;
+  nextProspect: Amount;
+  annualBudget: Amount;
+  nextAnnualBudget: Amount;
+  monthlyBudget: Amount[];
+  monthlyProspect: Amount[];
+  monthlySales: { external: Amount[]; group: Amount[] };
+  monthlyOrderbook: { external: Amount[]; group: Amount[] };
+  nextMonthlyOrderbook: { external: Amount[]; group: Amount[] };
   sourceFile: string;
   sourceSheet: string;
-  sourceCheck: 'OK' | 'Review';
+  sourceNote: string;
+  sourceCells: Record<string, string>;
+  findings: string[];
+  sourceCheck: "Ready" | "Review";
+  publishedAt?: string;
 };
-
-export type BrandRecord = { brand: string; sales: number; budget: number; region: string; trend: number };
-
+export type Finding = { severity: "error" | "review"; message: string };
 export type ImportBatch = {
   id: string;
   fileName: string;
+  sourceType: "Excel" | "Manual";
+  status: "review" | "published" | "rejected";
+  entityIds: string[];
   submittedBy: string;
   submittedAt: string;
-  status: 'review' | 'published' | 'rejected';
-  sourceType: 'Excel' | 'Manual';
-  records: number;
-  completeness: number;
-  findings: string[];
-  sheets?: { name: string; rows: number; weeks?: string[]; kind: string }[];
-  entityId?: string;
-  week?: number;
-  parsedLines?: OrderBookLine[];
-  parsedSnapshots?: EntityWeekSnapshot[];
+  publishedBy?: string;
+  publishedAt?: string;
+  findings: Finding[];
+  snapshots: Snapshot[];
+  lines: OrderBookLine[];
+  sheets: { name: string; rows: number; kind: string }[];
+  revision?: number;
+};
+export type AuditEvent = {
+  id: string;
+  at: string;
+  actor: string;
+  action: string;
+  subject: string;
+};
+export type Store = {
+  version: number;
+  revision: number;
+  users: User[];
+  snapshots: Snapshot[];
+  lines: OrderBookLine[];
+  batches: ImportBatch[];
+  audit: AuditEvent[];
+};
+export type Filters = {
+  region: string;
+  bu: string;
+  entity: string;
+  year: number;
+  scenario: Scenario;
+  salesType: SalesType;
 };

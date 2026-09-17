@@ -1,61 +1,1063 @@
-'use client';
-
-import { useEffect, useMemo, useState } from 'react';
-import { BarChart3, CheckCircle2, ChevronDown, Download, FileUp, LayoutDashboard, LockKeyhole, Settings2, ShieldCheck, Upload, Users, X } from 'lucide-react';
-import { brands, entities, importBatches, users } from '@/lib/seed';
-import { getDashboardSnapshot, formatK } from '@/lib/dashboard';
-import { canEdit, canView, roleLabel, togglePermission } from '@/lib/permissions';
-import { validateManualImport } from '@/lib/import-validation';
-import type { Scenario, User } from '@/lib/types';
-import { AccountMenu, DemoLogin } from '@/components/account-menu';
-import { ImportPortal } from '@/components/import-portal';
-
-type Tab = 'overview' | 'analysis' | 'entities' | 'checks' | 'brand' | 'imports' | 'admin';
-
-function MetricCard({ label, value, note, tone = 'neutral' }: { label: string; value: string; note: string; tone?: string }) {
-  return <div className={`metric-card ${tone}`}><div className="metric-topline"><span>{label}</span><small>{label === 'Sales & Dashboard' ? 'W37' : label === 'Remaining this month' ? 'SEP 2026' : 'EUR K'}</small></div><strong>{value}</strong>{label === 'Sales & Dashboard' && <div className="metric-split"><span>SALES TO DATE <b>{note.match(/Sales to date ([^·]+)/)?.[1] ?? '—'}</b></span><span>DASHBOARD <b>{note.match(/Dashboard ([^·]+)/)?.[1] ?? '—'}</b></span></div>}<small className={label === 'Sales & Dashboard' ? 'metric-note' : ''}>{label === 'Sales & Dashboard' ? 'Unclassified and group split reconciles to total' : note}</small></div>;
+"use client";
+import { matchesRegion } from "@/lib/entities";
+import { useEffect, useState } from "react";
+import { DashboardShell } from "@/components/dashboard-shell";
+import { ImportPortal } from "@/components/import-portal";
+import { AdminPanel } from "@/components/admin-panel";
+import { PerformanceChart } from "@/components/performance-chart";
+import {
+  defaultFilters,
+  formatK,
+  percent,
+  months,
+  combine,
+} from "@/lib/dashboard";
+import type { Dashboard, Metric } from "@/lib/dashboard";
+import type { Amount, Filters, User } from "@/lib/types";
+function Segmented({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: string;
+  options: { value: string; label: string }[];
+  onChange: (v: string) => void;
+}) {
+  return (
+    <div className="filter-field">
+      <span className="filter-label">{label}</span>
+      <div
+        className="segmented"
+        style={{ gridTemplateColumns: `repeat(${options.length},1fr)` }}
+        role="group"
+        aria-label={label}
+      >
+        {options.map((o) => (
+          <button
+            key={o.value}
+            aria-pressed={value === o.value}
+            className={value === o.value ? "is-active" : ""}
+            onClick={() => onChange(o.value)}
+          >
+            {o.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
 }
-
-function TrendChart({ monthly }: { monthly: ReturnType<typeof getDashboardSnapshot>['monthly'] }) {
-  const max = Math.max(...monthly.map((m) => Math.max(m.budget, m.forecast)), 1);
-  const points = (key: 'budget' | 'sales' | 'forecast') => monthly.map((m, i) => `${(i / 5) * 100},${96 - (m[key] / max) * 82}`).join(' ');
-  return <div className="chart-wrap"><svg viewBox="0 0 100 100" preserveAspectRatio="none" role="img" aria-label="Monthly performance trend"><line x1="0" y1="96" x2="100" y2="96" className="grid-line"/><line x1="0" y1="55" x2="100" y2="55" className="grid-line"/><line x1="0" y1="14" x2="100" y2="14" className="grid-line"/><polyline points={points('budget')} className="line budget-line"/><polyline points={points('forecast')} className="line forecast-line"/><polyline points={points('sales')} className="line sales-line"/></svg><div className="chart-labels">{monthly.map((m) => <span key={m.label}>{m.label}</span>)}</div><div className="legend"><span><i className="dot blue"/>Budget</span><span><i className="dot orange"/>Forecast</span><span><i className="dot green"/>Sales</span></div></div>;
+function MetricCard({
+  label,
+  value,
+  note,
+  children,
+  accent = false,
+}: {
+  label: string;
+  value: string;
+  note: string;
+  children?: React.ReactNode;
+  accent?: boolean;
+}) {
+  return (
+    <article className={`kpi-card ${accent ? "kpi-accent" : ""}`}>
+      <div className="kpi-topline">
+        <span>{label}</span>
+        <small>{label === "Coverage" ? "FY" : "kEUR"}</small>
+      </div>
+      <strong>{value}</strong>
+      {children}
+      <p>{note}</p>
+    </article>
+  );
 }
-
-function GapPanel({ snapshot, totals }: { snapshot: ReturnType<typeof getDashboardSnapshot>; totals: ReturnType<typeof getDashboardSnapshot>['totals'] }) {
-  return <div className="panel gap-panel"><div className="panel-heading"><div><span className="kicker">Contribution to performance</span><h2>Gap by region</h2></div></div><div className="gap-list">{snapshot.entities.map((entity) => { const rows = snapshot.records.filter((r) => r.entityId === entity.id); const gap = rows.reduce((s, r) => s + r.budget - r.forecast, 0); return <div className="gap-row" key={entity.id}><div><strong>{entity.code}</strong><small>{entity.name}</small></div><div className="gap-bar"><i style={{ width: `${Math.min(Math.abs(gap) / Math.max(totals.budget, 1) * 460, 100)}%` }}/></div><b className={gap > 0 ? 'warning' : 'positive'}>{gap > 0 ? '+' : ''}{formatK(gap)}</b></div>; })}</div><div className="gap-callout"><span>Global scenario gap</span><strong>{formatK(totals.gap)}</strong></div><div className="sales-mix"><div><span>Sales mix</span><strong>External vs Group</strong></div><div className="donut"><span>100%</span></div></div></div>;
+function MetricsTable({
+  rows,
+  onSelect,
+}: {
+  rows: {
+    id: string;
+    name: string;
+    description?: string;
+    metrics: Metric;
+    week?: number;
+  }[];
+  onSelect?: (id: string) => void;
+}) {
+  return (
+    <div className="table-wrap">
+      <table className="bu-table">
+        <thead>
+          <tr>
+            <th>BU / Entity</th>
+            <th className="numeric">Annual Dashboard</th>
+            <th className="numeric">Sales & Dashboard</th>
+            <th className="numeric">Prospect</th>
+            <th className="numeric">Selected scenario</th>
+            <th className="numeric">Coverage</th>
+            <th className="numeric">Residual gap</th>
+            <th className="numeric">Remaining · month</th>
+          </tr>
+        </thead>
+        <tbody>
+          {rows.map((r) => (
+            <tr key={r.id}>
+              <td>
+                {onSelect ? (
+                  <button
+                    className="entity-link"
+                    onClick={() => onSelect(r.id)}
+                  >
+                    {r.name}
+                  </button>
+                ) : (
+                  <strong>{r.name}</strong>
+                )}
+                <small>
+                  {r.description}
+                  {r.week ? ` · W${r.week}` : ""}
+                </small>
+              </td>
+              <td className="numeric">{formatK(r.metrics.budget)}</td>
+              <td className="numeric">{formatK(r.metrics.base)}</td>
+              <td className="numeric">{formatK(r.metrics.prospect)}</td>
+              <td className="numeric">
+                {formatK(r.metrics.scenario)}
+                {!r.metrics.scenarioComplete && (
+                  <small>Partial · Prospect/source pending</small>
+                )}
+              </td>
+              <td className="numeric">{percent(r.metrics.coverage)}</td>
+              <td className="numeric">{formatK(r.metrics.gap)}</td>
+              <td className="numeric">{formatK(r.metrics.remaining)}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  );
 }
-
-function DashboardView({ tab, currentUser, setTab }: { tab: Tab; currentUser: User; setTab: (tab: Tab) => void }) {
-  const [entityFilter, setEntityFilter] = useState('all');
-  const [regionFilter, setRegionFilter] = useState('APAC');
-  const [scenario, setScenario] = useState<Scenario>('Sales');
-  const snapshot = useMemo(() => getDashboardSnapshot(entityFilter, scenario), [entityFilter, scenario]);
-  const visibleEntities = entities.filter((entity) => canView(currentUser, entity));
-  const totals = snapshot.totals;
-  if (regionFilter === 'Europe' || regionFilter === 'Americas') return <section className="mock-region-page"><div className="eyebrow">REGION DEMO / MOCK DATA</div><div className="hero-row"><div><h1>{regionFilter} performance</h1><p>This region is mocked for the demo until its source workbook is supplied. APAC Excel data remains unchanged.</p></div><span className="status review">Mock source</span></div><div className="metric-grid"><MetricCard label="Annual budget" value={regionFilter === 'Europe' ? '40,915k' : '35,468k'} note="Mock regional baseline" tone="blue"/><MetricCard label="Sales & Dashboard" value={regionFilter === 'Europe' ? '34,032k' : '35,672k'} note="Mock current snapshot" tone="green"/><MetricCard label="Coverage" value={regionFilter === 'Europe' ? '83.2%' : '100.6%'} note="Mock scenario coverage" tone="purple"/><MetricCard label="Residual gap" value={regionFilter === 'Europe' ? '−6,883k' : '+204k'} note="Mock gap to plan" tone="orange"/></div><div className="panel mock-region-panel"><div className="panel-heading"><div><span className="kicker">Contribution to performance · mock</span><h2>Gap by region</h2></div><button className="text-button" onClick={() => setRegionFilter('APAC')}>Back to APAC</button></div><div className="gap-list"><div className="gap-row"><div><strong>{regionFilter}</strong><small>Mock regional aggregate</small></div><div className="gap-bar"><i style={{ width: regionFilter === 'Europe' ? '16.8%' : '4%' }}/></div><b className={regionFilter === 'Europe' ? 'warning' : 'positive'}>{regionFilter === 'Europe' ? '−6,883k' : '+204k'}</b></div></div><div className="notice success">Mock data is isolated from the Excel-backed APAC snapshot and is not included in APAC export totals.</div></div></section>;
-  if (tab === 'imports') return <ImportPortal currentUser={currentUser} />;
-  if (tab === 'admin') return <AdminPanel currentUser={currentUser} />;
-  if (tab === 'brand') return <BrandView />;
-  return <>
-    <section id="overview" className="hero-row"><div><div className="eyebrow">BUSINESS PERFORMANCE · 2026</div><h1>{tab === 'overview' ? 'Sales 2026' : tab === 'analysis' ? 'Performance analysis' : tab === 'entities' ? 'Business units & entities' : 'Management checks'}</h1><p>{tab === 'overview' ? 'A weekly and monthly view of budget, Sales and P1 by region and Business Unit Entity.' : 'Sales performance, planning confidence, and source readiness in one operating view.'}</p></div><div className="snapshot-card"><div><span>ACTIVE SNAPSHOT</span><strong>W37 · 2026</strong></div><div><span>11 SEPTEMBER 2026</span><b>EUR K · 1 EUR = 1.18 USD</b></div><div><strong className="snapshot-ready">● 1/3 ready</strong><small>2 entity budgets need source review</small><strong className="snapshot-review">● P1 · W36 carried</strong></div></div></section>
-    <section className="filter-bar"><label>Region<select value={regionFilter} onChange={(e) => setRegionFilter(e.target.value)}><option>APAC</option><option>All regions</option><option>Europe</option><option>Americas</option></select></label><label>Business Unit Entity<select value={entityFilter} onChange={(e) => setEntityFilter(e.target.value)}><option value="all">All BUs</option>{visibleEntities.map((e) => <option key={e.id} value={e.id}>{e.code}</option>)}</select></label><label className="segmented-filter">Analysis years<div className="segmented"><button className="is-active">2026</button><button>2027</button></div></label><label className="segmented-filter">Scenario<div className="segmented"><button className={scenario === 'Sales' ? 'is-active' : ''} onClick={() => setScenario('Sales')}>Sales</button><button className={scenario === 'Sales + P1' ? 'is-active' : ''} onClick={() => setScenario('Sales + P1')}>Sales + P1</button></div></label><label className="segmented-filter sales-type-filter">Sales type<div className="segmented"><button className="is-active">All sales</button><button>External</button><button>Group</button></div></label></section>
-    <section className="metric-grid"><MetricCard label="Annual budget" value={formatK(totals.budget)} note="Original Budget 2026 · EUR K" tone="blue"/><MetricCard label="Sales & Dashboard" value={formatK(totals.sales + totals.orderbook)} note={`Sales to date ${formatK(totals.sales)} · Dashboard ${formatK(totals.orderbook)}`} tone="green"/><MetricCard label="Sales + P1" value={formatK(totals.salesPlusP1)} note="Selected scenario · EUR K" tone="orange"/><MetricCard label="Coverage" value={`${Math.round(totals.coverage * 100)}%`} note="Of annual budget" tone="purple"/><MetricCard label="Residual gap" value={formatK(totals.gap)} note="Scenario gap to plan" tone="blue"/><MetricCard label="Remaining this month" value={formatK(Math.max(totals.forecast - totals.sales, 0))} note="Latest estimate less invoiced" tone="green"/></section>
-    <section className="briefing-strip"><span className="briefing-mark">↗</span><div><span className="kicker">Executive summary</span><h2>What requires attention this week</h2></div><div className="briefing-points"><span><b>{visibleEntities.filter((entity) => entity.status !== 'Ready').length}</b> entities need source review</span><span><b>{Math.round(totals.coverage * 100)}%</b> forecast coverage</span><span><b>{formatK(Math.max(totals.gap, 0))}</b> residual scenario gap</span></div></section>
-    <section className="content-grid"><div className="panel trend-panel"><div className="panel-heading"><div><span className="kicker">Annual trajectory · EUR K</span><h2>Budget vs cumulative scenario</h2><small>APAC view · All sales · 2026 · each year restarts in January</small></div><span className="unit">Cumulative budget · Sales / Dashboard · Sales / Dashboard + P1</span></div><TrendChart monthly={snapshot.monthly}/><div className="panel-foot">2026 selected scenario {formatK(totals.salesPlusP1)} · benchmark {formatK(totals.budget)} · residual gap {formatK(totals.gap)}</div><button className="compare-button">Compare performance →</button></div><GapPanel snapshot={snapshot} totals={totals}/><div className="panel readiness-panel"><div className="panel-heading"><div><span className="kicker">Data control</span><h2>Source readiness</h2></div><ShieldCheck size={20} className="muted-icon"/></div><div className="readiness-score"><strong>{Math.round(visibleEntities.filter((e) => e.status === 'Ready').length / Math.max(visibleEntities.length, 1) * 100)}%</strong><span>APAC reporting readiness</span></div>{visibleEntities.map((entity) => <div className="readiness-row" key={entity.id}><span>{entity.code}</span><span className={`status ${entity.status.toLowerCase()}`}>{entity.status}</span><small>{entity.source}</small></div>)}</div></section>
-    <section className="content-grid us-secondary-grid"><div className="panel monthly-panel"><div className="panel-heading"><div><span className="kicker">Monthly phasing · EUR K</span><h2>Budget vs monthly performance</h2><small>Sales and P1 shown separately</small></div><strong className="month-focus">{Math.round(totals.coverage * 100)}% current coverage</strong></div><div className="mini-bars">{snapshot.monthly.map((month) => <div className="mini-bar-group" key={month.label}><div className="mini-bar budget" style={{ height: `${Math.max(8, month.budget / Math.max(...snapshot.monthly.map((item) => item.budget), 1) * 100)}%` }}/><div className="mini-bar forecast" style={{ height: `${Math.max(8, month.forecast / Math.max(...snapshot.monthly.map((item) => item.budget), 1) * 100)}%` }}/><span>{month.label}</span></div>)}</div></div><div className="panel weekly-panel"><div className="panel-heading"><div><span className="kicker">Current month control · EUR K</span><h2>Invoice plan vs invoiced</h2><small>Entity dashboards</small></div><span className="trend-pill positive">+8.4%</span></div><div className="delivery-track"><span style={{ width: `${Math.min(94, Math.round(totals.sales / Math.max(totals.forecast, 1) * 100))}%` }}/></div><div className="delivery-values"><strong>{formatK(totals.sales)} invoiced</strong><span>{formatK(totals.forecast)} estimate</span></div><div className="panel-foot">Reported estimate is checked against MTD turnover + current-month Dashboard</div></div></section>
-    <section className="content-grid dashboard-grid-main"><div className="panel gap-panel"><div className="panel-heading"><div><span className="kicker">Contribution to performance</span><h2>Gap by region</h2></div></div><div className="gap-list">{snapshot.entities.map((entity) => { const rows = snapshot.records.filter((r) => r.entityId === entity.id); const gap = rows.reduce((s, r) => s + r.budget - r.forecast, 0); return <div className="gap-row" key={entity.id}><div><strong>{entity.code}</strong><small>{entity.name}</small></div><div className="gap-bar"><i style={{ width: `${Math.min(Math.abs(gap) / Math.max(totals.budget, 1) * 460, 100)}%` }}/></div><b className={gap > 0 ? 'warning' : 'positive'}>{gap > 0 ? '+' : ''}{formatK(gap)}</b></div>; })}</div><div className="gap-callout"><span>Global scenario gap</span><strong>{formatK(totals.gap)}</strong></div><div className="sales-mix"><div><span>Sales mix</span><strong>External vs Group</strong></div><div className="donut"><span>100%</span></div></div></div><div className="panel commercial-panel"><div className="panel-heading"><div><span className="kicker">Committed Dashboard exposure · EUR K</span><h2>Dashboard by customer and brand</h2><small>Largest current-year committed exposures</small></div><span className="unit">APAC</span></div><div className="commercial-grid">{brands.map((item) => <div className="commercial-card" key={item.brand}><span>{item.brand}</span><strong>{item.sales}k</strong><small>{item.trend >= 0 ? '+' : ''}{item.trend}% vs plan</small><div><i style={{ width: `${Math.min(item.sales / 7, 100)}%` }}/></div></div>)}</div><div className="panel-foot">Committed orders only. P1 is excluded; unavailable customer dimensions are not inferred.</div></div></section>
-    <section className="panel matrix-panel" id="analysis"><div className="panel-heading"><div><span className="kicker">Period analysis · EUR K</span><h2>Time matrix</h2><small>Monthly scenario by Business Units Entities</small></div><button className="text-button">Explore time matrix →</button></div><div className="table-wrap matrix-scroll"><table className="time-matrix"><thead><tr><th>Business Unit Entity</th>{snapshot.monthly.map((month) => <th className="numeric" key={month.label}>{month.label}</th>)}<th className="numeric">FY total</th></tr></thead><tbody>{snapshot.entities.map((entity) => { const rows = snapshot.records.filter((r) => r.entityId === entity.id); const total = rows.reduce((s, r) => s + r.forecast, 0); return <tr key={entity.id}><td><strong>{entity.code}</strong><small>{entity.businessUnit}</small></td>{snapshot.monthly.map((month) => <td className="numeric" key={month.label}>{formatK(month.forecast / Math.max(snapshot.entities.length, 1))}</td>)}<td className="numeric"><strong>{formatK(total)}</strong></td></tr>; })}</tbody></table></div></section>
-    <section className="content-grid lower-grid"><div className="panel"><div className="panel-heading"><div><span className="kicker">Comparable performance</span><h2>Business Units Entities</h2></div><button className="text-button" onClick={() => setTab('entities')}>Open detail</button></div><div className="table-wrap"><table><thead><tr><th>BU</th><th>Budget</th><th>Sales</th><th>P1</th><th>Sales + P1</th><th>Coverage</th><th>Gap</th></tr></thead><tbody>{snapshot.entities.map((entity) => { const rows = snapshot.records.filter((r) => r.entityId === entity.id); const budget = entity.budget ?? 0; const sales = rows.reduce((s, r) => s + r.sales, 0); const p1 = rows.reduce((s, r) => s + r.p1, 0); const forecast = rows.reduce((s, r) => s + r.forecast, 0); return <tr key={entity.id}><td><strong>{entity.code}</strong><small>{entity.businessUnit}</small></td><td>{budget ? formatK(budget) : '—'}</td><td>{formatK(sales)}</td><td>{formatK(p1)}</td><td>{formatK(sales + p1)}</td><td><span className={budget && forecast >= budget ? 'positive' : 'warning'}>{budget ? `${Math.round(forecast / budget * 100)}%` : 'Review'}</span></td><td>{budget ? formatK(budget - forecast) : '—'}</td></tr>})}</tbody></table></div></div><div className="panel checks-panel"><div className="panel-heading"><div><span className="kicker">Executive controls</span><h2>Management checks</h2></div><button className="text-button" onClick={() => setTab('checks')}>View all</button></div>{[['Forecast coverage', 'All visible entities mapped', 'pass'], ['P1 phasing', '1 entity requires review', 'warning'], ['Source freshness', 'Last publish 2h ago', 'pass']].map(([label, value, tone]) => <div className="check-row" key={label}><CheckCircle2 size={18} className={tone === 'pass' ? 'check-pass' : 'check-warning'}/><div><strong>{label}</strong><small>{value}</small></div></div>)}</div></section>
-  </>;
+function DashboardView({
+  data,
+  filters,
+  setFilters,
+}: {
+  data: Dashboard;
+  filters: Filters;
+  setFilters: (f: Filters) => void;
+}) {
+  const [readiness, setReadiness] = useState(false),
+    [frequency, setFrequency] = useState("month"),
+    [matrixLevel, setMatrixLevel] = useState("entity"),
+    [customer, setCustomer] = useState("all");
+  const t = data.totals;
+  const partial = (key: Dashboard["partialKeys"][number]) =>
+    data.partialKeys.includes(key) ? " · partial source coverage" : "";
+  const selectEntity = (id: string) =>
+    setFilters({
+      ...filters,
+      region: "China",
+      bu: id === "all" ? "all" : id.toUpperCase(),
+      entity: id,
+    });
+  const totalRows = [
+    {
+      id: "china",
+      name: "China total",
+      description: `${data.china.filter((r) => r.snapshot).length}/${data.china.length} sources · known values`,
+      metrics: data.chinaTotal,
+    },
+    ...data.china.map((r) => ({
+      id: r.entity.id,
+      name: r.entity.code,
+      description: r.entity.description,
+      metrics: r.metrics,
+      week: r.snapshot?.week,
+    })),
+  ];
+  const matrixRows =
+    matrixLevel === "entity"
+      ? data.rows.map((r) => ({ name: r.entity.code, metrics: r.metrics }))
+      : data.buGroups;
+  const weeks = [
+    ...new Set(data.history.flatMap((h) => h.records.map((r) => r.week))),
+  ].sort((a, b) => a - b);
+  const knownMix = (data.external ?? 0) + (data.group ?? 0);
+  const externalShare = knownMix ? ((data.external ?? 0) / knownMix) * 100 : 0;
+  return (
+    <>
+      <section className="executive-head" id="overview">
+        <div>
+          <p className="eyebrow">Business performance · {filters.year}</p>
+          <h1>Sales {filters.year}</h1>
+          <p className="executive-subtitle">
+            A weekly and monthly view of Annual Dashboard, Sales and Prospect by
+            BU and Entity.
+          </p>
+        </div>
+        <div className="snapshot-wrapper">
+          <button
+            className="snapshot-cluster"
+            onClick={() => setReadiness(!readiness)}
+            aria-expanded={readiness}
+          >
+            <span className="snapshot-main">
+              <span>Active snapshot</span>
+              <strong>
+                {data.weeks.length
+                  ? data.weeks.map((w) => `W${w}`).join(" / ")
+                  : "No source"}
+              </strong>
+            </span>
+            <span className="snapshot-detail">
+              <span>
+                {data.weeks.length > 1
+                  ? "Mixed source weeks"
+                  : "Source snapshot"}{" "}
+                · 2026
+              </span>
+              <span>EUR K · revision {data.revision}</span>
+            </span>
+            <span className="snapshot-readiness-compact">
+              <strong>
+                {data.sourceCount}/{data.rows.length} sources available
+              </strong>
+              <small>{data.checks.length} source checks</small>
+              <strong>
+                Prospect {t.prospect === null ? "pending" : "partly supplied"}
+              </strong>
+            </span>
+            <span>⌄</span>
+          </button>
+          {readiness && (
+            <section className="snapshot-readiness-panel">
+              <div className="readiness-panel-head">
+                <h2>Data readiness</h2>
+                <button
+                  className="readiness-close"
+                  aria-label="Close data readiness"
+                  onClick={() => setReadiness(false)}
+                >
+                  ×
+                </button>
+              </div>
+              <div className="readiness-groups">
+                {data.rows.map((r) => (
+                  <div className="readiness-item" key={r.entity.id}>
+                    <strong>
+                      {r.entity.code} · {r.snapshot ? "Review" : "Missing"}
+                    </strong>
+                    <p>
+                      {r.snapshot
+                        ? `${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}`
+                        : "Source not supplied"}
+                    </p>
+                    {r.snapshot && (
+                      <details>
+                        <summary>Show source details</summary>
+                        <p>{r.snapshot.sourceNote}</p>
+                        {Object.entries(r.snapshot.sourceCells).map(
+                          ([key, value]) => (
+                            <p key={key}>
+                              {key}: {value}
+                            </p>
+                          ),
+                        )}
+                        <ul>
+                          {r.snapshot.findings.map((f, i) => (
+                            <li key={i}>{f}</li>
+                          ))}
+                        </ul>
+                      </details>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </section>
+          )}
+        </div>
+      </section>
+      <section className="filter-bar" aria-label="Global filters">
+        <div className="filter-field">
+          <label htmlFor="region">Region</label>
+          <select
+            id="region"
+            value={filters.region}
+            onChange={(e) =>
+              setFilters({
+                ...filters,
+                region: e.target.value,
+                bu: "all",
+                entity: "all",
+              })
+            }
+          >
+            {data.regions.map((r) => (
+              <option key={r} value={r}>
+                {r === "APAC" ? "APAC (Total)" : r}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-field">
+          <label htmlFor="bu">Business Unit</label>
+          <select
+            id="bu"
+            value={filters.bu}
+            onChange={(e) =>
+              setFilters({ ...filters, bu: e.target.value, entity: "all" })
+            }
+          >
+            <option value="all">All BUs</option>
+            {[
+              ...new Set(
+                data.entities
+                  .filter((e) => matchesRegion(e, filters.region))
+                  .map((e) => e.businessUnit),
+              ),
+            ].map((b) => (
+              <option key={b}>{b}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-field">
+          <label htmlFor="entity">Entity</label>
+          <select
+            id="entity"
+            value={filters.entity}
+            onChange={(e) => setFilters({ ...filters, entity: e.target.value })}
+          >
+            <option value="all">All entities</option>
+            {data.entities
+              .filter(
+                (e) =>
+                  matchesRegion(e, filters.region) &&
+                  (filters.bu === "all" || e.businessUnit === filters.bu),
+              )
+              .map((e) => (
+                <option key={e.id} value={e.id}>
+                  {e.code}
+                </option>
+              ))}
+          </select>
+        </div>
+        <Segmented
+          label="Analysis years"
+          value={String(filters.year)}
+          options={[
+            { value: "2026", label: "2026" },
+            { value: "2027", label: "2027" },
+          ]}
+          onChange={(v) => setFilters({ ...filters, year: Number(v) })}
+        />
+        <Segmented
+          label="Scenario"
+          value={filters.scenario}
+          options={[
+            { value: "Sales", label: "Sales" },
+            { value: "Sales + Prospect", label: "Sales + Prospect" },
+          ]}
+          onChange={(v) =>
+            setFilters({ ...filters, scenario: v as Filters["scenario"] })
+          }
+        />
+        <Segmented
+          label="Sales type"
+          value={filters.salesType}
+          options={[
+            { value: "all", label: "All sales" },
+            { value: "external", label: "External" },
+            { value: "group", label: "Group" },
+          ]}
+          onChange={(v) =>
+            setFilters({ ...filters, salesType: v as Filters["salesType"] })
+          }
+        />
+      </section>
+      <section className="china-strip" aria-label="China total and entities">
+        <button
+          onClick={() => selectEntity("all")}
+          className={
+            filters.region === "China" &&
+            filters.bu === "all" &&
+            filters.entity === "all"
+              ? "selected"
+              : ""
+          }
+        >
+          <small>CHINA TOTAL · {filters.year}</small>
+          <strong>
+            {formatK(data.chinaTotal.base)} <em>kEUR</em>
+          </strong>
+          <span>Sales & Dashboard · known sources</span>
+        </button>
+        {data.china.map((r) => (
+          <button
+            key={r.entity.id}
+            className={filters.entity === r.entity.id ? "selected" : ""}
+            onClick={() => selectEntity(r.entity.id)}
+          >
+            <small>
+              {r.entity.code} · {r.entity.description}
+            </small>
+            <strong>
+              {formatK(r.metrics.base)} <em>kEUR</em>
+            </strong>
+            <span>
+              {r.snapshot
+                ? `W${r.snapshot.week} · ${r.metrics.budget === null ? "Budget review" : "Source review"}`
+                : "Source pending"}
+            </span>
+          </button>
+        ))}
+      </section>
+      {!data.rows.length && (
+        <p className="apac-notice">
+          No permitted source data for this selection. Choose APAC or China to
+          view available records.
+        </p>
+      )}
+      <section className="kpi-grid">
+        <MetricCard
+          label="Annual Dashboard"
+          value={formatK(t.budget)}
+          note={`Approved annual budget ${filters.year}${t.budget === null ? " · Review missing budgets" : ""}`}
+        />
+        <MetricCard
+          label="Sales & Dashboard (OB)"
+          value={formatK(t.base)}
+          note={`YTD invoiced + committed annual OB${partial("base")}`}
+        >
+          <div className="kpi-sales-split">
+            <div>
+              <span>Sales to date</span>
+              <strong>{formatK(t.sales)}</strong>
+            </div>
+            <div>
+              <span>Dashboard (OB)</span>
+              <strong>{formatK(t.orderbook)}</strong>
+            </div>
+          </div>
+          <small>Split excludes unsplit legacy DCP data</small>
+        </MetricCard>
+        <MetricCard
+          label="Sales + Prospect"
+          value={formatK(t.scenario)}
+          accent
+          note={`${filters.scenario === "Sales" ? "Sales scenario selected" : "Expected annual sales including Prospect"}${partial("scenario")}`}
+        >
+          <div className="kpi-sales-split">
+            <div>
+              <span>Known Prospect</span>
+              <strong>{formatK(t.prospect)}</strong>
+            </div>
+          </div>
+        </MetricCard>
+        <MetricCard
+          label="Coverage"
+          value={percent(t.coverage)}
+          note={`Selected annual scenario / approved annual budget ${filters.year}`}
+        >
+          <div className="kpi-meter">
+            <span
+              style={{ width: `${Math.min(100, (t.coverage ?? 0) * 100)}%` }}
+            />
+          </div>
+        </MetricCard>
+        <MetricCard
+          label="Residual Gap"
+          value={formatK(t.gap)}
+          note={`Annual budget less selected scenario · ${filters.year}${t.gap === null ? " · Review" : ""}`}
+        />
+        <MetricCard
+          label="Remaining this month"
+          value={formatK(t.remaining)}
+          note={`Full-month estimate less MTD invoiced${partial("remaining")}${filters.year === 2027 ? " · future year unavailable" : ""}`}
+        />
+      </section>
+      <section className="briefing-strip">
+        <div className="briefing-title">
+          <span className="briefing-mark">↗</span>
+          <div>
+            <p>Executive summary</p>
+            <h2>What requires attention this week</h2>
+          </div>
+        </div>
+        <div className="briefing-points">
+          <span>
+            <b>{data.rows.filter((r) => r.metrics.budget === null).length}</b>{" "}
+            annual budgets unavailable
+          </span>
+          <span>
+            <b>{data.rows.filter((r) => r.metrics.prospect === null).length}</b>{" "}
+            Prospect inputs pending
+          </span>
+          <span>
+            {data.partialKeys.length
+              ? "Partial totals: known source values only"
+              : "Source values available"}{" "}
+            ·{" "}
+            {data.weeks.length > 1
+              ? "mixed reporting weeks"
+              : "weekly snapshot"}
+          </span>
+        </div>
+      </section>
+      <section className="dashboard-grid dashboard-grid-main">
+        <article className="panel cumulative-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="panel-kicker">Annual trajectory · EUR K</p>
+              <h2>Annual Dashboard vs cumulative scenario</h2>
+              <p>
+                {filters.bu} · {filters.year} · {filters.salesType}
+              </p>
+            </div>
+          </div>
+          <PerformanceChart rows={t.cumulative} cumulative />
+          <div className="panel-foot">
+            <span>
+              Annual selected scenario {formatK(t.scenario)} kEUR · gap{" "}
+              {formatK(t.gap)} kEUR
+            </span>
+            <span className="source-note">
+              Current YTD anchor + monthly committed orders. Missing Prospect
+              phasing remains blank.
+            </span>
+          </div>
+          <details className="analysis-disclosure">
+            <summary>
+              <span>
+                <strong>Compare performance</strong>
+                <small>Annual scenario for each Business Unit Entity</small>
+              </span>
+              <span className="disclosure-action">Explore comparison →</span>
+            </summary>
+            <div className="analysis-disclosure-body comparison-grid">
+              {data.rows.map((r) => (
+                <section key={r.entity.id}>
+                  <h3>{r.entity.code}</h3>
+                  <PerformanceChart rows={r.metrics.cumulative} cumulative />
+                </section>
+              ))}
+            </div>
+          </details>
+        </article>
+        <article className="panel gap-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="panel-kicker">Contribution to performance</p>
+              <h2>Gap by BU</h2>
+            </div>
+          </div>
+          <div className="gap-list">
+            {data.buGroups.map((b) => (
+              <div className="apac-gap-row" key={b.name}>
+                <strong>{b.name}</strong>
+                <div>
+                  <i
+                    style={{
+                      width:
+                        b.metrics.gap === null
+                          ? "0%"
+                          : `${Math.min(100, (Math.abs(b.metrics.gap) / Math.max(b.metrics.budget ?? 1, 1)) * 100)}%`,
+                    }}
+                  />
+                </div>
+                <b>
+                  {b.metrics.gap === null ? "Review" : formatK(b.metrics.gap)}
+                </b>
+              </div>
+            ))}
+          </div>
+          <div className="gap-callout">
+            <span>Selected annual gap</span>
+            <strong>{formatK(t.gap)}</strong>
+          </div>
+          <div className="sales-mix-block">
+            <div className="sales-mix-heading">
+              <div>
+                <span>Sales mix</span>
+                <strong>External vs Group</strong>
+              </div>
+              <small>Known classified source values</small>
+            </div>
+            <div className="apac-mix">
+              <div
+                className="apac-donut"
+                style={{
+                  background: knownMix
+                    ? `conic-gradient(#a77a35 0 ${externalShare}%, #386b65 ${externalShare}% 100%)`
+                    : "#ded9ce",
+                }}
+              >
+                <span>
+                  {knownMix ? `${externalShare.toFixed(0)}%` : "—"}
+                  <small>External</small>
+                </span>
+              </div>
+              <div>
+                <p>
+                  External <b>{formatK(data.external)}</b>
+                </p>
+                <p>
+                  Group <b>{formatK(data.group)}</b>
+                </p>
+                <small>DCP aggregate has no supplied split.</small>
+              </div>
+            </div>
+          </div>
+        </article>
+      </section>
+      <section className="dashboard-grid dashboard-grid-secondary">
+        <article className="panel monthly-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="panel-kicker">Monthly phasing · EUR K</p>
+              <h2>Annual Dashboard vs monthly performance</h2>
+              <p>Sales and Prospect follow supplied monthly phasing</p>
+            </div>
+          </div>
+          <PerformanceChart rows={t.monthly} />
+        </article>
+        <article className="panel weekly-panel">
+          <div className="panel-heading">
+            <div>
+              <p className="panel-kicker">Current month control · EUR K</p>
+              <h2>Invoice plan vs invoiced</h2>
+              <p>
+                {[
+                  ...new Set(
+                    data.rows.flatMap((r) =>
+                      r.snapshot && r.metrics.monthEstimate !== null
+                        ? [months[r.snapshot.month - 1]]
+                        : [],
+                    ),
+                  ),
+                ].join(" / ")}{" "}
+                · source reporting month
+              </p>
+            </div>
+          </div>
+          <div className="apac-delivery">
+            <strong>
+              {formatK(t.monthSales)}
+              <small>invoiced MTD</small>
+            </strong>
+            <span>of {formatK(t.monthEstimate)} estimated</span>
+            <div className="delivery-track">
+              <i
+                style={{
+                  width: `${t.monthEstimate ? Math.min(100, ((t.monthSales ?? 0) / t.monthEstimate) * 100) : 0}%`,
+                }}
+              />
+            </div>
+            <p>
+              Still to invoice <b>{formatK(t.remaining)} kEUR</b>
+            </p>
+          </div>
+          <div className="panel-foot">
+            <span>
+              Full-month estimate less MTD invoiced. Annual coverage and gap are
+              calculated separately.
+            </span>
+            <span className="source-note">
+              Partial when monthly invoicing inputs are unavailable.
+            </span>
+          </div>
+        </article>
+      </section>
+      <section className="panel commercial-panel">
+        <div className="panel-heading">
+          <div>
+            <p className="panel-kicker">Committed Dashboard exposure · EUR K</p>
+            <h2>Dashboard by customer and brand</h2>
+            <p>Largest committed exposures from order lines</p>
+          </div>
+          <label className="commercial-filter">
+            <span>Customer</span>
+            <select
+              value={customer}
+              onChange={(e) => setCustomer(e.target.value)}
+            >
+              <option value="all">All available</option>
+              {data.commercial.map((c) => (
+                <option key={c.customer}>{c.customer}</option>
+              ))}
+            </select>
+          </label>
+        </div>
+        <div className="commercial-grid">
+          {data.commercial
+            .filter((c) => customer === "all" || c.customer === customer)
+            .slice(0, 8)
+            .map((c) => (
+              <div className="apac-commercial" key={c.customer}>
+                <span>{c.customer}</span>
+                <strong>
+                  {formatK(c.value)} <small>kEUR</small>
+                </strong>
+                <div>
+                  <i
+                    style={{
+                      width: `${Math.max(0, (c.value / Math.max(data.commercial[0]?.value ?? 1, 1)) * 100)}%`,
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+        </div>
+        {!data.commercial.length && (
+          <p className="muted">
+            No customer detail supplied for this selection.
+          </p>
+        )}
+        <div className="panel-foot">
+          Committed orders only; Prospect excluded. Brand classification is not
+          supplied and is not inferred.
+        </div>
+      </section>
+      <section className="panel matrix-panel" id="analysis">
+        <details open>
+          <summary>
+            <span>
+              <p className="panel-kicker">Period analysis · EUR K</p>
+              <h2>Time matrix</h2>
+              <small>Monthly phasing and weekly annual scenario history</small>
+            </span>
+            <span className="disclosure-action">Explore time matrix →</span>
+          </summary>
+          <div className="matrix-body">
+            <div className="analysis-toolbar matrix-toolbar">
+              <Segmented
+                label="Frequency"
+                value={frequency}
+                options={[
+                  { value: "month", label: "Month" },
+                  { value: "week", label: "Week" },
+                ]}
+                onChange={setFrequency}
+              />
+              <Segmented
+                label="Rows"
+                value={matrixLevel}
+                options={[
+                  { value: "entity", label: "Entities" },
+                  { value: "bu", label: "Business Units" },
+                ]}
+                onChange={setMatrixLevel}
+              />
+              <p>
+                {filters.year} · {filters.scenario}
+              </p>
+            </div>
+            <div className="matrix-scroll">
+              <table className="time-matrix">
+                <thead>
+                  <tr>
+                    <th>BU / Entity</th>
+                    {(frequency === "month"
+                      ? months
+                      : weeks.map((w) => `W${w}`)
+                    ).map((m) => (
+                      <th className="numeric" key={m}>
+                        {m}
+                      </th>
+                    ))}
+                    <th className="numeric">FY selected</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {matrixRows.map((r) => (
+                    <tr key={r.name}>
+                      <td>{r.name}</td>
+                      {frequency === "month"
+                        ? r.metrics.monthly.map((m) => (
+                            <td className="numeric" key={m.label}>
+                              {formatK(m.scenario)}
+                            </td>
+                          ))
+                        : weeks.map((w) => {
+                            const history = data.history.filter((h) =>
+                              matrixLevel === "entity"
+                                ? h.entity.code === r.name
+                                : h.entity.businessUnit === r.name,
+                            );
+                            const vals = history.map(
+                              (h) =>
+                                h.records.find((x) => x.week === w)?.value ??
+                                null,
+                            );
+                            return (
+                              <td className="numeric" key={w}>
+                                {formatK(
+                                  vals.length && vals.every((v) => v !== null)
+                                    ? vals.reduce<number>((a, v) => a + v!, 0)
+                                    : null,
+                                )}
+                              </td>
+                            );
+                          })}
+                      <td className="numeric">{formatK(r.metrics.scenario)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+            <p className="muted">
+              Blank cells mean unavailable source detail. Weekly snapshots are
+              never added together.
+            </p>
+          </div>
+        </details>
+      </section>
+      <section className="panel bu-panel" id="business-units">
+        <div className="panel-heading">
+          <div>
+            <p className="panel-kicker">China · Entity detail</p>
+            <h2>China total and entities</h2>
+            <p>
+              China remains visible across dashboard selections. Totals use
+              permitted entities and known values.
+            </p>
+          </div>
+        </div>
+        <MetricsTable
+          rows={totalRows}
+          onSelect={(id) => selectEntity(id === "china" ? "all" : id)}
+        />
+        {data.rows.some((r) => r.entity.reportingRegion !== "China") && (
+          <MetricsTable
+            rows={data.rows
+              .filter((r) => r.entity.reportingRegion !== "China")
+              .map((r) => ({
+                id: r.entity.id,
+                name: r.entity.code,
+                metrics: r.metrics,
+              }))}
+          />
+        )}
+      </section>
+      <section className="quality-panel" id="data-quality">
+        <details open>
+          <summary>
+            <div>
+              <p className="panel-kicker">Executive controls</p>
+              <h2>Management checks</h2>
+            </div>
+            <span>{data.checks.length} items to review</span>
+          </summary>
+          <p className="quality-intro">
+            Coverage and annual gap stay unavailable until all selected entities
+            have comparable budgets and scenario inputs.
+          </p>
+          <div className="quality-grid">
+            {data.rows.map((r) => (
+              <article className="apac-check" key={r.entity.id}>
+                <strong>
+                  {r.entity.code} · {r.snapshot ? "Review" : "Missing source"}
+                </strong>
+                <ul>
+                  {(
+                    r.snapshot?.findings ?? ["Source workbook not supplied"]
+                  ).map((f, i) => (
+                    <li key={i}>{f}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </details>
+      </section>
+      <footer className="apac-footer">
+        <span>DIAM · APAC Sales Performance</span>
+        <span>
+          {data.latestPublish
+            ? `Last publish ${new Date(data.latestPublish).toLocaleString()}`
+            : "Workbook baseline · no import published"}{" "}
+          · kEUR
+        </span>
+      </footer>
+    </>
+  );
 }
-
-function BrandView() { return <section className="brand-page"><div className="eyebrow">SALES BY BRAND / APAC</div><h1>Brand performance</h1><p>Core brand view aligned to the US dashboard. APAC seed data can be replaced by a formal brand import.</p><div className="metric-grid"><MetricCard label="Brand sales" value="1,168k" note="YTD actuals" tone="green"/><MetricCard label="Brand budget" value="1,178k" note="FY2026 plan" tone="blue"/><MetricCard label="Plan coverage" value="99%" note="Sales vs budget" tone="orange"/></div><div className="panel"><div className="panel-heading"><div><span className="kicker">Ranking</span><h2>Where performance is created</h2></div><button className="button secondary"><Upload size={16}/> Import sales by brand</button></div><div className="brand-list">{brands.map((item) => <div className="brand-row" key={item.brand}><strong>{item.brand}</strong><div className="brand-bar"><i style={{ width: `${Math.min(item.sales / 7, 100)}%` }}/></div><span>{item.sales}k</span><b className={item.trend >= 0 ? 'positive' : 'warning'}>{item.trend >= 0 ? '+' : ''}{item.trend}%</b></div>)}</div></div></section>; }
-
-function ImportCenter({ currentUser }: { currentUser: User }) { const [manual, setManual] = useState({ entityId: 'pda', week: '37', turnover: '98', orderbook: '25', forecast: '110', p1: '10', source: 'APAC entity weekly review' }); const [message, setMessage] = useState(''); const [fileReview, setFileReview] = useState<{ fileName: string; sheets: { name: string; rows: number; kind: string }[]; records: number; completeness: number; findings: string[] } | null>(null); const validation = validateManualImport(manual); const analyzeFile = async (file: File) => { const form = new FormData(); form.append('file', file); const response = await fetch('/api/import/analyze', { method: 'POST', body: form }); const result = await response.json(); if (result.batch) setFileReview(result.batch); setMessage(result.ok ? `Workbook ready for review: ${result.batch.fileName} · ${result.batch.records} rows · ${result.batch.completeness}% complete` : result.findings.join(' · ')); }; const submitManual = async () => { const response = await fetch('/api/import/manual', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(manual) }); const result = await response.json(); setMessage(result.ok ? `Manual review batch created for W${manual.week} · publish is available after approval` : result.validation.findings.join(' · ')); }; return <section className="import-page" id="import-center"><div className="hero-row"><div><div className="eyebrow">DATA OPERATIONS / IMPORT CENTER</div><h1>Review and publish data</h1><p>Excel-shaped uploads and manual entity-week entries both pass through validation before becoming active.</p></div></div><div className="content-grid import-grid"><div className="panel upload-panel"><div className="panel-heading"><div><span className="kicker">Step 01</span><h2>Upload Excel</h2></div><FileUp size={21} className="muted-icon"/></div><div className="dropzone"><FileUp size={30}/><strong>Drop a workbook here</strong><span>Recognizes Data Weekly, Synth, Budget Recap and supporting sheets</span><label className="button dark"><Upload size={16}/> Choose workbook<input type="file" accept=".xlsx,.xls" hidden onChange={(e) => { const file = e.target.files?.[0]; if (file) void analyzeFile(file); }}/></label></div>{message && <div className="notice success"><CheckCircle2 size={16}/>{message}</div>}{fileReview && <div className="import-review"><strong>{fileReview.fileName}</strong><span>{fileReview.sheets.length} sheets · {fileReview.records} parsed rows</span>{fileReview.sheets.slice(0, 5).map((sheet) => <small key={sheet.name}>{sheet.name} · {sheet.kind} · {sheet.rows} rows</small>)}</div>}</div><div className="panel"><div className="panel-heading"><div><span className="kicker">Step 02</span><h2>Manual entity-week</h2></div><span className={validation.valid ? 'status ready' : 'status review'}>{validation.valid ? 'Ready to review' : `${validation.findings.length} findings`}</span></div><div className="form-grid"><label>Entity<select value={manual.entityId} onChange={(e) => setManual({ ...manual, entityId: e.target.value })}>{entities.map((e) => <option key={e.id} value={e.id}>{e.name}</option>)}</select></label><label>Week<input type="number" value={manual.week} onChange={(e) => setManual({ ...manual, week: e.target.value })}/></label>{[['Turnover', 'turnover'], ['Order book', 'orderbook'], ['Forecast', 'forecast'], ['P1 upside', 'p1']].map(([label, key]) => <label key={key}>{label}<input value={manual[key as keyof typeof manual]} onChange={(e) => setManual({ ...manual, [key]: e.target.value })}/></label>)}<label className="wide">Source note<input value={manual.source} onChange={(e) => setManual({ ...manual, source: e.target.value })}/></label></div><div className="validation-box">{validation.valid ? <><CheckCircle2 size={17}/><span>All required fields present. Completeness {validation.completeness}%.</span></> : <><LockKeyhole size={17}/><span>{validation.findings.join(' · ')}</span></>}</div><button className="button dark full" disabled={!validation.valid || !canEdit(currentUser, entities.find((entity) => entity.id === manual.entityId)!)} onClick={() => void submitManual()}><CheckCircle2 size={16}/> Submit for review</button></div></div><div className="panel"><div className="panel-heading"><div><span className="kicker">History</span><h2>Import batches</h2></div><span className="unit">{importBatches.length} batches</span></div><div className="table-wrap"><table><thead><tr><th>Batch</th><th>Source</th><th>Submitted</th><th>Completeness</th><th>Status</th></tr></thead><tbody>{importBatches.map((batch) => <tr key={batch.id}><td><strong>{batch.fileName}</strong><small>{batch.records} records</small></td><td>{batch.sourceType}</td><td>{batch.submittedAt}</td><td>{batch.completeness}%</td><td><span className={`status ${batch.status === 'published' ? 'ready' : 'review'}`}>{batch.status}</span></td></tr>)}</tbody></table></div></div></section>; }
-
-function AdminPanel({ currentUser }: { currentUser: User }) { const [rows, setRows] = useState(users); const [selected, setSelected] = useState(currentUser.id); const active = rows.find((u) => u.id === selected) ?? rows[0]; const update = (next: User) => setRows(rows.map((u) => u.id === next.id ? next : u)); return <section className="admin-page"><div className="hero-row"><div><div className="eyebrow">ACCESS CONTROL / APAC</div><h1>Accounts & permissions</h1><p>Manage region scope, cross-region visibility, and account-level view/edit access.</p></div></div><div className="content-grid admin-grid"><div className="panel"><div className="panel-heading"><div><span className="kicker">Accounts</span><h2>People</h2></div><Users size={20} className="muted-icon"/></div>{rows.map((user) => <button className={`user-row ${active.id === user.id ? 'selected' : ''}`} key={user.id} onClick={() => setSelected(user.id)}><span className="avatar">{user.name.split(' ').map((part) => part[0]).join('').slice(0, 2)}</span><span><strong>{user.name}</strong><small>{user.email}</small></span><em>{roleLabel(user.role)}</em></button>)}</div><div className="panel"><div className="panel-heading"><div><span className="kicker">Selected account</span><h2>{active.name}</h2></div><Settings2 size={20} className="muted-icon"/></div><div className="permission-summary"><span>Role</span><strong>{roleLabel(active.role)}</strong><span>Region</span><strong>{active.region}</strong><label className="switch-row"><span>Allow cross-region view</span><input type="checkbox" checked={active.crossRegionView} disabled={currentUser.role !== 'superadmin'} onChange={(e) => update({ ...active, crossRegionView: e.target.checked })}/></label></div><h3 className="table-title">Account access matrix</h3><div className="table-wrap"><table><thead><tr><th>Entity</th><th>View</th><th>Edit</th></tr></thead><tbody>{entities.map((entity) => <tr key={entity.id}><td><strong>{entity.code}</strong><small>{entity.name}</small></td><td><input type="checkbox" checked={active.permissions[entity.id]?.includes('view') ?? false} disabled={currentUser.role !== 'superadmin'} onChange={() => update(togglePermission(active, entity.id, 'view'))}/></td><td><input type="checkbox" checked={active.permissions[entity.id]?.includes('edit') ?? false} disabled={currentUser.role !== 'superadmin'} onChange={() => update(togglePermission(active, entity.id, 'edit'))}/></td></tr>)}</tbody></table></div></div></div></section>; }
-
-function downloadCsv(snapshot: ReturnType<typeof getDashboardSnapshot>) { const lines = [['Entity', 'Budget kEUR', 'Sales kEUR', 'Forecast kEUR'], ...snapshot.entities.map((e) => { const rows = snapshot.records.filter((r) => r.entityId === e.id); return [e.name, String(rows.reduce((s, r) => s + r.budget, 0).toFixed(1)), String(rows.reduce((s, r) => s + r.sales, 0).toFixed(1)), String(rows.reduce((s, r) => s + r.forecast, 0).toFixed(1))]; })]; const blob = new Blob([lines.map((line) => line.join(',')).join('\n')], { type: 'text/csv' }); const url = URL.createObjectURL(blob); const anchor = document.createElement('a'); anchor.href = url; anchor.download = 'diam-apac-dashboard-export.csv'; anchor.click(); URL.revokeObjectURL(url); }
-
-export default function Home() { const [tab, setTab] = useState<Tab>('overview'); const [userId, setUserId] = useState('u1'); const [loggedOut, setLoggedOut] = useState(false); const currentUser = users.find((u) => u.id === userId) ?? users[0]; useEffect(() => { const handler = (event: Event) => setTab((event as CustomEvent<Tab>).detail); window.addEventListener('dashboard:navigate', handler); return () => window.removeEventListener('dashboard:navigate', handler); }, []); if (loggedOut) return <DemoLogin users={users} onLogin={(id) => { setUserId(id); setLoggedOut(false); setTab('overview'); }} />; return <><div className="demo-switcher"><span>Demo account</span><select value={userId} onChange={(e) => setUserId(e.target.value)}>{users.map((u) => <option key={u.id} value={u.id}>{u.name} · {roleLabel(u.role)}</option>)}</select></div><AccountMenu user={currentUser} onNavigate={(nextTab) => setTab(nextTab)} onLogout={() => setLoggedOut(true)}/><DashboardView tab={tab} currentUser={currentUser} setTab={setTab}/><nav className="bottom-nav"><button className={tab === 'overview' ? 'active' : ''} onClick={() => setTab('overview')}><LayoutDashboard size={16}/>Overview</button><button className={tab === 'analysis' ? 'active' : ''} onClick={() => setTab('analysis')}><BarChart3 size={16}/>Analysis</button><button className={tab === 'entities' ? 'active' : ''} onClick={() => setTab('entities')}><Users size={16}/>Entities</button><button className={tab === 'checks' ? 'active' : ''} onClick={() => setTab('checks')}><CheckCircle2 size={16}/>Checks</button><button className={tab === 'brand' ? 'active' : ''} onClick={() => setTab('brand')}>Brand sales</button><button className={tab === 'imports' ? 'active' : ''} onClick={() => setTab('imports')}><Upload size={16}/>Import</button>{currentUser.role === 'superadmin' && <button className={tab === 'admin' ? 'active' : ''} onClick={() => setTab('admin')}><ShieldCheck size={16}/>Admin</button>}</nav></>; }
+export default function Home() {
+  const [user, setUser] = useState<User | null>(null),
+    [sessionChecked, setSessionChecked] = useState(false),
+    [filters, setFilters] = useState<Filters>(defaultFilters),
+    [data, setData] = useState<Dashboard | null>(null),
+    [view, setView] = useState("overview"),
+    [error, setError] = useState(""),
+    [email, setEmail] = useState(""),
+    [password, setPassword] = useState(""),
+    [loading, setLoading] = useState(false),
+    [revision, setRevision] = useState(0),
+    [writable, setWritable] = useState(false);
+  useEffect(() => {
+    void fetch("/api/auth/session")
+      .then((r) => r.json())
+      .then((j) => {
+        if (j.ok) setUser(j.user);
+      })
+      .finally(() => setSessionChecked(true));
+  }, []);
+  useEffect(() => {
+    if (!user) return;
+    const controller = new AbortController();
+    setLoading(true);
+    const query = new URLSearchParams(
+      Object.entries(filters).map(([k, v]) => [k, String(v)]),
+    );
+    void fetch(`/api/dashboard?${query}`, { signal: controller.signal })
+      .then((r) => {
+        if (r.status === 401) {
+          setUser(null);
+          setData(null);
+          setView("overview");
+        }
+        return r.json();
+      })
+      .then((j) => {
+        if (!j.ok) throw new Error(j.error);
+        setData(j.data);
+        setWritable(j.storage.writable);
+        setError("");
+      })
+      .catch((e) => {
+        if (e.name !== "AbortError") setError(e.message);
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) setLoading(false);
+      });
+    return () => controller.abort();
+  }, [user, filters, revision]);
+  const login = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoading(true);
+    try {
+      const j = await (
+        await fetch("/api/auth/login", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email, password }),
+        })
+      ).json();
+      if (!j.ok) throw new Error(j.error);
+      setUser(j.user);
+      setPassword("");
+      setError("");
+    } catch (e) {
+      setError((e as Error).message);
+    } finally {
+      setLoading(false);
+    }
+  };
+  const logout = async () => {
+    await fetch("/api/auth/login", { method: "DELETE" });
+    setUser(null);
+    setData(null);
+    setView("overview");
+  };
+  if (!sessionChecked)
+    return <main className="login-shell">Loading account…</main>;
+  if (!user)
+    return (
+      <main className="login-shell">
+        <form className="panel login-panel" onSubmit={(e) => void login(e)}>
+          <img src="/diam-logo.png" alt="DIAM" width="100" />
+          <p className="panel-kicker">APAC sales performance</p>
+          <h1>Sign in</h1>
+          <p>Access your permitted regions and entities.</p>
+          <label>
+            Email
+            <input
+              type="email"
+              autoComplete="username"
+              required
+              value={email}
+              onChange={(e) => setEmail(e.target.value)}
+            />
+          </label>
+          <label>
+            Password
+            <input
+              type="password"
+              autoComplete="current-password"
+              required
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+            />
+          </label>
+          <button className="apac-button primary" disabled={loading}>
+            Sign in
+          </button>
+          {error && (
+            <p role="alert" className="error-message">
+              {error}
+            </p>
+          )}
+        </form>
+      </main>
+    );
+  return (
+    <DashboardShell
+      user={user}
+      filters={filters}
+      onImport={() => setView("imports")}
+      onAdmin={() => setView("admin")}
+      onLogout={() => void logout()}
+      onBrand={() => setView("brand")}
+      onOverview={() => setView("overview")}
+    >
+      <main className="page-shell">
+        {error && (
+          <p className="apac-notice" role="alert">
+            {error}
+          </p>
+        )}
+        {loading && (
+          <div className="loading-strip" role="status">
+            Updating selected scope…
+          </div>
+        )}
+        {view === "imports" ? (
+          <ImportPortal
+            currentUser={user}
+            writable={writable}
+            onClose={() => setView("overview")}
+            onPublished={() => setRevision((v) => v + 1)}
+          />
+        ) : view === "admin" ? (
+          <AdminPanel onClose={() => setView("overview")} />
+        ) : view === "brand" ? (
+          <section className="panel apac-workspace">
+            <p className="panel-kicker">Sales by brand · APAC</p>
+            <h1>Brand source pending</h1>
+            <p>
+              No formal APAC brand source is present in the supplied workbooks.
+              Customer order detail is available on the overview.
+            </p>
+            <button className="apac-button" onClick={() => setView("overview")}>
+              Back to overview
+            </button>
+          </section>
+        ) : data ? (
+          <div
+            aria-busy={loading}
+            className={loading ? "dashboard-updating" : ""}
+          >
+            <DashboardView
+              data={data}
+              filters={filters}
+              setFilters={setFilters}
+            />
+          </div>
+        ) : (
+          <p>Loading dashboard…</p>
+        )}
+      </main>
+    </DashboardShell>
+  );
+}

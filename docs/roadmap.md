@@ -1,25 +1,23 @@
 # Roadmap
 
-## Demo milestone (current)
+## Implemented locally
 
-- APAC Sales Performance overview, analysis, business units/entities, management checks, export, and Sales by Brand base page.
-- Mock login with superadmin, two APAC admins, entity editors, viewer, and audit read-only personas.
-- Account-level view/edit permission matrix and region-admin cross-region switch.
-- Excel-derived snapshot from the supplied DDC, DEHK, and Global Follow Up workbooks; rerunnable extraction via `npm run extract:source`.
-- US-shaped `.xlsx` export with six sheets: Executive Summary, Weekly Review, Data Weekly, Budget Recap, Chart Data, and Management Checks.
-- Workbook-aware import review and manual entity-week entry, validation, and publish simulation.
-- Project context, architecture, and contributor rules.
+- USA-style page structure with China-first APAC hierarchy and visible China/entity summaries.
+- Real W-sheet extraction, approved PDA-to-DCP mapping, explicit missing-source handling.
+- Annual/MTD metric separation, Prospect naming, year/type/entity filters, monthly and weekly matrix.
+- Server-enforced scoped reads/imports/publishing/exports, password login and superadmin account controls.
+- Review acknowledgement, idempotent versioned publishing, atomic local file storage and PostgreSQL adapter interface.
+- Eight-sheet scoped export, automated calculation/permission/import regression tests, local API smoke checks.
 
-## Production milestone
+## Awaiting source data
 
-- Replace JSON adapter with Postgres/Supabase schema and migrations.
-- Persist import files, versions, publish events, corrections, and audit logs.
-- Add real SSO/identity provider, secure sessions, MFA policy, and server-side authorization.
-- Parse and validate real workbook contents server-side, including source reconciliation and duplicate detection.
-- Add scheduled refresh, alerts, data-quality ownership, and historical snapshot retention.
+- Approved DHK/DDC annual budgets and Prospect.
+- DCP entity-level splits/current-month invoicing replacing the confirmed mapped legacy aggregate when available.
+- DSI/DDJ/DDI source workbooks; formal APAC brand source.
+- Intercompany elimination rules if a consolidated revenue view is required.
 
-## Deployment milestone
+## Deferred by owner
 
-- Configure Vercel project and environment secrets.
-- Connect the purchased company domain, HTTPS, DNS, and production monitoring.
-- Set backup/recovery, access reviews, release environments, and operational runbooks.
+- AWS/Alibaba Cloud database provisioning and production connection configuration.
+- Vercel release with production identity/storage secrets.
+- SSO, centralized request-abuse protection, object storage, infrastructure backups/monitoring.

@@ -6,7 +6,9 @@ This repository contains the APAC demo for DIAM's sales-performance dashboard. I
 
 ## Working rules
 
-- Keep the dashboard focused on sales performance, planning, order book, P1 upside, source readiness, and management checks.
+- Keep the dashboard focused on sales performance, planning, order book, Prospect (source P1), source readiness, and management checks.
+- Preserve APAC (Total) -> China (DHK/DCP/DDC), Singapore (DSI), India (DDI), Japan (DDJ). Keep China totals and entity detail visible within the user's scope. Map DEHK to DHK and the approved PDA source to DCP; retain its source limitations.
+- Annual Dashboard means approved annual budget. Coverage and Residual Gap use annual values; Remaining this month uses monthly uninvoiced amounts. Missing entity data stays blank.
 - Keep metric names and units explicit. The source workbooks use kEUR and entity/week reporting.
 - Put business rules in `lib/` and keep pages/components focused on presentation and interaction.
 - Add or update documentation when a data grain, permission rule, or import contract changes.
@@ -16,7 +18,7 @@ This repository contains the APAC demo for DIAM's sales-performance dashboard. I
 
 ## Data handling
 
-- The demo uses JSON seed data plus an adapter. It is not a production persistence layer.
+- JSON is the initial seed. Local changes persist through the file adapter; cloud persistence uses the PostgreSQL adapter interface and requires DATABASE_URL. Do not enable ephemeral file writes on Vercel.
 - US staging URLs, usernames, passwords, cookies, and tokens are secrets and must never be committed to app code or docs.
 - Import data follows analyze -> review -> publish. Never make an upload active without a publish action.
 - Show source, week, entity, and validation status for imported records.
@@ -32,4 +34,8 @@ This repository contains the APAC demo for DIAM's sales-performance dashboard. I
 
 ## Demo limits
 
-Mock login, JSON state, in-process mutations, and seeded brand data are demo mechanisms. The current dashboard snapshot is extracted from the three workbooks in `Dashboard/`; the brand page remains a replaceable demo source until formal APAC brand data is supplied. Real SSO, audit logs, database transactions, object storage, Vercel deployment, domain setup, and permanent import storage belong to the roadmap.
+The current dashboard snapshot is extracted from the three workbooks in `Dashboard/`. Password login, scoped API access, import review/publish, revision history, and local persistence are implemented. The PostgreSQL transaction adapter is prepared but has not been validated against a provisioned cloud database. Brand data remains unavailable until formal APAC sources are supplied. SSO, centralized abuse protection, immutable audit storage, object storage, cloud database configuration, and Vercel rollout remain deployment work.
+
+## Reporting Region and BU mapping
+
+Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.

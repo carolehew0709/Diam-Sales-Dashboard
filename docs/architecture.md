@@ -1,31 +1,40 @@
-# Architecture
-
-## Demo stack
-
-Next.js App Router, React, TypeScript, CSS modules-free global styling, and lucide-react icons. The app is intentionally dependency-light so the demo is easy to review and later deploy.
+# Architecture and contracts
 
 ## Layers
 
-1. `app/`: routes and API handlers.
-2. `components/`: dashboard shell, charts, tables, import/admin panels.
-3. `lib/`: types, seed repository, aggregation, permission checks, and import validation.
-4. `data/`: generated source snapshot JSON. `scripts/extract-apac-source.mjs` reads the supplied workbooks without changing them and writes the normalized snapshot.
-5. `lib/workbook-parser.ts`: source adapter for the company W1-W52 template. It preserves order lines, monthly 2026/2027 allocation, entity-week snapshots, source sheet/row references, and workbook checks.
+- `lib/workbook-parser.ts`: shared source parser used by offline extraction and authenticated Excel import.
+- `lib/dashboard.ts`: scoped entity, China/BU and monthly/annual calculations shared by API and export.
+- `lib/permissions.ts`: account/region rules, with no editor bypass.
+- `lib/auth.ts`: signed expiring HttpOnly sessions, password verification, CSRF origin checks and consistent API errors.
+- `lib/storage.ts`: StorageAdapter contract (`read`, atomic `transaction`), local file adapter, optional PostgreSQL adapter.
+- `lib/repository.ts`: review/publish lifecycle, authorization, revision history and audit events.
+- `app/api`: authenticated data/exports, imports and superadmin-only account management.
+- Browser components: presentation and interaction. They fetch authorized data, never import the source JSON, user directory or password hashes.
 
-The repository adapter exposes dashboard reads, user/permission reads, and import lifecycle operations. Dashboard metrics use the latest non-empty weekly snapshot rather than summing YTD snapshots, and monthly phasing comes from the source workbook when present. Today it is an in-memory JSON-backed demo. The adapter boundary is the migration point for Postgres/Supabase later.
+## Permissions
 
-## Permission model
+Only superadmin manages users and permissions. Region admins publish only entities with View+Edit inside their own region. Editors may submit/review permitted imports, but never publish. Viewers/audit viewers may read/export permitted data. Cross-region visibility does not grant editing. Editing implies View. Disabled accounts and session versions revoke prior access; account writes are server-authorized.
 
-`User` has a role, region scope, and account permissions. Visibility requires a matching region or an explicit cross-region grant, plus `view` on the account. `superadmin` and `editor` have global edit capability; `region_admin` can edit only granted entities inside the assigned Region. Publishing remains a separate capability. The UI hides unavailable actions, while API handlers repeat authorization checks.
+Sessions last eight hours and use HMAC-SHA256 with a configured secret. Passwords use per-user salted scrypt hashes. Production cookies are Secure and HttpOnly; SameSite=Lax. Same-origin checks guard mutations. There is no default production password or email-to-superadmin fallback. Administrator bootstrap credentials must be explicitly configured. Production identity/SSO, centralized abuse controls and infrastructure monitoring remain deployment work.
 
-## Import flow
+## Persistence
 
-Excel and manual entry both create an `ImportBatch` in `review` state. The parser recognizes W1-W52 orderbook sheets as well as `Data Weekly`, `Synth`, `Budget Recap`, and supporting sheets. W sheets are normalized into order lines and entity-week snapshots; the workbook's calculated checks are retained as validation evidence. Only an authorized publish operation moves the batch into the active snapshot. Production should replace the in-memory lifecycle with server-side parsing and durable object storage.
+The local adapter serializes transactions and atomically renames a temporary file. It is only supported in a single Node process, not multiple workers or network filesystems. PostgreSQL uses a database transaction, advisory lock and row-level lock to publish the complete state atomically. Initial state comes from the generated workbook baseline; subsequent persisted state takes precedence.
 
-## Export contract
+The JSON-document PostgreSQL adapter is a portable starting point for AWS RDS or Alibaba Cloud ApsaraDB PostgreSQL. It does not provision infrastructure. A normalized schema/object storage can replace it behind StorageAdapter later. Vercel with no DATABASE_URL is read-only; this is shown in the import portal.
 
-`GET /api/export` produces an Excel workbook patterned after the US export: `Executive Summary`, `Weekly Review`, `Data Weekly`, `Orderbook Detail`, `Entity Snapshots`, `Budget Recap`, `Chart Data`, and `Management Checks`. Published W1-W52 order lines retain customer, External/Group, DGC, monthly phasing, and source row references in `Orderbook Detail`.
+## Import lifecycle
 
-## Production path
+Authenticated analyze/manual submission → persisted review batch → explicit authorized publish. Review responses include every affected entity/week, source, source cells, validation findings and order lines. A review acknowledgement is required for nonfatal source limitations. Validation errors block publish. A batch outside the caller's edit/publish scope is rejected as a whole.
 
-Keep the page contracts stable while replacing the adapter with Postgres/Supabase, add real identity/SSO, server-side file parsing, audit events, row-level security, background jobs, and Vercel/domain configuration.
+Manual input preserves separate YTD/MTD/estimate External and Group fields, 2026/2027 OB, annual budgets, Prospect and source notes. Each line requires twelve allocations per year reconciling to that year's total. Numeric values must be finite/nonnegative and weeks integer/range-valid. No lines means explicitly zero OB.
+
+Publication replaces matching entity/year/week active snapshots and details; retries of a published batch are idempotent. Earlier batches retain their records as a reviewable revision history. Dashboard refreshes from the API after publication; exports read the same adapter. A new batch for an already-published grain creates a new revision rather than appending duplicate active lines.
+
+## Export
+
+Eight sheets: Executive Summary, Weekly Review, Data Weekly, Orderbook Detail, Entity Snapshots, Budget Recap, Chart Data and Management Checks. Filters and scope are applied server-side; no unauthorized entities are exported. Weekly Review includes source history for the actual selected entities. Missing amounts remain blank. Coverage uses typed ratios. Source split columns are retained in detailed source sheets for review.
+
+## Frontend
+
+The reference's stylesheet and section structure provide the dark topbar, typography stacks, warm canvas, six KPI cards, briefing strip, wide cumulative/narrow gap layout, monthly/invoicing panels, commercial detail, matrix, BU table and checks. APAC additions include hierarchical filters and the persistent China/entity strip. Original source URLs, credentials and session material are excluded from the repository. No fake brand sales or made-up region totals are presented.

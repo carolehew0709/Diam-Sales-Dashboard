@@ -1,3 +1,4 @@
+import { applyApprovedBudget } from "./annual-budgets";
 import * as XLSX from "xlsx";
 import { resolveEntity } from "./entities";
 import type { Amount, Finding, OrderBookLine, Snapshot } from "./types";
@@ -295,9 +296,10 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
       severity: "error",
       message: "No supported populated entity-week snapshots found",
     });
-  const issues = [...new Set(snapshots.flatMap((s) => s.findings))];
+  const approvedSnapshots = snapshots.map(applyApprovedBudget);
+  const issues = [...new Set(approvedSnapshots.flatMap((s) => s.findings))];
   findings.push(
     ...issues.map((message) => ({ severity: "review" as const, message })),
   );
-  return { snapshots, lines, findings, sheets };
+  return { snapshots: approvedSnapshots, lines, findings, sheets };
 }

@@ -2,9 +2,9 @@ import fs from "node:fs";
 import path from "node:path";
 import { parseDashboardWorkbook } from "../lib/workbook-parser";
 const root = process.cwd();
-const files = fs
-  .readdirSync(path.join(root, "Dashboard"))
-  .filter((f) => /\.xlsx$/i.test(f));
+const files: string[] = JSON.parse(
+  fs.readFileSync(path.join(root, "Dashboard/source-manifest.json"), "utf8"),
+).files;
 const parsed = files.map((f) =>
   parseDashboardWorkbook(fs.readFileSync(path.join(root, "Dashboard", f)), f),
 );

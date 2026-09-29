@@ -311,5 +311,7 @@
   "validation.annualBudget": "Annual budget not supplied",
   "validation.prospect": "Prospect not supplied",
   "validation.phasing": "Prospect monthly phasing not supplied",
-  "validation.turnover": "Historical monthly turnover not supplied"
+  "validation.turnover": "Historical monthly turnover not supplied",
+  "import.fixedBudget": "Approved 2026 annual budget is fixed across all weeks. Weekly uploads and manual entries cannot change it.",
+  "validation.budgetPhasing": "Approved annual budget has no supplied monthly phasing"
 }

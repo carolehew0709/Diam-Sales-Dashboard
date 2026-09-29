@@ -1,4 +1,5 @@
 "use client";
+import { approved2026Budgets } from "@/lib/annual-budgets";
 import { useI18n } from "@/components/i18n-provider";
 import { useEffect, useState } from "react";
 import { entities } from "@/lib/entities";
@@ -155,7 +156,16 @@ export function ImportPortal({
                 {label}
                 <input
                   type="number"
-                  value={form[key as keyof typeof form]}
+                  value={
+                    key === "annualBudget"
+                      ? (approved2026Budgets[form.entityId] ??
+                        form.annualBudget)
+                      : form[key as keyof typeof form]
+                  }
+                  readOnly={
+                    key === "annualBudget" &&
+                    approved2026Budgets[form.entityId] !== undefined
+                  }
                   onChange={(e) => setForm({ ...form, [key]: e.target.value })}
                 />
               </label>
@@ -188,11 +198,22 @@ export function ImportPortal({
               {label}
               <input
                 inputMode="decimal"
-                value={form[key as keyof typeof form]}
+                value={
+                  key === "annualBudget"
+                    ? (approved2026Budgets[form.entityId] ?? form.annualBudget)
+                    : form[key as keyof typeof form]
+                }
+                readOnly={
+                  key === "annualBudget" &&
+                  approved2026Budgets[form.entityId] !== undefined
+                }
                 onChange={(e) => setForm({ ...form, [key]: e.target.value })}
               />
             </label>
           ))}
+          {approved2026Budgets[form.entityId] !== undefined && (
+            <p className="wide muted">{tr("import.fixedBudget")}</p>
+          )}
           <label className="wide">
             {tr("import.sourceNote")}
             <input

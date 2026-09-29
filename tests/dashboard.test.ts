@@ -74,7 +74,7 @@ test("source parser reads YTD instead of Synth MTD and skips empty future templa
   close(s.monthTurnover.external, 308.88);
   assert.ok(p.lines.every((l) => l.sourceRow >= 24));
 });
-test("China hierarchy, missing budgets, and DCP mapping retain source limitations", () => {
+test("China uses fixed approved budgets while DCP retains its operating source limitations", () => {
   const d = getDashboardSnapshot(state, admin, {
     ...defaultFilters,
     scenario: "Sales",
@@ -83,12 +83,13 @@ test("China hierarchy, missing budgets, and DCP mapping retain source limitation
     d.rows.map((r) => r.entity.code),
     ["DHK", "DCP", "DDC"],
   );
-  close(d.totals.base, 33028.444 + 23642.9539 + 2961.9134);
-  assert.equal(d.totals.coverage, null);
-  assert.equal(d.totals.gap, null);
-  assert.deepEqual(d.weeks, [35, 36]);
+  close(d.totals.base, 34042.396 + 25008.8949 + 2961.9134);
+  close(d.totals.budget, 33207);
+  close(d.totals.coverage, 62013.2043 / 33207);
+  close(d.totals.gap, 33207 - 62013.2043);
+  assert.deepEqual(d.weeks, [35, 39]);
   const dcp = d.rows.find((r) => r.entity.id === "dcp")!;
-  close(dcp.metrics.budget, 10627.065097208331);
+  close(dcp.metrics.budget, 2608);
   close(dcp.metrics.prospect, 271);
   assert.equal(dcp.metrics.sales, null);
 });
@@ -153,7 +154,7 @@ test("2027 and sales-type filters use source splits and cannot invent missing bu
     year: 2027,
     scenario: "Sales",
   });
-  close(d.totals.base, 210);
+  close(d.totals.base, 601.224);
   assert.equal(d.totals.budget, null);
   assert.equal(d.totals.remaining, null);
   const e = getDashboardSnapshot(state, admin, {
@@ -162,7 +163,7 @@ test("2027 and sales-type filters use source splits and cannot invent missing bu
     salesType: "external",
     scenario: "Sales",
   });
-  close(e.totals.base, 24307.57);
+  close(e.totals.base, 25130.114);
   assert.equal(e.totals.coverage, null);
 });
 test("manual import preserves YTD/MTD, both order years, Prospect and source note", () => {
@@ -176,8 +177,8 @@ test("manual import preserves YTD/MTD, both order years, Prospect and source not
   assert.equal(s.sourceNote, "Test source");
   const m = entityMetric(s, defaultFilters);
   close(m.scenario, 180);
-  close(m.coverage, 0.9);
-  close(m.gap, 20);
+  close(m.coverage, 180 / 5769);
+  close(m.gap, 5769 - 180);
   close(m.remaining, 35);
 });
 test("validation rejects nonfinite/fractional weeks, unknown entity and inconsistent allocation", () => {
@@ -276,4 +277,38 @@ test("reporting regions select their BUs and APAC includes all six", () => {
     bu: "DHK",
   });
   assert.equal(invalid.rows.length, 0);
+});
+
+test("W39 refresh reconciles metrics and fixed budgets ignore weekly overrides", () => {
+  for (const [id, budget, base, remaining] of [
+    ["dhk", 24830, 34042.396, 492.612],
+    ["ddc", 5769, 25008.8949, 1278.9479],
+  ] as const) {
+    const d = getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      entity: id,
+      scenario: "Sales",
+    });
+    const s = d.rows[0].snapshot!;
+    assert.equal(s.week, 39);
+    close(d.totals.base, base);
+    close(d.totals.remaining, remaining);
+    close(d.totals.budget, budget);
+    for (const week of [1, 20, 39, 52]) {
+      const m = entityMetric(
+        { ...s, week, annualBudget: 99999 },
+        { ...defaultFilters, scenario: "Sales" },
+      );
+      close(m.budget, budget);
+      assert.ok(m.monthly.every((x) => x.budget === null));
+    }
+  }
+  const scenario = getDashboardSnapshot(state, admin, defaultFilters);
+  close(scenario.totals.budget, 33207);
+  assert.equal(scenario.totals.coverage, null); // Missing Prospect remains unknown.
+  const all = getDashboardSnapshot(state, admin, {
+    ...defaultFilters,
+    region: "APAC",
+  });
+  assert.equal(all.totals.budget, null); // No invented DSI/DDI/DDJ budgets.
 });

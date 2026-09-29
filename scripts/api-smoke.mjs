@@ -80,7 +80,7 @@ const d = await (
 ).json();
 assert.equal(d.data.rows.length, 1);
 assert.equal(d.data.rows[0].entity.code, "DCP");
-assert.ok(Math.abs(d.data.totals.coverage - 0.304215074475) < 0.00001);
+assert.ok(Math.abs(d.data.totals.coverage - 3232.9134 / 2608) < 0.00001);
 const r = await fetch(base + "/api/export?entity=dcp", {
   headers: { cookie: admin },
 });

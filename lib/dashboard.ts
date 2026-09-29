@@ -1,3 +1,4 @@
+import { applyApprovedBudget } from "./annual-budgets";
 import { entities, regions, matchesRegion } from "./entities";
 import { canView } from "./permissions";
 import type {
@@ -59,6 +60,7 @@ export const sumComplete = (values: Amount[]): Amount =>
 export const splitValue = (split: Split, type: SalesType): Amount =>
   type === "all" ? sumComplete([split.external, split.group]) : split[type];
 export function entityMetric(s: Snapshot | undefined, filters: Filters) {
+  if (s) s = applyApprovedBudget(s);
   const future = filters.year === 2027,
     type = filters.salesType;
   const sales = s && !future ? splitValue(s.turnover, type) : s ? 0 : null;
@@ -229,7 +231,8 @@ export function getDashboardSnapshot(
       .filter((s) => s.entityId === id && s.year === 2026)
       .sort((a, b) => b.week - a.week)[0];
   const rows = allowed.map((entity) => {
-    const snapshot = latest(entity.id);
+    const raw = latest(entity.id);
+    const snapshot = raw ? applyApprovedBudget(raw) : undefined;
     return { entity, snapshot, metrics: entityMetric(snapshot, filters) };
   });
   const selected = rows.filter(

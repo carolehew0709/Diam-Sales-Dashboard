@@ -6,12 +6,12 @@ A snapshot is entity × source year × ISO week; a line is entity × year × wee
 
 Hierarchy: APAC (Total) → China (DHK/DCP/DDC), Singapore (DSI), India (DDI), Japan (DDJ). Country names are reporting Regions; entity codes are BUs. Visibility is applied before aggregation and before customer/order details are returned.
 
-## Confirmed source mapping (2026-09-17)
+## Confirmed source mapping (updated 2026-09-29)
 
 | File                                          | Destination | Current populated week | Important limits                                                                               |
 | --------------------------------------------- | ----------- | ---------------------: | ---------------------------------------------------------------------------------------------- |
-| Dashboard 2026 - DEHK.xlsx                    | China / DHK |                     36 | Annual budget and Prospect not supplied                                                        |
-| Dashboard 2026 - DDC.xlsx                     | China / DDC |                     36 | Annual budget and Prospect not supplied                                                        |
+| Dashboard 2026 - DEHK(2).xlsx                 | China / DHK |                     39 | Prospect not supplied; budget fixed by owner approval                                          |
+| Dashboard 2026 - DDC(2).xlsx                  | China / DDC |                     39 | Prospect not supplied; budget fixed by owner approval                                          |
 | DIAM_Global_Follow_Up_2026_W35.xlsx, PDA rows | China / DCP |                     35 | Project-owner-approved mapping of a legacy aggregate; no sales/OB, External/Group or MTD split |
 
 DSI, DDJ and DDI have no supplied records and remain blank. The DCP mapping is a business instruction, not an independently reconciled allocation of the source's original Asia (PDA + PDN + PGC) aggregate.
@@ -22,7 +22,7 @@ All amounts are kEUR. Weekly entity sheets explicitly label their amounts K€. 
 
 For closed months, month-end YTD is the next month's YTD minus its MTD. Monthly invoicing is the difference between consecutive observed month-end balances; missing boundaries remain null. Current-month actual uses explicit MTD, future invoicing is zero, and committed OB uses supplied monthly allocations. A cumulative current-month anchor uses actual YTD plus current-month OB, then adds future OB. Historical monthly figures can reflect source corrections.
 
-DCP's annual base/monthly profile, approved budget and current-week Prospect are read from Data Weekly and Budget Recap. Historical Prospect is unavailable rather than copied backwards. The source P1 label is presented as Prospect.
+DCP's annual base/monthly profile and current-week Prospect are read from Data Weekly and Budget Recap. Its legacy workbook budget is superseded by the approved FY2026 budget below. Historical Prospect is unavailable rather than copied backwards. The source P1 label is presented as Prospect.
 
 ## KPI definitions
 
@@ -38,8 +38,14 @@ China's pinned strip shows Sales & Dashboard across all permitted China entities
 
 ## Known baseline checks
 
-103 populated entity-week snapshots and 1,927 historical order lines. Latest DHK base = 33,028.444 kEUR; DDC = 23,642.9539; mapped DCP = 2,961.9134. China base = 59,633.3113. Known Prospect = 271, so the partial annual Sales + Prospect is 59,904.3113. China annual coverage/gap remain Review because DHK/DDC budgets are absent. Known September remaining-to-invoice = 4,013.8959; DCP's monthly input is absent.
+109 populated entity-week snapshots and 2,107 historical order lines. DHK/DDC use W39 (2026-09-25); DCP retains W35. Latest DHK base = 34,042.396 kEUR; DDC = 25,008.8949; mapped DCP = 2,961.9134. China base = 62,013.2043. Known Prospect = 271, so the partial annual Sales + Prospect is 62,284.2043. China Sales coverage = 62,013.2043 / 33,207; Sales + Prospect coverage/gap remain unavailable because DHK/DDC Prospect is unknown. Known September remaining-to-invoice = 1,771.5599; DCP's monthly input is absent.
 
 ## Reporting Region and BU mapping
 
 Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.
+
+## Fixed FY2026 budget approval (2026-09-29)
+
+The project owner supplies DHK 24,830, DDC 5,769, DCP 2,608 kEUR, totaling 33,207 kEUR for China. `lib/annual-budgets.ts` is the year/entity control; it overrides all weekly source and manual budgets for these entities throughout 2026, including historical views and existing stored snapshots. It does not affect 2027. The source detail identifies the owner approval separately from workbook cells. No monthly or External/Group budget allocation was approved: these comparisons remain blank, and the old PDA monthly budget is not reused or divided proportionally. APAC's full budget remains incomplete while DSI/DDI/DDJ budgets are missing.
+
+`Dashboard/source-manifest.json` selects the current source workbooks. The original W36 files remain unchanged for traceability and are excluded from extraction, avoiding duplicate entity-week records. New source files are copied unchanged; extraction generates the reviewable JSON baseline. Persistent local updates follow the reviewed import/publish workflow rather than replacing user/account state.

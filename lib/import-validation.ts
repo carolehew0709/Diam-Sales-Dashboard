@@ -1,3 +1,4 @@
+import { applyApprovedBudget } from "./annual-budgets";
 import { randomUUID } from "node:crypto";
 import { emptySnapshot, weekDate } from "./workbook-parser";
 import { resolveEntity } from "./entities";
@@ -141,6 +142,7 @@ export function manualBatch(input: unknown, user: User): ImportBatch {
   else s.monthlyProspect.fill(0);
   s.findings.push("Historical monthly turnover not supplied");
   s.sourceCheck = "Review";
+  const approved = applyApprovedBudget(s);
   return {
     id: randomUUID(),
     fileName: s.sourceFile,
@@ -149,8 +151,11 @@ export function manualBatch(input: unknown, user: User): ImportBatch {
     entityIds: [entity.id],
     submittedBy: user.id,
     submittedAt: new Date().toISOString(),
-    findings: s.findings.map((message) => ({ severity: "review", message })),
-    snapshots: [s],
+    findings: approved.findings.map((message) => ({
+      severity: "review",
+      message,
+    })),
+    snapshots: [approved],
     lines,
     sheets: [],
   };

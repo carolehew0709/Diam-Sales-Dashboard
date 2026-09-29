@@ -25,7 +25,7 @@ The original workbooks are read-only. `Dashboard/source-manifest.json` selects t
 
 APAC (Total) aggregates China (DHK, DCP, DDC), Singapore (DSI), India (DDI) and Japan (DDJ). China is the default Region and its aggregate/entity strip remains visible. Entities without source data remain blank.
 
-Mappings confirmed by the project owner: DEHK → DHK; DDC → DDC; the Global Follow Up PDA aggregate → DCP. The DCP source retains its original PDA label and limitations in source details. It is not silently reclassified into invoiced sales or an External/Group split.
+Mappings: DEHK → DHK; DDC → DDC; Diam Pack Luxe China → DCP. The active baseline uses DHK/DDC W39 and DCP W38 entity workbooks. The previously approved Global Follow Up PDA → DCP mapping remains supported for legacy imports, but that aggregate workbook is no longer active.
 
 Annual Dashboard means approved annual budget. FY2026 budgets are fixed at DHK 24,830, DDC 5,769 and DCP 2,608 kEUR (China total 33,207), overriding weekly workbook/manual values. Sales & Dashboard = YTD invoiced sales + annual committed orderbook. Sales + Prospect adds expected orders. Coverage and Residual Gap use the selected full-year scenario and a comparable full-year budget. Remaining this month = full-month estimate minus MTD invoicing, bounded at zero.
 

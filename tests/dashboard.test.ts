@@ -74,7 +74,7 @@ test("source parser reads YTD instead of Synth MTD and skips empty future templa
   close(s.monthTurnover.external, 308.88);
   assert.ok(p.lines.every((l) => l.sourceRow >= 24));
 });
-test("China uses fixed approved budgets while DCP retains its operating source limitations", () => {
+test("China uses fixed budgets and latest entity-specific operating sources", () => {
   const d = getDashboardSnapshot(state, admin, {
     ...defaultFilters,
     scenario: "Sales",
@@ -83,15 +83,15 @@ test("China uses fixed approved budgets while DCP retains its operating source l
     d.rows.map((r) => r.entity.code),
     ["DHK", "DCP", "DDC"],
   );
-  close(d.totals.base, 34042.396 + 25008.8949 + 2961.9134);
+  close(d.totals.base, 34042.396 + 25008.8949 + 2622.104117529132);
   close(d.totals.budget, 33207);
-  close(d.totals.coverage, 62013.2043 / 33207);
-  close(d.totals.gap, 33207 - 62013.2043);
-  assert.deepEqual(d.weeks, [35, 39]);
+  close(d.totals.coverage, 61673.39501752914 / 33207);
+  close(d.totals.gap, 33207 - 61673.39501752914);
+  assert.deepEqual(d.weeks, [38, 39]);
   const dcp = d.rows.find((r) => r.entity.id === "dcp")!;
   close(dcp.metrics.budget, 2608);
-  close(dcp.metrics.prospect, 271);
-  assert.equal(dcp.metrics.sales, null);
+  assert.equal(dcp.metrics.prospect, null);
+  close(dcp.metrics.sales, 2620.651);
 });
 test("entity matrix preserves differences and cumulative December matches annual base", () => {
   for (const id of ["dhk", "ddc", "dcp"]) {
@@ -311,4 +311,30 @@ test("W39 refresh reconciles metrics and fixed budgets ignore weekly overrides",
     region: "APAC",
   });
   assert.equal(all.totals.budget, null); // No invented DSI/DDI/DDJ budgets.
+});
+
+test("DCP W38 uses direct entity data and handles shifted used ranges", () => {
+  const parsed = parseDashboardWorkbook(
+    fs.readFileSync("Dashboard/W38-- Dashboard 2026 - DCP.xlsx"),
+    "W38-- Dashboard 2026 - DCP.xlsx",
+  );
+  assert.equal(parsed.snapshots.length, 37);
+  assert.equal(parsed.findings.filter((f) => f.severity === "error").length, 0);
+  for (const week of [19, 20, 22]) {
+    const s = parsed.snapshots.find((s) => s.week === week)!;
+    assert.equal(s.entityId, "dcp");
+    assert.equal(s.sourceCells.turnover, "H10:H11");
+  }
+  const s = parsed.snapshots.at(-1)!;
+  assert.equal(s.week, 38);
+  assert.equal(s.baseOverride, null);
+  close(s.turnover.external, 199.275);
+  close(s.turnover.group, 2421.376);
+  const m = entityMetric(s, { ...defaultFilters, scenario: "Sales" });
+  close(m.budget, 2608);
+  close(m.base, 2622.104117529132);
+  close(m.orderbook, 1.45311752913171);
+  close(m.remaining, 1.45311752913171);
+  close(m.coverage, 2622.104117529132 / 2608);
+  assert.equal(s.prospect, null); // Never carry forward legacy PDA Prospect.
 });

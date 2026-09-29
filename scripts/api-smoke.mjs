@@ -80,7 +80,7 @@ const d = await (
 ).json();
 assert.equal(d.data.rows.length, 1);
 assert.equal(d.data.rows[0].entity.code, "DCP");
-assert.ok(Math.abs(d.data.totals.coverage - 3232.9134 / 2608) < 0.00001);
+assert.ok(d.data.totals.coverage === null);
 const r = await fetch(base + "/api/export?entity=dcp", {
   headers: { cookie: admin },
 });
@@ -91,7 +91,7 @@ const rows = XLSX.utils.sheet_to_json(wb.Sheets["Executive Summary"], {
   header: 1,
 });
 assert.equal(rows[4][0], "DCP");
-assert.ok(Math.abs(rows[4][6] - 3232.9134) < 0.001);
+assert.ok(Math.abs(rows[4][6] - 2622.104117529132) < 0.001);
 assert.ok(
   XLSX.utils
     .sheet_to_json(wb.Sheets["Weekly Review"], { header: 1 })

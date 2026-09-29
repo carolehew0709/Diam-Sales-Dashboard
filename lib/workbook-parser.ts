@@ -82,9 +82,19 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
   for (const name of workbook.SheetNames.filter((n) => /^W\d+$/.test(n))) {
     const ws = workbook.Sheets[name];
     const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
+    // Empty leading cells can change !ref without moving the actual template.
+    const header = Object.entries(ws).find(
+      ([address, value]) =>
+        !address.startsWith("!") && /^ENTITY NAME\s*:/i.test(text(value.v)),
+    );
+    if (header) {
+      const anchor = XLSX.utils.decode_cell(header[0]);
+      range.s = { r: Math.max(0, anchor.r - 1), c: Math.max(0, anchor.c - 1) };
+    }
     const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, {
       header: 1,
       defval: null,
+      range,
     }) as unknown[][];
     const at = (r: number, c: number) => rows[r]?.[c];
     const cell = (r: number, c: number) =>

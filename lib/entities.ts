@@ -28,7 +28,7 @@ export const entities: Entity[] = [
     reportingRegion: "China",
     businessUnit: "DCP",
     description: "即将关闭的工厂",
-    aliases: ["DCP", "PDA", "Asia (PDA + PDN + PGC)"],
+    aliases: ["DCP", "Diam Pack Luxe China", "PDA", "Asia (PDA + PDN + PGC)"],
   },
   ...["DSI", "DDI", "DDJ"].map((code) => ({
     id: code.toLowerCase(),

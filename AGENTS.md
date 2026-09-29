@@ -10,7 +10,7 @@ This repository contains the APAC demo for DIAM's sales-performance dashboard. I
 
 - Keep the dashboard focused on sales performance, planning, order book, Prospect (source P1), source readiness, and management checks.
 - Keep interface copy in `locales/en.json` and `locales/zh-CN.json` using semantic keys and `useI18n().tr`. Translate display labels only; preserve API enum values and source evidence. See `docs/localization.md`.
-- Preserve APAC (Total) -> China (DHK/DCP/DDC), Singapore (DSI), India (DDI), Japan (DDJ). Keep China totals and entity detail visible within the user's scope. Map DEHK to DHK and the approved PDA source to DCP; retain its source limitations.
+- Preserve APAC (Total) -> China (DHK/DCP/DDC), Singapore (DSI), India (DDI), Japan (DDJ). Keep China totals and entity detail visible within the user's scope. Map DEHK to DHK and Diam Pack Luxe China to DCP. Prefer the supplied DCP entity workbook; retain legacy PDA mapping only for historical imports with its limitations.
 - FY2026 approved budgets are fixed in `lib/annual-budgets.ts`: DHK 24,830, DDC 5,769, DCP 2,608 kEUR. Weekly imports must not overwrite them. No monthly budget allocation is supplied.
 - Annual Dashboard means approved annual budget. Coverage and Residual Gap use annual values; Remaining this month uses monthly uninvoiced amounts. Missing entity data stays blank.
 - Keep metric names and units explicit. The source workbooks use kEUR and entity/week reporting.

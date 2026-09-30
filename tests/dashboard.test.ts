@@ -1,3 +1,7 @@
+import {
+  reportingState,
+  isDuplicateIntercompanyOrder,
+} from "../lib/intercompany";
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -83,10 +87,10 @@ test("China uses fixed budgets and latest entity-specific operating sources", ()
     d.rows.map((r) => r.entity.code),
     ["DHK", "DCP", "DDC"],
   );
-  close(d.totals.base, 34042.396 + 25008.8949 + 2622.104117529132);
+  close(d.totals.base, 34042.396 + 20624.6649 + 2620.651);
   close(d.totals.budget, 33207);
-  close(d.totals.coverage, 61673.39501752914 / 33207);
-  close(d.totals.gap, 33207 - 61673.39501752914);
+  close(d.totals.coverage, 57287.7119 / 33207);
+  close(d.totals.gap, 33207 - 57287.7119);
   assert.deepEqual(d.weeks, [38, 39]);
   const dcp = d.rows.find((r) => r.entity.id === "dcp")!;
   close(dcp.metrics.budget, 2608);
@@ -282,7 +286,7 @@ test("reporting regions select their BUs and APAC includes all six", () => {
 test("W39 refresh reconciles metrics and fixed budgets ignore weekly overrides", () => {
   for (const [id, budget, base, remaining] of [
     ["dhk", 24830, 34042.396, 492.612],
-    ["ddc", 5769, 25008.8949, 1278.9479],
+    ["ddc", 5769, 20624.6649, 99.4279],
   ] as const) {
     const d = getDashboardSnapshot(state, admin, {
       ...defaultFilters,
@@ -337,4 +341,105 @@ test("DCP W38 uses direct entity data and handles shifted used ranges", () => {
   close(m.remaining, 1.45311752913171);
   close(m.coverage, 2622.104117529132 / 2608);
   assert.equal(s.prospect, null); // Never carry forward legacy PDA Prospect.
+});
+
+test("intercompany projection reconciles all metrics without modifying sources or double subtracting", () => {
+  const before = JSON.stringify(state);
+  const adjusted = reportingState(state);
+  assert.equal(JSON.stringify(state), before);
+  assert.deepEqual(reportingState(adjusted).snapshots, adjusted.snapshots);
+  for (const [id, base, remaining, removed] of [
+    ["ddc", 20624.6649, 99.4279, 4384.23],
+    ["dcp", 2620.651, 0, 1.45311752913171],
+  ] as const) {
+    const d = getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      entity: id,
+      scenario: "Sales",
+    });
+    close(d.totals.base, base);
+    close(d.totals.remaining, remaining);
+    close(d.totals.cumulative[11].base, base);
+    close(d.totals.coverage, base / d.totals.budget!);
+    close(d.totals.gap, d.totals.budget! - base);
+    const s = d.rows[0].snapshot!;
+    const gross = state.snapshots.find(
+      (x) => x.entityId === id && x.week === s.week,
+    )!;
+    close(gross.orderbook.group! - s.orderbook.group!, removed);
+    assert.deepEqual(gross.turnover, s.turnover);
+    assert.deepEqual(gross.monthTurnover, s.monthTurnover);
+    close(s.monthlyOrderbook.group[8], 0);
+    assert.ok(
+      !d.commercial.some((c) =>
+        ["DEHK HK", "DEHK", "DDC"].includes(c.customer),
+      ),
+    );
+    const external = getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      entity: id,
+      scenario: "Sales",
+      salesType: "external",
+    });
+    close(
+      external.totals.base,
+      gross.turnover.external! + gross.orderbook.external!,
+    );
+  }
+  const china = getDashboardSnapshot(state, admin, {
+    ...defaultFilters,
+    scenario: "Sales",
+  });
+  close(china.totals.base, 57287.7119);
+  close(china.totals.remaining, 592.0399);
+});
+
+test("intercompany rules match counterparties rather than row numbers or all Group sales", () => {
+  const l = state.lines.find(
+    (l) => l.entityId === "ddc" && l.week === 39 && l.sourceRow === 24,
+  )!;
+  assert.equal(
+    isDuplicateIntercompanyOrder({
+      ...l,
+      sourceRow: 99,
+      customer: " dehk hk ",
+    }),
+    true,
+  );
+  assert.equal(
+    isDuplicateIntercompanyOrder({ ...l, customer: "Another group company" }),
+    false,
+  );
+  assert.equal(
+    isDuplicateIntercompanyOrder({
+      ...l,
+      customer: "DEHK HK",
+      customerType: "External",
+    }),
+    false,
+  );
+  assert.equal(isDuplicateIntercompanyOrder({ ...l, entityId: "dhk" }), false);
+  assert.equal(
+    isDuplicateIntercompanyOrder({ ...l, entityId: "dcp", customer: "DDC" }),
+    true,
+  );
+  const original = state.snapshots.find(
+    (s) => s.entityId === "ddc" && s.week === 39,
+  )!;
+  const s = {
+    ...original,
+    nextOrderbook: { external: 0, group: 30 },
+    nextMonthlyOrderbook: {
+      external: Array(12).fill(0),
+      group: [30, ...Array(11).fill(0)],
+    },
+  };
+  const adjusted = reportingState({
+    ...state,
+    snapshots: [s],
+    lines: [{ ...l, total2027: 25, monthly2027: [25, ...Array(11).fill(0)] }],
+  });
+  close(adjusted.snapshots[0].nextOrderbook.group, 5);
+  close(adjusted.snapshots[0].nextMonthlyOrderbook.group[0], 5);
+  assert.equal(adjusted.lines.length, 0);
 });

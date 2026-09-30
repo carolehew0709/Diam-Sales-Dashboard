@@ -1,3 +1,4 @@
+import { reportingState } from "./intercompany";
 import { applyApprovedBudget } from "./annual-budgets";
 import { entities, regions, matchesRegion } from "./entities";
 import { canView } from "./permissions";
@@ -225,6 +226,7 @@ export function getDashboardSnapshot(
   user: User,
   filters: Filters,
 ) {
+  state = reportingState(state);
   const allowed = entities.filter((e) => canView(user, e));
   const latest = (id: string) =>
     state.snapshots

@@ -1,3 +1,4 @@
+import { reportingState } from "@/lib/intercompany";
 import * as XLSX from "xlsx-js-style";
 import { currentUser, ApiError } from "@/lib/auth";
 import { repository } from "@/lib/repository";
@@ -6,7 +7,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const user = await currentUser();
-    const state = await repository.read();
+    const state = reportingState(await repository.read());
     const filters = filtersFrom(new URL(request.url));
     const d = getDashboardSnapshot(state, user, filters);
     const wb = XLSX.utils.book_new();
@@ -165,6 +166,39 @@ export async function GET(request: Request) {
           l.product,
           l.customer,
           l.customerType,
+          l.total2026,
+          l.total2027,
+          ...l.monthly2026,
+          ...l.monthly2027,
+          l.sourceFile,
+          l.sourceSheet,
+          l.sourceRow,
+        ]),
+    ]);
+    add("Intercompany Exclusions", [
+      [
+        "Entity",
+        "Week",
+        "Customer",
+        "2026 excluded",
+        "2027 excluded",
+        ...months.map((m) => `${m} 2026 excluded`),
+        ...months.map((m) => `${m} 2027 excluded`),
+        "Source",
+        "Sheet",
+        "Row",
+      ],
+      ...state.intercompanyExcluded
+        .filter(
+          (l) =>
+            d.rows.some(
+              (r) => r.entity.id === l.entityId && r.snapshot?.week === l.week,
+            ) && filters.salesType !== "external",
+        )
+        .map((l) => [
+          l.entityId,
+          l.week,
+          l.customer,
           l.total2026,
           l.total2027,
           ...l.monthly2026,

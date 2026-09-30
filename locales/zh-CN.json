@@ -313,5 +313,6 @@
   "validation.phasing": "尚未提供潜在订单月度分布",
   "validation.turnover": "尚未提供历史月度营业额",
   "import.fixedBudget": "2026 年批准预算全年固定，周报上传和手动录入不会更改该预算。",
-  "validation.budgetPhasing": "批准年度预算尚未提供月度分配"
+  "validation.budgetPhasing": "批准年度预算尚未提供月度分配",
+  "validation.intercompany": "已扣除实体间重复订单；已开票销售额保持不变"
 }

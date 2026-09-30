@@ -34,7 +34,7 @@ DCP follows the same direct entity-week sales/orderbook parsing rules as DHK/DDC
 - Remaining this month: max(full-month estimate − MTD invoiced, 0). Missing entity values remain unknown; known subtotal is marked partial. For 2027 this current-month metric is unavailable.
 - 2027 base uses supplied next-year OB; no future budget or Prospect is invented.
 
-China's pinned strip shows Sales & Dashboard across all permitted China entities under the selected year/sales type even when one entity or another BU is selected. Detail rows include all KPIs. This is an additive entity reporting view; no intercompany elimination has been supplied. External and Group remain separately filterable.
+China's pinned strip shows Sales & Dashboard across all permitted China entities under the selected year/sales type even when one entity or another BU is selected. Detail rows include all KPIs. Reporting applies the owner-approved intercompany orderbook deductions described below before aggregation. External and Group remain separately filterable.
 
 ## Known baseline checks
 
@@ -51,3 +51,11 @@ The project owner supplies DHK 24,830, DDC 5,769, DCP 2,608 kEUR, totaling 33,20
 `Dashboard/source-manifest.json` selects the current source workbooks. The original W36 files remain unchanged for traceability and are excluded from extraction, avoiding duplicate entity-week records. New source files are copied unchanged; extraction generates the reviewable JSON baseline. Persistent local updates follow the reviewed import/publish workflow rather than replacing user/account state.
 
 The entity-week parser anchors its cell offsets to the ENTITY NAME header, not the used-range left edge. DCP W19/W20/W22 have an empty leading column that changes !ref without changing the template. W1 is unpopulated and is excluded; DCP W2–W38 are active.
+
+## Intercompany orderbook exclusions (approved 2026-09-30)
+
+Reporting excludes Group orders from DDC to DHK (including source customer DEHK HK), and from DCP to DHK/DEHK or DDC. Matching uses normalized customer identities, not fixed spreadsheet row numbers. Other Group orders and all invoiced YTD/MTD sales remain unchanged. This implements the specifically identified orderbook overlap, not a blanket elimination of Group invoicing.
+
+DDC W39 K24: 4,384.23 kEUR is excluded; gross Sales + Orderbook 25,008.8949 becomes 20,624.6649. DCP W38 K24 (DEHK) 1.45311752913171 and K25 (DDC) 0 are excluded; gross 2,622.104117529132 becomes 2,620.651. China net Sales + Orderbook is 57,287.7119 kEUR. Fixed budgets remain 33,207 total.
+
+`lib/intercompany.ts` provides a pure, idempotent reporting projection applied to stored snapshots and detail rows before KPI, historical, monthly, customer and export calculations. It deducts the same rows' current/next-year totals and monthly allocations, and deducts only the current month's order allocation from the monthly estimate. Remaining this month is DDC 99.4279, DCP 0 and China 592.0399 kEUR. Export includes a separate Intercompany Exclusions sheet with original amounts and source rows; Orderbook Detail contains the net included orders. Source workbooks, generated source JSON, and persistent imports retain their original values, so this rule also works on existing databases without a destructive data migration. Deductions do not depend on which counterparties the viewer can see or selects.

@@ -86,16 +86,39 @@ const r = await fetch(base + "/api/export?entity=dcp", {
 });
 assert.equal(r.status, 200);
 const wb = XLSX.read(Buffer.from(await r.arrayBuffer()));
-assert.equal(wb.SheetNames.length, 8);
+assert.equal(wb.SheetNames.length, 9);
 const rows = XLSX.utils.sheet_to_json(wb.Sheets["Executive Summary"], {
   header: 1,
 });
 assert.equal(rows[4][0], "DCP");
-assert.ok(Math.abs(rows[4][6] - 2622.104117529132) < 0.001);
+assert.ok(Math.abs(rows[4][6] - 2620.651) < 0.001);
 assert.ok(
   XLSX.utils
     .sheet_to_json(wb.Sheets["Weekly Review"], { header: 1 })
     .every((r, i) => !i || r[0] === "DCP"),
+);
+const exclusions = XLSX.utils.sheet_to_json(
+  wb.Sheets["Intercompany Exclusions"],
+  { header: 1 },
+);
+assert.equal(exclusions.length, 3);
+assert.ok(
+  Math.abs(exclusions[1][3] + exclusions[2][3] - 1.45311752913171) < 0.000001,
+);
+const detail = XLSX.utils.sheet_to_json(wb.Sheets["Orderbook Detail"], {
+  header: 1,
+});
+assert.ok(detail.slice(1).every((row) => !["DEHK", "DDC"].includes(row[3])));
+const ddc = await (
+  await fetch(base + "/api/dashboard?entity=ddc&scenario=Sales", {
+    headers: { cookie: admin },
+  })
+).json();
+assert.ok(Math.abs(ddc.data.totals.base - 20624.6649) < 0.000001);
+assert.ok(Math.abs(ddc.data.totals.remaining - 99.4279) < 0.000001);
+assert.ok(
+  Math.abs(ddc.data.totals.cumulative[11].base - ddc.data.totals.base) <
+    0.000001,
 );
 const testPassword = randomUUID();
 const created = await request("/api/admin/users", {

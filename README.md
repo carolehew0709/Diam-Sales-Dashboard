@@ -23,11 +23,11 @@ The original workbooks are read-only. `Dashboard/source-manifest.json` selects t
 
 ## Business structure
 
-APAC (Total) aggregates China (DHK, DCP, DDC), Singapore (DSI), India (DDI) and Japan (DDJ). China is the default Region and its aggregate/entity strip remains visible. Entities without source data remain blank.
+APAC (Total) aggregates China (DEHK, DCP, DDC), Singapore (DSI), India (DDI) and Japan (DDJ). China is the default Region and its aggregate/entity strip remains visible. Entities without source data remain blank.
 
-Mappings: DEHK → DHK; DDC → DDC; Diam Pack Luxe China → DCP. The active baseline uses DHK/DDC W40 and DCP W38 entity workbooks. The previously approved Global Follow Up PDA → DCP mapping remains supported for legacy imports, but that aggregate workbook is no longer active.
+Mappings: DEHK → internal entity ID `dhk` (legacy alias DHK); DDC → DDC; Diam Pack Luxe China → DCP. The active baseline uses DEHK/DDC W40 and DCP W38 entity workbooks. The previously approved Global Follow Up PDA → DCP mapping remains supported for legacy imports, but that aggregate workbook is no longer active.
 
-Annual Dashboard means approved annual budget. FY2026 budgets are fixed at DHK 24,830, DDC 5,769 and DCP 2,608 kEUR (China total 33,207), overriding weekly workbook/manual values. FY2027 budget version: DHK 29,014 and DDC 6,017 kEUR; other entity budgets remain unknown. WK40 DHK FY2027 OB is owner-confirmed at 2,597 kEUR with no complete monthly allocation. Sales & Dashboard = YTD invoiced sales + annual committed orderbook. Sales + Prospect adds expected orders. Coverage and Residual Gap use the selected full-year scenario and a comparable full-year budget. Remaining this month = full-month estimate minus MTD invoicing, bounded at zero.
+Annual Dashboard means approved annual budget. FY2026 budgets are fixed at DEHK 24,830, DDC 5,769 and DCP 2,608 kEUR (China total 33,207), overriding weekly workbook/manual values. FY2027 budget version: DEHK 29,014 and DDC 6,017 kEUR; other entity budgets remain unknown. WK40 DEHK FY2027 OB is owner-confirmed at 2,597 kEUR with no complete monthly allocation. Sales & Dashboard = YTD invoiced sales + annual committed orderbook. Sales + Prospect adds expected orders. Coverage and Residual Gap use the selected full-year scenario and a comparable full-year budget. Remaining this month = full-month estimate minus MTD invoicing, bounded at zero.
 
 ## Storage and deployment
 
@@ -39,4 +39,4 @@ See [architecture](docs/architecture.md), [source contract](docs/project-context
 
 ## Reporting Region and BU mapping
 
-Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.
+Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DEHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.

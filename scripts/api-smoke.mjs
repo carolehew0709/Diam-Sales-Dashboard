@@ -154,6 +154,13 @@ const ns = XLSX.utils.sheet_to_json(nw.Sheets["Executive Summary"], {
 });
 assert.equal(ns[4][1], 29014);
 assert.equal(ns[4][3], 2597);
+
+for(const bu of ["DEHK","DHK"]){
+ const res=await fetch(base+"/api/dashboard?bu="+bu+"&scenario=Sales",{headers:{cookie:admin}});
+ const h=await res.json();assert.equal(h.data.rows.length,1);assert.equal(h.data.rows[0].entity.code,"DEHK");
+ assert.equal(h.data.rows[0].entity.businessUnit,"DEHK");assert.ok(Math.abs(h.data.totals.base-32518.276)<0.000001);
+}
+assert.equal(ns[4][0],"DEHK");
 const testPassword = randomUUID();
 const created = await request("/api/admin/users", {
   name: "API smoke viewer",

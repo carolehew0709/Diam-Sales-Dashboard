@@ -13,6 +13,7 @@ import { canView, canEdit, canPublish } from "../lib/permissions";
 import {
   getDashboardSnapshot,
   defaultFilters,
+  filtersFrom,
   entityMetric,
 } from "../lib/dashboard";
 import { parseDashboardWorkbook } from "../lib/workbook-parser";
@@ -85,7 +86,7 @@ test("China uses fixed budgets and latest entity-specific operating sources", ()
   });
   assert.deepEqual(
     d.rows.map((r) => r.entity.code),
-    ["DHK", "DCP", "DDC"],
+    ["DEHK", "DCP", "DDC"],
   );
   close(d.totals.base, 32518.276 + 22644.4709 + 2620.651);
   close(d.totals.budget, 33207);
@@ -243,8 +244,8 @@ test("publish requires permission and review, is idempotent and replaces same-gr
 
 test("reporting regions select their BUs and APAC includes all six", () => {
   const expected: Record<string, string[]> = {
-    APAC: ["DHK", "DCP", "DDC", "DSI", "DDI", "DDJ"],
-    China: ["DHK", "DCP", "DDC"],
+    APAC: ["DEHK", "DCP", "DDC", "DSI", "DDI", "DDJ"],
+    China: ["DEHK", "DCP", "DDC"],
     Singapore: ["DSI"],
     India: ["DDI"],
     Japan: ["DDJ"],
@@ -506,4 +507,20 @@ test("FY2027 budgets and WK40 owner orderbook confirmation preserve source and m
     scenario: "Sales",
   });
   assert.equal(china.totals.budget, null); // DCP FY2027 remains unprovided.
+});
+
+
+test("DEHK display code and legacy BU filters preserve entity identity and reconciliation",()=>{
+  const f=filtersFrom(new URL("http://localhost/api/dashboard?bu=DHK&scenario=Sales"));
+  assert.equal(f.bu,"DEHK");
+  for(const bu of ["DEHK","DHK"]){
+    const d=getDashboardSnapshot(state,admin,{...defaultFilters,bu,scenario:"Sales"});
+    assert.equal(d.rows.length,1);assert.equal(d.rows[0].entity.id,"dhk");
+    assert.equal(d.rows[0].entity.code,"DEHK");assert.equal(d.rows[0].entity.businessUnit,"DEHK");
+    close(d.totals.sales,26606.729);close(d.totals.orderbook,5911.547);close(d.totals.base,32518.276);
+  }
+  const china=getDashboardSnapshot(state,admin,defaultFilters);
+  close(china.totals.sales,49849.292);close(china.totals.orderbook,7934.1059);
+  close(china.totals.base,china.totals.sales!+china.totals.orderbook!);
+  assert.equal(china.totals.scenarioComplete,false);assert.equal(china.totals.prospect,null);
 });

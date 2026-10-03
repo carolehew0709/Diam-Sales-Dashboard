@@ -315,5 +315,6 @@
   "import.fixedBudget": "Approved 2026 annual budget is fixed across all weeks. Weekly uploads and manual entries cannot change it.",
   "validation.budgetPhasing": "Approved annual budget has no supplied monthly phasing",
   "validation.intercompany": "Intercompany orderbook excluded; invoiced sales unchanged",
-  "checks.nextOrderbookUnallocated": "Approved next-year orderbook has no supplied monthly or sales-type allocation"
+  "checks.nextOrderbookUnallocated": "Approved next-year orderbook has no supplied monthly or sales-type allocation",
+  "metric.knownSubtotal": "Known subtotal"
 }

@@ -37,7 +37,7 @@ export const defaultFilters: Filters = {
 export function filtersFrom(url: URL): Filters {
   return {
     region: url.searchParams.get("region") ?? "China",
-    bu: url.searchParams.get("bu") ?? "all",
+    bu: url.searchParams.get("bu") === "DHK" ? "DEHK" : url.searchParams.get("bu") ?? "all",
     entity: url.searchParams.get("entity") ?? "all",
     year: url.searchParams.get("year") === "2027" ? 2027 : 2026,
     scenario:
@@ -247,7 +247,8 @@ export function getDashboardSnapshot(
   const selected = rows.filter(
     (r) =>
       matchesRegion(r.entity, filters.region) &&
-      (filters.bu === "all" || r.entity.businessUnit === filters.bu) &&
+      (filters.bu === "all" || r.entity.businessUnit === filters.bu ||
+        (filters.bu === "DHK" && r.entity.id === "dhk")) &&
       (filters.entity === "all" || r.entity.id === filters.entity),
   );
   const totals = combine(selected.map((r) => r.metrics));

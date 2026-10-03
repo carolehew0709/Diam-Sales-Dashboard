@@ -10,10 +10,10 @@ This repository contains the APAC demo for DIAM's sales-performance dashboard. I
 
 - Keep the dashboard focused on sales performance, planning, order book, Prospect (source P1), source readiness, and management checks.
 - Keep interface copy in `locales/en.json` and `locales/zh-CN.json` using semantic keys and `useI18n().tr`. Translate display labels only; preserve API enum values and source evidence. See `docs/localization.md`.
-- Preserve APAC (Total) -> China (DHK/DCP/DDC), Singapore (DSI), India (DDI), Japan (DDJ). Keep China totals and entity detail visible within the user's scope. Map DEHK to DHK and Diam Pack Luxe China to DCP. Prefer the supplied DCP entity workbook; retain legacy PDA mapping only for historical imports with its limitations.
-- FY2026 approved budgets are fixed in `lib/annual-budgets.ts`: DHK 24,830, DDC 5,769, DCP 2,608 kEUR. Weekly imports must not overwrite them. No monthly budget allocation is supplied.
+- Preserve APAC (Total) -> China (DEHK/DCP/DDC), Singapore (DSI), India (DDI), Japan (DDJ). Keep China totals and entity detail visible within the user's scope. Display the Hong Kong BU as DEHK; retain internal entity ID `dhk` and legacy alias DHK. Map DEHK to `dhk` and Diam Pack Luxe China to DCP. Prefer the supplied DCP entity workbook; retain legacy PDA mapping only for historical imports with its limitations.
+- FY2026 approved budgets are fixed in `lib/annual-budgets.ts`: DEHK 24,830, DDC 5,769, DCP 2,608 kEUR. Weekly imports must not overwrite them. No monthly budget allocation is supplied.
 - Annual Dashboard means approved annual budget. Coverage and Residual Gap use annual values; Remaining this month uses monthly uninvoiced amounts. Missing entity data stays blank.
-- Apply the approved intercompany orderbook exclusions in `lib/intercompany.ts`: DDC to DHK; DCP to DHK/DDC. Preserve raw source data and invoiced sales, and keep KPI, monthly, historical and exported amounts consistent.
+- Apply the approved intercompany orderbook exclusions in `lib/intercompany.ts`: DDC to DEHK; DCP to DEHK/DDC. Preserve raw source data and invoiced sales, and keep KPI, monthly, historical and exported amounts consistent.
 - Keep metric names and units explicit. The source workbooks use kEUR and entity/week reporting.
 - Put business rules in `lib/` and keep pages/components focused on presentation and interaction.
 - Add or update documentation when a data grain, permission rule, or import contract changes.
@@ -43,4 +43,4 @@ The current dashboard snapshot is extracted from the three workbooks in `Dashboa
 
 ## Reporting Region and BU mapping
 
-Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.
+Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DEHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.

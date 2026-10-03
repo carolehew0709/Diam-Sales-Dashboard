@@ -4,13 +4,13 @@
 
 A snapshot is entity × source year × ISO week; a line is entity × year × week × source row. Weekly snapshots are immutable observations and are not summed across weeks. The active entity record is its latest populated snapshot, including explicitly entered zeroes. Untouched future W tabs with blank input cells are skipped even when formulas return zero.
 
-Hierarchy: APAC (Total) → China (DHK/DCP/DDC), Singapore (DSI), India (DDI), Japan (DDJ). Country names are reporting Regions; entity codes are BUs. Visibility is applied before aggregation and before customer/order details are returned.
+Hierarchy: APAC (Total) → China (DEHK/DCP/DDC), Singapore (DSI), India (DDI), Japan (DDJ). Country names are reporting Regions; entity codes are BUs. Visibility is applied before aggregation and before customer/order details are returned.
 
 ## Confirmed source mapping (updated 2026-10-03)
 
 | File                            | Destination | Current populated week | Important limits                                                   |
 | ------------------------------- | ----------- | ---------------------: | ------------------------------------------------------------------ |
-| Dashboard 2026 - DEHK(1).xlsx   | China / DHK |                     40 | Prospect not supplied; budget fixed by owner approval              |
+| Dashboard 2026 - DEHK(1).xlsx   | China / DEHK |                     40 | Prospect not supplied; budget fixed by owner approval              |
 | Dashboard 2026 - DDC(1).xlsx    | China / DDC |                     40 | Prospect not supplied; budget fixed by owner approval              |
 | W38-- Dashboard 2026 - DCP.xlsx | China / DCP |                     38 | Direct entity source; Prospect not supplied; fixed approved budget |
 
@@ -22,7 +22,7 @@ All amounts are kEUR. Weekly entity sheets explicitly label their amounts K€. 
 
 For closed months, month-end YTD is the next month's YTD minus its MTD. Monthly invoicing is the difference between consecutive observed month-end balances; missing boundaries remain null. Current-month actual uses explicit MTD, future invoicing is zero, and committed OB uses supplied monthly allocations. A cumulative current-month anchor uses actual YTD plus current-month OB, then adds future OB. Historical monthly figures can reflect source corrections.
 
-DCP follows the same direct entity-week sales/orderbook parsing rules as DHK/DDC. Its W38 workbook supplies External/Group sales, monthly invoicing, orderbook and monthly order allocations. Prospect is absent and is not carried forward from the old PDA aggregate.
+DCP follows the same direct entity-week sales/orderbook parsing rules as DEHK/DDC. Its W38 workbook supplies External/Group sales, monthly invoicing, orderbook and monthly order allocations. Prospect is absent and is not carried forward from the old PDA aggregate.
 
 ## KPI definitions
 
@@ -38,15 +38,15 @@ China's pinned strip shows Sales & Dashboard across all permitted China entities
 
 ## Known baseline checks
 
-117 populated entity-week snapshots and 2,409 historical order lines. DHK/DDC use W40 (2026-10-02); DCP remains W38 (2026-09-18). Net Sales + Orderbook: DHK 32,518.276, DDC 22,644.4709, DCP 2,620.651 kEUR; China 57,783.3979 kEUR. DDC gross 25,516.7189 includes 2,872.248 kEUR of DEHK HK orders, excluded from every reporting projection. Current-month remaining: DHK 1,983.186 and DDC 819.7699 (October), DCP 0 (September). Mixed reporting dates remain visible. Prospect is absent, so Sales + Prospect coverage/gap remain unavailable. FY2026 China budget stays 33,207.
+117 populated entity-week snapshots and 2,409 historical order lines. DEHK/DDC use W40 (2026-10-02); DCP remains W38 (2026-09-18). Net Sales + Orderbook: DEHK 32,518.276, DDC 22,644.4709, DCP 2,620.651 kEUR; China 57,783.3979 kEUR. DDC gross 25,516.7189 includes 2,872.248 kEUR of DEHK HK orders, excluded from every reporting projection. Current-month remaining: DEHK 1,983.186 and DDC 819.7699 (October), DCP 0 (September). Mixed reporting dates remain visible. Prospect is absent, so Sales + Prospect coverage/gap remain unavailable. FY2026 China budget stays 33,207.
 
 ## Reporting Region and BU mapping
 
-Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.
+Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DEHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.
 
 ## Fixed FY2026 budget approval (2026-09-29)
 
-The project owner supplies DHK 24,830, DDC 5,769, DCP 2,608 kEUR, totaling 33,207 kEUR for China. `lib/annual-budgets.ts` is the year/entity control; it overrides all weekly source and manual budgets for these entities throughout 2026, including historical views and existing stored snapshots. FY2027 has a separately approved budget version, described below. The source detail identifies the owner approval separately from workbook cells. No monthly or External/Group budget allocation was approved: these comparisons remain blank, and the old PDA monthly budget is not reused or divided proportionally. APAC's full budget remains incomplete while DSI/DDI/DDJ budgets are missing.
+The project owner supplies DEHK 24,830, DDC 5,769, DCP 2,608 kEUR, totaling 33,207 kEUR for China. `lib/annual-budgets.ts` is the year/entity control; it overrides all weekly source and manual budgets for these entities throughout 2026, including historical views and existing stored snapshots. FY2027 has a separately approved budget version, described below. The source detail identifies the owner approval separately from workbook cells. No monthly or External/Group budget allocation was approved: these comparisons remain blank, and the old PDA monthly budget is not reused or divided proportionally. APAC's full budget remains incomplete while DSI/DDI/DDJ budgets are missing.
 
 `Dashboard/source-manifest.json` selects the current source workbooks. The original W36 files remain unchanged for traceability and are excluded from extraction, avoiding duplicate entity-week records. New source files are copied unchanged; extraction generates the reviewable JSON baseline. Persistent local updates follow the reviewed import/publish workflow rather than replacing user/account state.
 
@@ -54,7 +54,7 @@ The entity-week parser anchors its cell offsets to the ENTITY NAME header, not t
 
 ## Intercompany orderbook exclusions (approved 2026-09-30)
 
-Reporting excludes Group orders from DDC to DHK (including source customer DEHK HK), and from DCP to DHK/DEHK or DDC. Matching uses normalized customer identities, not fixed spreadsheet row numbers. Other Group orders and all invoiced YTD/MTD sales remain unchanged. This implements the specifically identified orderbook overlap, not a blanket elimination of Group invoicing.
+Reporting excludes Group orders from DDC to DEHK (including source customer DEHK HK), and from DCP to DEHK/DEHK or DDC. Matching uses normalized customer identities, not fixed spreadsheet row numbers. Other Group orders and all invoiced YTD/MTD sales remain unchanged. This implements the specifically identified orderbook overlap, not a blanket elimination of Group invoicing.
 
 DDC W39 K24: 4,384.23 kEUR is excluded; gross Sales + Orderbook 25,008.8949 becomes 20,624.6649. DCP W38 K24 (DEHK) 1.45311752913171 and K25 (DDC) 0 are excluded; gross 2,622.104117529132 becomes 2,620.651. These are archived W39 checks; the current W40 amounts are listed above. Fixed budgets remain 33,207 total.
 
@@ -63,6 +63,13 @@ DDC W39 K24: 4,384.23 kEUR is excluded; gross Sales + Orderbook 25,008.8949 beco
 
 ## FY2027 budget version and WK40 orderbook confirmation (2026-10-03)
 
-The owner supplied DHK 29,014 and DDC 6,017 kEUR annual budgets. These override nextAnnualBudget on FY2026 snapshots and annualBudget on FY2027 snapshots, including persisted records. DCP and other BUs have no FY2027 budget: China/APAC total budget, coverage and gap remain incomplete. No monthly or sales-type budget allocation is supplied.
+The owner supplied DEHK 29,014 and DDC 6,017 kEUR annual budgets. These override nextAnnualBudget on FY2026 snapshots and annualBudget on FY2027 snapshots, including persisted records. DCP and other BUs have no FY2027 budget: China/APAC total budget, coverage and gap remain incomplete. No monthly or sales-type budget allocation is supplied.
 
-The owner explicitly confirmed WK40 DHK FY2027 Orderbook as 2,597 kEUR, overriding the workbook aggregate 2,579.224 (External 2,478 + Group 101.224). `lib/reporting-overrides.ts` applies this confirmation only to DHK FY2026 W40; later weekly imports and previous history are not overwritten. FY2027 annual KPI/export use 2,597; raw workbook/detail and source sales-type allocations remain unchanged. The difference 17.776 has no customer, sales-type or month allocation. Total FY2027 monthly/cumulative orderbook is therefore blank for this observation, with a translated Review finding and explicit source provenance. Filtered External/Group views continue to show workbook splits; these are not a complete allocation of the confirmed aggregate. Sales coverage is 2,597 / 29,014; missing Prospect still prevents Sales + Prospect coverage.
+The owner explicitly confirmed WK40 DEHK FY2027 Orderbook as 2,597 kEUR, overriding the workbook aggregate 2,579.224 (External 2,478 + Group 101.224). `lib/reporting-overrides.ts` applies this confirmation only to DEHK FY2026 W40; later weekly imports and previous history are not overwritten. FY2027 annual KPI/export use 2,597; raw workbook/detail and source sales-type allocations remain unchanged. The difference 17.776 has no customer, sales-type or month allocation. Total FY2027 monthly/cumulative orderbook is therefore blank for this observation, with a translated Review finding and explicit source provenance. Filtered External/Group views continue to show workbook splits; these are not a complete allocation of the confirmed aggregate. Sales coverage is 2,597 / 29,014; missing Prospect still prevents Sales + Prospect coverage.
+
+
+## Display correction and source reconciliation (2026-10-03)
+
+The Hong Kong BU display code is DEHK. Stored entity ID `dhk`, permission keys, original workbooks and legacy DHK aliases remain compatible. BU filters, entity cards, charts and exports use DEHK. Legacy `bu=DHK` links still select DEHK.
+
+Rechecked raw source cells: DEHK W40 H10+H11 = 26,606.729; K17+K18 = 5,911.547; base = 32,518.276. DCP W38 H10+H11 = 2,620.651; raw OB 1.45311752913171 is wholly excluded (DEHK row24, DDC row25 zero), leaving OB 0 and base 2,620.651. DDC W40 H10+H11 = 20,621.912; K17+K18 minus DEHK K24 2,872.248 = net OB 2,022.5589; base = 22,644.4709. China YTD 49,849.292 + net OB 7,934.1059 = 57,783.3979. No new numeric discrepancy was found. Missing Prospect means Sales + Prospect is a known subtotal, not a complete forecast. Legacy unsplit-DCP warnings display only when an actual unsplit legacy override is selected.

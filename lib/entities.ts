@@ -2,11 +2,11 @@ import type { Entity } from "./types";
 export const entities: Entity[] = [
   {
     id: "dhk",
-    code: "DHK",
+    code: "DEHK",
     name: "Hong Kong",
     region: "APAC",
     reportingRegion: "China",
-    businessUnit: "DHK",
+    businessUnit: "DEHK",
     description: "香港外销",
     aliases: ["DE HONG KONG", "DEHK", "DHK"],
   },

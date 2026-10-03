@@ -11,7 +11,7 @@
 
 ## Awaiting source data
 
-- Approved DHK/DDC annual budgets and Prospect.
+- Approved DEHK/DDC annual budgets and Prospect.
 - DCP entity-level splits/current-month invoicing replacing the confirmed mapped legacy aggregate when available.
 - DSI/DDJ/DDI source workbooks; formal APAC brand source.
 - Intercompany elimination rules if a consolidated revenue view is required.

@@ -204,13 +204,14 @@ function DashboardView({
     };
   }, [readiness]);
   const t = data.totals;
+  const hasLegacySplit = filters.year === 2026 && data.rows.some((r) => r.snapshot?.baseOverride != null);
   const partial = (key: Dashboard["partialKeys"][number]) =>
     data.partialKeys.includes(key) ? tr("metric.partialSource") : "";
   const selectEntity = (id: string) =>
     setFilters({
       ...filters,
       region: "China",
-      bu: id === "all" ? "all" : id.toUpperCase(),
+      bu: id === "all" ? "all" : (data.entities.find((e) => e.id === id)?.businessUnit ?? "all"),
       entity: "all",
     });
   const totalRows = [
@@ -489,12 +490,14 @@ function DashboardView({
               <strong>{formatK(t.orderbook)}</strong>
             </div>
           </div>
-          <small>{tr("metric.unsplit")}</small>
+          {hasLegacySplit &&
+            <small>{tr("metric.unsplit")}</small>}
         </MetricCard>
         <MetricCard
           label={tr("metric.salesProspect")}
           value={formatK(t.scenario)}
           accent
+          period={!t.scenarioComplete ? tr("metric.knownSubtotal") : undefined}
           note={`${filters.scenario === "Sales" ? tr("metric.salesSelected") : tr("metric.expected")}${partial("scenario")}`}
         >
           <div className="kpi-sales-split">
@@ -674,7 +677,7 @@ function DashboardView({
                   {tr("common.group")}
                   <b>{formatK(data.group)}</b>
                 </p>
-                <small>{tr("chart.dcpSplit")}</small>
+                {hasLegacySplit && <small>{tr("chart.dcpSplit")}</small>}
               </div>
             </div>
           </div>

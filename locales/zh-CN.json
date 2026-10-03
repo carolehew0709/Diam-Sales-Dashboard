@@ -323,5 +323,6 @@
   "metric.budgetPending": "待定",
   "checks.pending2027Budget": "2027 年度预算待定，暂按 0 显示",
   "checks.dcpExternal": "DCP 报表使用 H10 已开票销售和 L10 订单簿；排除 Group 数值",
-  "checks.externalCells": "External 报表使用 H10 已开票销售和 K17 订单簿"
+  "checks.externalCells": "External 报表使用 H10 已开票销售和 K17 订单簿",
+  "checks.dcpYtdCorrection": "DCP 外销累计销售已按负责人提供的数据更新；尚未提供月度分配"
 }

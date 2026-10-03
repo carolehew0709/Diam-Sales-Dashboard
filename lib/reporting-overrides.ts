@@ -8,11 +8,13 @@ export function applyReportingOverrides(snapshot: Snapshot, salesType: SalesType
     const sourceMonthlyOB = snapshot.sourceExternalMonthlyOrderbook ?? snapshot.monthlyOrderbook.external;
     const external = salesType === "external";
     const ob = external ? sourceOB : snapshot.monthEstimate.external;
+    const correctedSales = snapshot.week === 40 ? 260814.49 / 1000 : undefined;
     return {
       ...snapshot,
       sourceExternalOrderbook: sourceOB,
       sourceExternalMonthlyOrderbook: sourceMonthlyOB,
-      turnover: { ...snapshot.turnover, group: 0 },
+      turnover: { ...snapshot.turnover, external: correctedSales ?? snapshot.turnover.external, group: 0 },
+      ...(correctedSales !== undefined ? { salesCardValue: correctedSales } : {}),
       monthTurnover: { ...snapshot.monthTurnover, group: 0 },
       monthEstimate: { ...snapshot.monthEstimate, group: 0 },
       orderbook: { external: ob, group: 0 },
@@ -23,14 +25,18 @@ export function applyReportingOverrides(snapshot: Snapshot, salesType: SalesType
       },
       sourceCells: {
         ...snapshot.sourceCells,
+        ...(correctedSales !== undefined ? {
+          dcpYtdSales: "Project owner update · 2026-10-03 · screenshot de36605ef8221b65a112da2d841ee66a.png · 260814.49 EUR / 1000 = 260.81449 kEUR · FY2026 W40 · External YTD · no monthly allocation supplied",
+        } : {}),
         dcpReporting: external
           ? "Project owner correction · 2026-10-03 · FY2026 External: Sales H10; OB K17; total H10+K17"
           : "Project owner correction · 2026-10-03 · FY2026 DCP: top card and Sales to date H10; OB L10; annual total H10+L10; External row only",
       },
       findings: [...new Set(snapshot.findings
         .filter(f => f !== "Intercompany orderbook excluded; invoiced sales unchanged")
-        .filter(f => !["DCP reporting uses H10 sales and L10 orderbook; Group values excluded", "External reporting uses H10 sales and K17 orderbook"].includes(f))
-        .concat(external ? "External reporting uses H10 sales and K17 orderbook" : "DCP reporting uses H10 sales and L10 orderbook; Group values excluded"))],
+        .filter(f => !["DCP reporting uses H10 sales and L10 orderbook; Group values excluded", "External reporting uses H10 sales and K17 orderbook", "DCP External YTD sales updated by owner; monthly allocation not supplied"].includes(f))
+        .concat(external ? "External reporting uses H10 sales and K17 orderbook" : "DCP reporting uses H10 sales and L10 orderbook; Group values excluded")
+        .concat(correctedSales !== undefined ? ["DCP External YTD sales updated by owner; monthly allocation not supplied"] : []))],
     };
   }
   if (snapshot.entityId === "ddc" && snapshot.year === 2026) {

@@ -323,5 +323,6 @@
   "metric.budgetPending": "Pending",
   "checks.pending2027Budget": "FY2027 annual budget pending; displayed as 0",
   "checks.dcpExternal": "DCP reporting uses H10 sales and L10 orderbook; Group values excluded",
-  "checks.externalCells": "External reporting uses H10 sales and K17 orderbook"
+  "checks.externalCells": "External reporting uses H10 sales and K17 orderbook",
+  "checks.dcpYtdCorrection": "DCP External YTD sales updated by owner; monthly allocation not supplied"
 }

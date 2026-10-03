@@ -124,3 +124,10 @@ Only the FY2026 top China strip changes when Scenario = Sales: DEHK reads cached
 All sales retains all owner-specific formulas. For FY2026 External, each direct BU source uses H10 invoices, K17 annual OB, and H10+K17 base (sum of source values, not the cached DDC O10 nor the DCP All-sales L10). DCP reporting preserves original K17/monthly External allocations before applying its All-sales override, so changing sales type or repeated export projections cannot lose the source values. External monthly/history/export use the same K17 source allocations. The Sales-scenario first strip continues to show H10 invoices; Sales + Prospect External strip shows H10+K17 totals. Group numbers remain unchanged: DEHK H11+K18, DDC/DCP zero. FY2027 rules are unchanged.
 
 W40 External: DEHK 18,256.216 + 5,282.382 = 23,538.598; DDC 5,136.274 + 2,022.5589 = 7,158.8329; DCP 200.091 + 1.184 = 201.275. China sales 23,592.581, OB 7,306.1249, total 30,898.7059 (displayed 30,899).
+
+
+## DCP W40 External YTD correction (2026-10-03)
+
+The owner supplied a corrected DCP YTD sales figure of approximately 260.8K, with screenshot value 260,814.49 EUR. Reporting converts it to 260.81449 kEUR and applies it to FY2026 DCP W40 only. It is entirely External, affects both All sales and External invoices and top cards, and leaves Group at zero. Original workbook H10 (200.091 kEUR), stored raw source records, previous weeks and other BUs remain unchanged. Source provenance identifies the owner screenshot and conversion. The owner supplied no monthly allocation: existing monthly invoice observations and J10 stay intact, with a Review finding, while the annual/cumulative-current-month anchor uses the corrected YTD total.
+
+DCP OB is unchanged at 1.184; Sales + OB = 261.99849 (displayed 262), Sales to date/top sales card displays 261. China All-sales YTD is 32,003.81749, annual base 39,939.10739; External YTD is 23,653.30449, base 30,959.42939. Approved budgets and FY2027 records remain unchanged.

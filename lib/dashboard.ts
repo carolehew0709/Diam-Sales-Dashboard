@@ -1,5 +1,5 @@
 import { reportingState } from "./intercompany";
-import { applyApprovedBudget } from "./annual-budgets";
+import { applyApprovedBudget, approved2027Budgets, pending2027Budgets } from "./annual-budgets";
 import { applyReportingOverrides } from "./reporting-overrides";
 import { entities, regions, matchesRegion } from "./entities";
 import { canView } from "./permissions";
@@ -64,7 +64,7 @@ export const sumComplete = (values: Amount[]): Amount =>
     : null;
 export const splitValue = (split: Split, type: SalesType): Amount =>
   type === "all" ? sumComplete([split.external, split.group]) : split[type];
-export function entityMetric(s: Snapshot | undefined, filters: Filters) {
+export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId = s?.entityId) {
   if (s) s = applyReportingOverrides(applyApprovedBudget(s));
   const future = filters.year === 2027,
     type = filters.salesType;
@@ -91,7 +91,10 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters) {
   const prospect =
     s && type === "all" ? (future ? s.nextProspect : s.prospect) : null;
   const budget =
-    s && type === "all" ? (future ? s.nextAnnualBudget : s.annualBudget) : null;
+    type === "all" && future && entityId
+      ? (approved2027Budgets[entityId] ?? pending2027Budgets[entityId] ?? s?.nextAnnualBudget ?? null)
+      : s && type === "all" ? s.annualBudget : null;
+  const budgetComplete = budget !== null && !(future && entityId && entityId in pending2027Budgets);
   const scenarioComplete =
     base !== null && (filters.scenario === "Sales" || prospect !== null);
   const scenario =
@@ -172,11 +175,12 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters) {
     scenario,
     scenarioComplete,
     budget,
+    budgetComplete,
     coverage:
-      budget !== null && budget > 0 && scenarioComplete
+      budgetComplete && budget !== null && budget > 0 && scenarioComplete
         ? scenario! / budget
         : null,
-    gap: budget !== null && scenarioComplete ? budget - scenario! : null,
+    gap: budgetComplete && budget !== null && scenarioComplete ? budget - scenario! : null,
     remaining,
     monthSales,
     monthEstimate,
@@ -185,7 +189,7 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters) {
   };
 }
 export type Metric = ReturnType<typeof entityMetric>;
-export function combine(metrics: Metric[]): Metric {
+export function combine(metrics: Metric[], showKnownBudget = false): Metric {
   const total = (
     key:
       | "sales"
@@ -197,7 +201,9 @@ export function combine(metrics: Metric[]): Metric {
       | "monthSales"
       | "monthEstimate",
   ) => sumKnown(metrics.map((m) => m[key]));
-  const budget = sumComplete(metrics.map((m) => m.budget));
+  const completeBudget = metrics.every((m) => m.budgetComplete)
+    ? sumComplete(metrics.map((m) => m.budget)) : null;
+  const budget = showKnownBudget ? sumKnown(metrics.map((m) => m.budget)) : completeBudget;
   const scenarioComplete =
     metrics.length > 0 && metrics.every((m) => m.scenarioComplete)
       ? sumComplete(metrics.map((m) => m.scenario))
@@ -210,13 +216,14 @@ export function combine(metrics: Metric[]): Metric {
     scenario: total("scenario"),
     scenarioComplete: scenarioComplete !== null,
     budget,
+    budgetComplete: completeBudget !== null,
     coverage:
-      budget !== null && budget > 0 && scenarioComplete !== null
-        ? scenarioComplete / budget
+      completeBudget !== null && completeBudget > 0 && scenarioComplete !== null
+        ? scenarioComplete / completeBudget
         : null,
     gap:
-      budget !== null && scenarioComplete !== null
-        ? budget - scenarioComplete
+      completeBudget !== null && scenarioComplete !== null
+        ? completeBudget - scenarioComplete
         : null,
     remaining: total("remaining"),
     monthSales: total("monthSales"),
@@ -251,7 +258,7 @@ export function getDashboardSnapshot(
   const rows = allowed.map((entity) => {
     const raw = latest(entity.id);
     const snapshot = raw ? applyApprovedBudget(raw) : undefined;
-    return { entity, snapshot, metrics: entityMetric(snapshot, filters) };
+    return { entity, snapshot, metrics: entityMetric(snapshot, filters, entity.id) };
   });
   const selected = rows.filter(
     (r) =>
@@ -261,9 +268,10 @@ export function getDashboardSnapshot(
         (filters.bu === "DHK" && r.entity.id === "dhk")) &&
       (filters.entity === "all" || r.entity.id === filters.entity),
   );
-  const totals = combine(selected.map((r) => r.metrics));
+  const combineSelected = (metrics: Metric[]) => combine(metrics, filters.year === 2027);
+  const totals = combineSelected(selected.map((r) => r.metrics));
   const china = rows.filter((r) => r.entity.reportingRegion === "China");
-  const chinaTotal = combine(china.map((r) => r.metrics));
+  const chinaTotal = combineSelected(china.map((r) => r.metrics));
   const weeks = [
     ...new Set(selected.flatMap((r) => (r.snapshot ? [r.snapshot.week] : []))),
   ].sort((a, b) => a - b);
@@ -288,7 +296,7 @@ export function getDashboardSnapshot(
   const buGroups = [...new Set(selected.map((r) => r.entity.businessUnit))].map(
     (bu) => ({
       name: bu,
-      metrics: combine(
+      metrics: combineSelected(
         selected
           .filter((r) => r.entity.businessUnit === bu)
           .map((r) => r.metrics),
@@ -303,6 +311,9 @@ export function getDashboardSnapshot(
           message,
         })),
   );
+  if (filters.year === 2027) checks.push(...selected
+    .filter(r => r.entity.id in pending2027Budgets)
+    .map(r => ({entity:r.entity.code,message:"FY2027 annual budget pending; displayed as 0"})));
   const partialKeys = (
     ["sales", "orderbook", "base", "prospect", "scenario", "remaining"] as const
   ).filter((key) =>

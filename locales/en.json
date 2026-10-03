@@ -317,5 +317,9 @@
   "validation.intercompany": "Intercompany orderbook excluded; invoiced sales unchanged",
   "checks.nextOrderbookUnallocated": "Approved next-year orderbook has no supplied monthly or sales-type allocation",
   "metric.knownSubtotal": "Known subtotal",
-  "checks.ddcExternal": "DDC reporting uses External row only: H10 sales, O10 annual total, K17 orderbook"
+  "checks.ddcExternal": "DDC reporting uses External row only: H10 sales, O10 annual total, K17 orderbook",
+  "notes.partialBudget": " · {entities} confirmed; pending BU budgets shown as 0",
+  "notes.pendingBudget": " · Pending budget displayed as 0",
+  "metric.budgetPending": "Pending",
+  "checks.pending2027Budget": "FY2027 annual budget pending; displayed as 0"
 }

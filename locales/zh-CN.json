@@ -317,5 +317,9 @@
   "validation.intercompany": "已扣除实体间重复订单；已开票销售额保持不变",
   "checks.nextOrderbookUnallocated": "已确认的下一年度订单簿尚无月度或销售类型分配",
   "metric.knownSubtotal": "已知小计",
-  "checks.ddcExternal": "DDC 报表仅使用 External 行：H10 已开票销售、O10 年度合计、K17 订单簿"
+  "checks.ddcExternal": "DDC 报表仅使用 External 行：H10 已开票销售、O10 年度合计、K17 订单簿",
+  "notes.partialBudget": " · {entities} 已确认；待定 BU 预算暂按 0 显示",
+  "notes.pendingBudget": " · 待定预算暂按 0 显示",
+  "metric.budgetPending": "待定",
+  "checks.pending2027Budget": "2027 年度预算待定，暂按 0 显示"
 }

@@ -171,6 +171,15 @@ for (const bu of ["DEHK", "DHK"]) {
   assert.ok(Math.abs(h.data.totals.base - 32518.276) < 0.000001);
 }
 assert.equal(ns[4][0], "DEHK");
+
+const annual=await(await fetch(base+"/api/dashboard?year=2027&region=APAC&scenario=Sales",{headers:{cookie:admin}})).json();
+assert.equal(annual.data.totals.budget,35031);assert.equal(annual.data.totals.budgetComplete,false);
+assert.equal(annual.data.totals.coverage,null);assert.equal(annual.data.totals.gap,null);
+for(const id of ["dcp","dsi","ddi","ddj"]){const row=annual.data.rows.find(r=>r.entity.id===id);assert.equal(row.metrics.budget,0);assert.equal(row.metrics.budgetComplete,false);}
+const ar=await fetch(base+"/api/export?year=2027&region=APAC&scenario=Sales",{headers:{cookie:admin}});
+assert.equal(ar.status,200);const aw=XLSX.read(Buffer.from(await ar.arrayBuffer()));const as=XLSX.utils.sheet_to_json(aw.Sheets["Executive Summary"],{header:1});
+assert.equal(as.find(r=>r[0]==="Selected total")[1],35031);
+assert.ok(as.some(r=>String(r[0]).includes("pending FY2027 budgets displayed as 0")));
 const testPassword = randomUUID();
 const created = await request("/api/admin/users", {
   name: "API smoke viewer",

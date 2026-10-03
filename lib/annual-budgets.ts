@@ -13,6 +13,11 @@ export const approved2027Budgets: Readonly<Record<string, number>> = {
   ddc: 6017,
 };
 
+// Owner-requested display placeholders, 2026-10-03; these are NOT approved budgets.
+export const pending2027Budgets: Readonly<Record<string, number>> = {
+  dcp: 0, dsi: 0, ddi: 0, ddj: 0,
+};
+
 export function applyApprovedBudget(snapshot: Snapshot): Snapshot {
   const approved =
     snapshot.year === 2026

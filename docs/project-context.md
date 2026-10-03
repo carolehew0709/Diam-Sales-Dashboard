@@ -84,3 +84,11 @@ The owner superseded the previous DDC H10+H11 rule. For FY2026 DDC only: top Chi
 The raw parser retains O10 as ddcAnnualTotal with source address, and preserves H11 and Group source rows. The reporting projection excludes FY2026 DDC Group invoicing, monthly actuals/estimates and OB; Group order detail FY2026 amounts become zero while FY2027 source allocations remain intact. This applies consistently to annual metrics, historical weekly views, monthly/cumulative figures, China totals and export. Existing stores without cached O10 use H10+K17; an explicitly missing O10 remains unknown. DEHK, DCP, all other BUs, approved budgets and FY2027 values are unchanged.
 
 Current China FY2026 base is DEHK 32,518.276 + DCP 2,620.651 + DDC 7,158.8329 = 42,297.7599 kEUR. Sales to date totals 34,363.654; OB totals 7,934.1059. Original source files and stored raw invoices remain intact.
+
+
+## FY2027 known annual budget subtotal (2026-10-03)
+
+At the owner request, the FY2027 Annual Dashboard total now displays the known approved DEHK + DDC budget: 29,014 + 6,017 = 35,031 kEUR for China/APAC selections that include both. It is explicitly labelled a known subtotal and names the included BUs; missing DCP/DSI/DDI/DDJ budgets remain null. Permission and BU filters apply before summing. `budgetComplete` remains false if any selected BU budget is absent; coverage/gap still require a complete comparable budget. FY2026 aggregation retains its existing complete-budget rule. Exports show the subtotal with its partial-scope note.
+
+
+The owner subsequently requested pending FY2027 DCP/DSI/DDI/DDJ budgets display as 0. `pending2027Budgets` keeps these placeholders separate from confirmed budgets; source/operating data remains absent. Each pending BU shows budget 0 and a translated pending finding. China/APAC Annual Dashboard sums to 35,031 with a pending-budget note. `budgetComplete` stays false, so these provisional zeros do not enable approved-budget coverage/gap. No monthly allocation is invented; FY2026 values are unchanged.

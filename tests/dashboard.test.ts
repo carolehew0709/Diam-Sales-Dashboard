@@ -509,7 +509,10 @@ test("FY2027 budgets and WK40 owner orderbook confirmation preserve source and m
     year: 2027,
     scenario: "Sales",
   });
-  assert.equal(china.totals.budget, null); // DCP FY2027 remains unprovided.
+  close(china.totals.budget, 35031); // Approved DEHK + DDC subtotal only.
+  assert.equal(china.totals.budgetComplete,false);
+  assert.equal(china.totals.coverage,null);
+  assert.equal(china.totals.gap,null);
 });
 
 test("DEHK display code and legacy BU filters preserve entity identity and reconciliation", () => {
@@ -590,4 +593,29 @@ test("DDC H10/O10 reporting preserves raw Group sources and other BUs", () => {
     }).totals.base,
     2620.651,
   );
+});
+
+
+test("2027 known budget subtotals respect scope and never enable incomplete coverage",()=>{
+ for(const region of ["China","APAC"]){
+  const d=getDashboardSnapshot(state,admin,{...defaultFilters,year:2027,region,scenario:"Sales"});
+  close(d.totals.budget,35031);assert.equal(d.totals.budgetComplete,false);
+  assert.equal(d.totals.coverage,null);assert.equal(d.totals.gap,null);
+ }
+ const user={...admin,role:"viewer" as const,permissions:{dhk:["view" as const]}};
+ const d=getDashboardSnapshot(state,user,{...defaultFilters,year:2027,scenario:"Sales"});
+ close(d.totals.budget,29014);assert.equal(d.totals.budgetComplete,true);close(d.totals.coverage,2597/29014);
+ const missing=getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dcp",year:2027});
+ close(missing.totals.budget,0);
+ assert.equal(missing.totals.budgetComplete,false);
+});
+
+
+test("FY2027 pending BUs display zero without inventing approved budgets or operating data",()=>{
+ for(const id of ["dcp","dsi","ddi","ddj"]){
+ const d=getDashboardSnapshot(state,admin,{...defaultFilters,entity:id,region:"APAC",year:2027,scenario:"Sales"});
+ close(d.totals.budget,0);assert.equal(d.totals.budgetComplete,false);assert.equal(d.totals.gap,null);assert.equal(d.totals.coverage,null);
+ assert.ok(d.checks.some(c=>c.message==="FY2027 annual budget pending; displayed as 0"));
+ if(id!=="dcp")assert.equal(d.totals.base,null);
+ }
 });

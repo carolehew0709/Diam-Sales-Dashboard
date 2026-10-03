@@ -471,9 +471,14 @@ function DashboardView({
         <MetricCard
           label={tr("metric.budget")}
           value={formatK(t.budget)}
-          note={tr("notes.budget", {
+          period={t.budget !== null && !t.budgetComplete ? tr(t.budget === 0 ? "metric.budgetPending" : "metric.knownSubtotal") : undefined}
+          note={t.budget === 0 && !t.budgetComplete ? tr("notes.pendingBudget") : tr("notes.budget", {
             year: filters.year,
-            note: t.budget === null ? tr("notes.missingBudget") : "",
+            note: t.budget === null ? tr("notes.missingBudget")
+              : !t.budgetComplete && t.budget === 0 ? tr("notes.pendingBudget")
+              : !t.budgetComplete ? tr("notes.partialBudget", {
+                entities: data.rows.filter(r => r.metrics.budgetComplete).map(r => r.entity.code).join(" + "),
+              }) : "",
           })}
         />
         <MetricCard

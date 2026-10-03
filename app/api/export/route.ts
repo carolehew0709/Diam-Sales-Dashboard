@@ -97,6 +97,9 @@ export async function GET(request: Request) {
       [
         "Missing values remain blank. Totals with unavailable entity inputs are partial; coverage and gap require complete comparable data.",
       ],
+      ...(!d.totals.budgetComplete && d.totals.budget !== null ? [[
+        `Annual budget includes confirmed budgets: ${d.rows.filter(r => r.metrics.budgetComplete).map(r => r.entity.code).join(" + ") || "none"}; pending FY2027 budgets displayed as 0, not approved.`,
+      ]] : []),
     ]);
     add("Weekly Review", [
       ["Entity", "Week", "Selected annual scenario (kEUR)"],

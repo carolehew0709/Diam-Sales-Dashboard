@@ -12,7 +12,7 @@ Hierarchy: APAC (Total) → China (DEHK/DCP/DDC), Singapore (DSI), India (DDI), 
 | ------------------------------- | ----------- | ---------------------: | ------------------------------------------------------------------ |
 | Dashboard 2026 - DEHK(1).xlsx   | China / DEHK |                     40 | Prospect not supplied; budget fixed by owner approval              |
 | Dashboard 2026 - DDC(1).xlsx    | China / DDC |                     40 | Prospect not supplied; budget fixed by owner approval              |
-| W38-- Dashboard 2026 - DCP.xlsx | China / DCP |                     38 | Direct entity source; Prospect not supplied; fixed approved budget |
+| W40-- Dashboard 2026 - DCP.xlsx | China / DCP |                     40 | Direct entity source; Prospect not supplied; fixed approved budget |
 
 DSI, DDJ and DDI have no supplied records and remain blank. DCP now uses its own workbook (entity label: Diam Pack Luxe China). The legacy PDA aggregate workbook is retained unchanged for traceability but is no longer in the active source manifest.
 
@@ -92,3 +92,10 @@ At the owner request, the FY2027 Annual Dashboard total now displays the known a
 
 
 The owner subsequently requested pending FY2027 DCP/DSI/DDI/DDJ budgets display as 0. `pending2027Budgets` keeps these placeholders separate from confirmed budgets; source/operating data remains absent. Each pending BU shows budget 0 and a translated pending finding. China/APAC Annual Dashboard sums to 35,031 with a pending-budget note. `budgetComplete` stays false, so these provisional zeros do not enable approved-budget coverage/gap. No monthly allocation is invented; FY2026 values are unchanged.
+
+
+## DCP W40 source refresh (2026-10-03)
+
+The active manifest now selects W40-- Dashboard 2026 - DCP.xlsx; W38 remains archived unchanged. All three China BUs now report W40 / 2026-10-02 / October. The seed contains 119 populated entity-week observations and 2,414 historical lines. DCP W40 YTD invoices H10 200.091 + H11 2,431.542 = 2,631.633 kEUR. Raw OB is External 1.184 + Group 6.161. The Group line is DDC at source row24 and is excluded under the existing counterparty rule; no DEHK duplicate appears in W40. Net OB and October Remaining are each 1.184; net annual Sales + OB is 2,632.817 (displayed 2,633). FY2026 DCP budget remains 2,608; its FY2027 budget remains pending, displayed as 0.
+
+With the established DDC H10/O10 rule and unchanged DEHK W40, China sales to date is 34,374.636; net OB is 7,935.2899; annual base is 42,309.9259 (displayed 42,310); October Remaining is 2,804.1399 (displayed 2,804). Prospect remains unavailable. Raw workbook data and original invoices remain intact, and source replacement follows review/publish for the local persistent store. These figures supersede earlier W38 DCP baseline examples above.

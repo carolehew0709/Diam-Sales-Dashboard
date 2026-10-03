@@ -88,15 +88,15 @@ test("China uses fixed budgets and latest entity-specific operating sources", ()
     d.rows.map((r) => r.entity.code),
     ["DEHK", "DCP", "DDC"],
   );
-  close(d.totals.base, 32518.276 + 7158.8329 + 2620.651);
+  close(d.totals.base, 32518.276 + 7158.8329 + 2632.817);
   close(d.totals.budget, 33207);
-  close(d.totals.coverage, 42297.7599 / 33207);
-  close(d.totals.gap, 33207 - 42297.7599);
-  assert.deepEqual(d.weeks, [38, 40]);
+  close(d.totals.coverage, 42309.9259 / 33207);
+  close(d.totals.gap, 33207 - 42309.9259);
+  assert.deepEqual(d.weeks, [40]);
   const dcp = d.rows.find((r) => r.entity.id === "dcp")!;
   close(dcp.metrics.budget, 2608);
   assert.equal(dcp.metrics.prospect, null);
-  close(dcp.metrics.sales, 2620.651);
+  close(dcp.metrics.sales, 2631.633);
 });
 test("entity matrix preserves differences and cumulative December matches annual base", () => {
   for (const id of ["dhk", "ddc", "dcp"]) {
@@ -352,7 +352,7 @@ test("intercompany projection reconciles all metrics without modifying sources o
   assert.deepEqual(reportingState(adjusted).snapshots, adjusted.snapshots);
   for (const [id, base, remaining, removed] of [
     ["ddc", 7158.8329, 819.7699, 2872.248],
-    ["dcp", 2620.651, 0, 1.45311752913171],
+    ["dcp", 2632.817, 1.184, 6.161],
   ] as const) {
     const d = getDashboardSnapshot(state, admin, {
       ...defaultFilters,
@@ -395,8 +395,8 @@ test("intercompany projection reconciles all metrics without modifying sources o
     ...defaultFilters,
     scenario: "Sales",
   });
-  close(china.totals.base, 42297.7599);
-  close(china.totals.remaining, 2802.9559);
+  close(china.totals.base, 42309.9259);
+  close(china.totals.remaining, 2804.1399);
 });
 
 test("intercompany rules match counterparties rather than row numbers or all Group sales", () => {
@@ -535,8 +535,8 @@ test("DEHK display code and legacy BU filters preserve entity identity and recon
     close(d.totals.base, 32518.276);
   }
   const china = getDashboardSnapshot(state, admin, defaultFilters);
-  close(china.totals.sales, 34363.654);
-  close(china.totals.orderbook, 7934.1059);
+  close(china.totals.sales, 34374.636);
+  close(china.totals.orderbook, 7935.2899);
   close(china.totals.base, china.totals.sales! + china.totals.orderbook!);
   assert.equal(china.totals.scenarioComplete, false);
   assert.equal(china.totals.prospect, null);
@@ -591,7 +591,7 @@ test("DDC H10/O10 reporting preserves raw Group sources and other BUs", () => {
       entity: "dcp",
       scenario: "Sales",
     }).totals.base,
-    2620.651,
+    2632.817,
   );
 });
 
@@ -618,4 +618,19 @@ test("FY2027 pending BUs display zero without inventing approved budgets or oper
  assert.ok(d.checks.some(c=>c.message==="FY2027 annual budget pending; displayed as 0"));
  if(id!=="dcp")assert.equal(d.totals.base,null);
  }
+});
+
+
+test("DCP W40 refresh reconciles sales, current month and counterparty exclusions",()=>{
+ const p=parseDashboardWorkbook(fs.readFileSync("Dashboard/W40-- Dashboard 2026 - DCP.xlsx"),"W40-- Dashboard 2026 - DCP.xlsx");
+ assert.equal(p.snapshots.length,39);assert.equal(p.findings.filter(f=>f.severity==="error").length,0);
+ const s=p.snapshots.at(-1)!;assert.equal(s.week,40);assert.equal(s.month,10);
+ close(s.turnover.external,200.091);close(s.turnover.group,2431.542);
+ close(s.orderbook.external,1.184);close(s.orderbook.group,6.161);
+ const d=getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dcp",scenario:"Sales"});
+ assert.equal(d.rows[0].snapshot!.sourceFile,"W40-- Dashboard 2026 - DCP.xlsx");
+ close(d.totals.sales,2631.633);close(d.totals.orderbook,1.184);close(d.totals.base,2632.817);
+ close(d.totals.remaining,1.184);close(d.totals.cumulative[11].base,2632.817);close(d.totals.budget,2608);
+ const excluded=reportingState(state).intercompanyExcluded.filter(l=>l.entityId==="dcp"&&l.week===40);
+ assert.equal(excluded.length,1);assert.equal(excluded[0].customer,"DDC");close(excluded[0].total2026,6.161);
 });

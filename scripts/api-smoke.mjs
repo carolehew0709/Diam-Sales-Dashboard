@@ -80,6 +80,11 @@ const d = await (
 ).json();
 assert.equal(d.data.rows.length, 1);
 assert.equal(d.data.rows[0].entity.code, "DCP");
+assert.equal(d.data.rows[0].snapshot.week,40);
+assert.equal(d.data.rows[0].snapshot.month,10);
+assert.ok(Math.abs(d.data.totals.sales-2631.633)<0.000001);
+assert.ok(Math.abs(d.data.totals.orderbook-1.184)<0.000001);
+assert.ok(Math.abs(d.data.totals.remaining-1.184)<0.000001);
 assert.ok(d.data.totals.coverage === null);
 const r = await fetch(base + "/api/export?entity=dcp", {
   headers: { cookie: admin },
@@ -91,7 +96,7 @@ const rows = XLSX.utils.sheet_to_json(wb.Sheets["Executive Summary"], {
   header: 1,
 });
 assert.equal(rows[4][0], "DCP");
-assert.ok(Math.abs(rows[4][6] - 2620.651) < 0.001);
+assert.ok(Math.abs(rows[4][6] - 2632.817) < 0.001);
 assert.ok(
   XLSX.utils
     .sheet_to_json(wb.Sheets["Weekly Review"], { header: 1 })
@@ -101,9 +106,9 @@ const exclusions = XLSX.utils.sheet_to_json(
   wb.Sheets["Intercompany Exclusions"],
   { header: 1 },
 );
-assert.equal(exclusions.length, 3);
+assert.equal(exclusions.length, 2);
 assert.ok(
-  Math.abs(exclusions[1][3] + exclusions[2][3] - 1.45311752913171) < 0.000001,
+  Math.abs(exclusions[1][3] - 6.161) < 0.000001,
 );
 const detail = XLSX.utils.sheet_to_json(wb.Sheets["Orderbook Detail"], {
   header: 1,

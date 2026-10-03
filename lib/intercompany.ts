@@ -1,4 +1,5 @@
 import type { Amount, OrderBookLine, Snapshot, Store } from "./types";
+import { applyReportingOverrides } from "./reporting-overrides";
 
 const normalize = (value: string) =>
   value.toUpperCase().replace(/[^A-Z0-9]/g, "");
@@ -91,7 +92,7 @@ export function reportingState(state: Store) {
   });
   return {
     ...state,
-    snapshots,
+    snapshots: snapshots.map(applyReportingOverrides),
     lines: state.lines.filter((l) => !isDuplicateIntercompanyOrder(l)),
     intercompanyExcluded: excluded,
   };

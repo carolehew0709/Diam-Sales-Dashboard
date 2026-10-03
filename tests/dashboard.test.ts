@@ -87,11 +87,11 @@ test("China uses fixed budgets and latest entity-specific operating sources", ()
     d.rows.map((r) => r.entity.code),
     ["DHK", "DCP", "DDC"],
   );
-  close(d.totals.base, 34042.396 + 20624.6649 + 2620.651);
+  close(d.totals.base, 32518.276 + 22644.4709 + 2620.651);
   close(d.totals.budget, 33207);
-  close(d.totals.coverage, 57287.7119 / 33207);
-  close(d.totals.gap, 33207 - 57287.7119);
-  assert.deepEqual(d.weeks, [38, 39]);
+  close(d.totals.coverage, 57783.3979 / 33207);
+  close(d.totals.gap, 33207 - 57783.3979);
+  assert.deepEqual(d.weeks, [38, 40]);
   const dcp = d.rows.find((r) => r.entity.id === "dcp")!;
   close(dcp.metrics.budget, 2608);
   assert.equal(dcp.metrics.prospect, null);
@@ -151,15 +151,16 @@ test("restricted editor cannot see or edit other accounts; cross-region view nev
   assert.equal(canView(cross, entities[0]), true);
   assert.equal(canEdit(cross, entities[0]), false);
 });
-test("2027 and sales-type filters use source splits and cannot invent missing budgets", () => {
+test("2027 uses supplied budgets and orderbook; sales-type budgets stay unknown", () => {
   const d = getDashboardSnapshot(state, admin, {
     ...defaultFilters,
     entity: "dhk",
     year: 2027,
     scenario: "Sales",
   });
-  close(d.totals.base, 601.224);
-  assert.equal(d.totals.budget, null);
+  close(d.totals.base, 2597);
+  close(d.totals.budget, 29014);
+  close(d.totals.coverage, 2597 / 29014);
   assert.equal(d.totals.remaining, null);
   const e = getDashboardSnapshot(state, admin, {
     ...defaultFilters,
@@ -167,7 +168,7 @@ test("2027 and sales-type filters use source splits and cannot invent missing bu
     salesType: "external",
     scenario: "Sales",
   });
-  close(e.totals.base, 25130.114);
+  close(e.totals.base, 23538.598);
   assert.equal(e.totals.coverage, null);
 });
 test("manual import preserves YTD/MTD, both order years, Prospect and source note", () => {
@@ -283,10 +284,10 @@ test("reporting regions select their BUs and APAC includes all six", () => {
   assert.equal(invalid.rows.length, 0);
 });
 
-test("W39 refresh reconciles metrics and fixed budgets ignore weekly overrides", () => {
+test("W40 refresh reconciles metrics and fixed budgets ignore weekly overrides", () => {
   for (const [id, budget, base, remaining] of [
-    ["dhk", 24830, 34042.396, 492.612],
-    ["ddc", 5769, 20624.6649, 99.4279],
+    ["dhk", 24830, 32518.276, 1983.186],
+    ["ddc", 5769, 22644.4709, 819.7699],
   ] as const) {
     const d = getDashboardSnapshot(state, admin, {
       ...defaultFilters,
@@ -294,7 +295,7 @@ test("W39 refresh reconciles metrics and fixed budgets ignore weekly overrides",
       scenario: "Sales",
     });
     const s = d.rows[0].snapshot!;
-    assert.equal(s.week, 39);
+    assert.equal(s.week, 40);
     close(d.totals.base, base);
     close(d.totals.remaining, remaining);
     close(d.totals.budget, budget);
@@ -349,7 +350,7 @@ test("intercompany projection reconciles all metrics without modifying sources o
   assert.equal(JSON.stringify(state), before);
   assert.deepEqual(reportingState(adjusted).snapshots, adjusted.snapshots);
   for (const [id, base, remaining, removed] of [
-    ["ddc", 20624.6649, 99.4279, 4384.23],
+    ["ddc", 22644.4709, 819.7699, 2872.248],
     ["dcp", 2620.651, 0, 1.45311752913171],
   ] as const) {
     const d = getDashboardSnapshot(state, admin, {
@@ -369,7 +370,7 @@ test("intercompany projection reconciles all metrics without modifying sources o
     close(gross.orderbook.group! - s.orderbook.group!, removed);
     assert.deepEqual(gross.turnover, s.turnover);
     assert.deepEqual(gross.monthTurnover, s.monthTurnover);
-    close(s.monthlyOrderbook.group[8], 0);
+    close(s.monthlyOrderbook.group[s.month - 1], 0);
     assert.ok(
       !d.commercial.some((c) =>
         ["DEHK HK", "DEHK", "DDC"].includes(c.customer),
@@ -390,8 +391,8 @@ test("intercompany projection reconciles all metrics without modifying sources o
     ...defaultFilters,
     scenario: "Sales",
   });
-  close(china.totals.base, 57287.7119);
-  close(china.totals.remaining, 592.0399);
+  close(china.totals.base, 57783.3979);
+  close(china.totals.remaining, 2802.9559);
 });
 
 test("intercompany rules match counterparties rather than row numbers or all Group sales", () => {
@@ -442,4 +443,67 @@ test("intercompany rules match counterparties rather than row numbers or all Gro
   close(adjusted.snapshots[0].nextOrderbook.group, 5);
   close(adjusted.snapshots[0].nextMonthlyOrderbook.group[0], 5);
   assert.equal(adjusted.lines.length, 0);
+});
+
+test("FY2027 budgets and WK40 owner orderbook confirmation preserve source and missing allocations", () => {
+  for (const [id, budget] of [
+    ["dhk", 29014],
+    ["ddc", 6017],
+  ] as const) {
+    const d = getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      entity: id,
+      year: 2027,
+      scenario: "Sales",
+    });
+    close(d.totals.budget, budget);
+    const s = d.rows[0].snapshot!;
+    close(
+      entityMetric(
+        { ...s, nextAnnualBudget: 99999 },
+        { ...defaultFilters, year: 2027 },
+      ).budget,
+      budget,
+    );
+    close(
+      entityMetric(
+        { ...s, year: 2027, annualBudget: 99999 },
+        { ...defaultFilters, year: 2026 },
+      ).budget,
+      budget,
+    );
+  }
+  const d = getDashboardSnapshot(state, admin, {
+    ...defaultFilters,
+    entity: "dhk",
+    year: 2027,
+    scenario: "Sales",
+  });
+  close(d.totals.orderbook, 2597);
+  close(d.totals.gap, 29014 - 2597);
+  assert.ok(
+    d.totals.monthly.every((m) => m.base === null && m.budget === null),
+  );
+  const raw = state.snapshots.find(
+    (s) => s.entityId === "dhk" && s.week === 40,
+  )!;
+  close(raw.nextOrderbook.external! + raw.nextOrderbook.group!, 2579.224);
+  assert.equal(raw.nextOrderbookOverride, undefined);
+  assert.ok(
+    d.rows[0].snapshot!.sourceCells.nextOrderbookOverride.includes("17.776"),
+  );
+  const previous = state.snapshots.find(
+    (s) => s.entityId === "dhk" && s.week === 39,
+  )!;
+  close(
+    entityMetric(previous, { ...defaultFilters, year: 2027, scenario: "Sales" })
+      .orderbook,
+    601.224,
+  );
+  const china = getDashboardSnapshot(state, admin, {
+    ...defaultFilters,
+    year: 2027,
+    scenario: "Sales",
+  });
+  assert.equal(china.totals.budget, null); // DCP FY2027 remains unprovided.
 });

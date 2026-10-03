@@ -56,6 +56,7 @@ export type Snapshot = {
   monthEstimate: Split;
   orderbook: Split;
   nextOrderbook: Split;
+  nextOrderbookOverride?: Amount;
   baseOverride: Amount;
   monthlyBaseOverride: Amount[] | null;
   prospect: Amount;

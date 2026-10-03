@@ -1,5 +1,6 @@
 import { reportingState } from "./intercompany";
 import { applyApprovedBudget } from "./annual-budgets";
+import { applyReportingOverrides } from "./reporting-overrides";
 import { entities, regions, matchesRegion } from "./entities";
 import { canView } from "./permissions";
 import type {
@@ -61,13 +62,17 @@ export const sumComplete = (values: Amount[]): Amount =>
 export const splitValue = (split: Split, type: SalesType): Amount =>
   type === "all" ? sumComplete([split.external, split.group]) : split[type];
 export function entityMetric(s: Snapshot | undefined, filters: Filters) {
-  if (s) s = applyApprovedBudget(s);
+  if (s) s = applyReportingOverrides(applyApprovedBudget(s));
   const future = filters.year === 2027,
     type = filters.salesType;
   const sales = s && !future ? splitValue(s.turnover, type) : s ? 0 : null;
-  const orderbook = s
-    ? splitValue(future ? s.nextOrderbook : s.orderbook, type)
-    : null;
+  const unallocatedNext = future && s?.nextOrderbookOverride != null;
+  const orderbook =
+    unallocatedNext && type === "all"
+      ? s!.nextOrderbookOverride!
+      : s
+        ? splitValue(future ? s.nextOrderbook : s.orderbook, type)
+        : null;
   const base =
     s && !future && s.baseOverride !== null
       ? type === "all"
@@ -91,18 +96,20 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters) {
       ? Math.max(0, monthEstimate - monthSales)
       : null;
   const monthly = months.map((label, i) => {
-    const ob = s
-      ? splitValue(
-          {
-            external: (future ? s.nextMonthlyOrderbook : s.monthlyOrderbook)
-              .external[i],
-            group: (future ? s.nextMonthlyOrderbook : s.monthlyOrderbook).group[
-              i
-            ],
-          },
-          type,
-        )
-      : null;
+    const ob =
+      unallocatedNext && type === "all"
+        ? null
+        : s
+          ? splitValue(
+              {
+                external: (future ? s.nextMonthlyOrderbook : s.monthlyOrderbook)
+                  .external[i],
+                group: (future ? s.nextMonthlyOrderbook : s.monthlyOrderbook)
+                  .group[i],
+              },
+              type,
+            )
+          : null;
     const actual =
       s && !future
         ? i >= s.month

@@ -15,6 +15,8 @@ import {
   percent,
   months,
   combine,
+  chinaStripAmount,
+  sumKnown,
 } from "@/lib/dashboard";
 import type { Dashboard, Metric } from "@/lib/dashboard";
 import type { Amount, Filters, User } from "@/lib/types";
@@ -439,9 +441,9 @@ function DashboardView({
             {filters.year}
           </small>
           <strong>
-            {formatK(data.chinaTotal.base)} <em>kEUR</em>
+            {formatK(filters.year === 2026 && filters.scenario === "Sales" ? sumKnown(data.china.map(r => chinaStripAmount(r, filters))) : data.chinaTotal.base)} <em>kEUR</em>
           </strong>
-          <span>{tr("china.known")}</span>
+          <span>{filters.year === 2026 && filters.scenario === "Sales" ? tr("metric.salesDate") : tr("china.known")}</span>
         </button>
         {[...data.china].sort((a,b) => ["dhk","ddc","dcp"].indexOf(a.entity.id) - ["dhk","ddc","dcp"].indexOf(b.entity.id)).map((r) => (
           <button
@@ -453,11 +455,13 @@ function DashboardView({
               {r.entity.code} · {display(r.entity.description)}
             </small>
             <strong>
-              {formatK(r.entity.id === "dcp" && filters.year === 2026 && r.snapshot?.sourceCells.dcpReporting ? r.metrics.sales : r.metrics.base)} <em>kEUR</em>
+              {formatK(chinaStripAmount(r, filters))} <em>kEUR</em>
             </strong>
             <span>
-              {r.entity.id === "ddc" && filters.year === 2026 && `${tr("metric.baseOB")} · `}
-              {r.entity.id === "dcp" && filters.year === 2026 && r.snapshot?.sourceCells.dcpReporting && `${tr("metric.salesDate")} · `}
+              {filters.year === 2026 && filters.scenario === "Sales" ? `${tr("metric.salesDate")} · ` : <>
+                {r.entity.id === "ddc" && filters.year === 2026 && `${tr("metric.baseOB")} · `}
+                {r.entity.id === "dcp" && filters.year === 2026 && r.snapshot?.sourceCells.dcpReporting && `${tr("metric.salesDate")} · `}
+              </>}
               {r.snapshot
                 ? `W${r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`
                 : tr("china.pending")}

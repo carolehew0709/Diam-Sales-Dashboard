@@ -110,3 +110,10 @@ Monthly actuals use External only; the selected source month carries the L10 rep
 China FY2026 sales is 31,943.094; OB is 7,935.2899; base is 39,878.3839 (displayed 39,878). October Remaining is unchanged at 2,804.1399. These totals supersede the previous DCP Group-inclusive examples above.
 
 Top China strip presentation order is China Total, DEHK, DDC, DCP (owner request, 2026-10-03). Other entity tables retain their existing ordering.
+
+
+## Sales scenario first-row display (2026-10-03)
+
+Only the FY2026 top China strip changes when Scenario = Sales: DEHK reads cached H12 (W40 26,606.729); DDC and DCP read cached H10 (5,136.274 and 200.091). China Total sums the permitted BU values, 31,943.094 kEUR (displayed 31,943). The parser preserves these values and source addresses in salesCardValue. Missing cells stay null; older stores/manual imports without the field fall back to existing invoicing metrics. External/Group filters retain their scoped invoicing metrics.
+
+`chinaStripAmount` affects this first row only. Lower KPI cards, scenario calculations, charts, history and export are unchanged. Sales + Prospect retains its existing top-row display (DEHK annual base, DDC O10 annual base, DCP H10 sales). FY2027 first-row behavior is unchanged.

@@ -58,6 +58,7 @@ export type Snapshot = {
   nextOrderbook: Split;
   nextOrderbookOverride?: Amount;
   ddcAnnualTotal?: Amount;
+  salesCardValue?: Amount;
   baseOverride: Amount;
   monthlyBaseOverride: Amount[] | null;
   prospect: Amount;

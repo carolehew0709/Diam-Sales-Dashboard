@@ -189,6 +189,15 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId
   };
 }
 export type Metric = ReturnType<typeof entityMetric>;
+/** First-row display only; never changes annual KPI or scenario calculations. */
+export function chinaStripAmount(row: { snapshot?: Snapshot; metrics: Metric }, filters: Filters): Amount {
+  if (filters.year === 2026 && filters.scenario === "Sales") {
+    return filters.salesType === "all" && row.snapshot?.salesCardValue !== undefined
+      ? row.snapshot.salesCardValue : row.metrics.sales;
+  }
+  return filters.year === 2026 && row.snapshot?.entityId === "dcp" && row.snapshot.sourceCells.dcpReporting
+    ? row.metrics.sales : row.metrics.base;
+}
 export function combine(metrics: Metric[], showKnownBudget = false): Metric {
   const total = (
     key:

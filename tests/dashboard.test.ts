@@ -14,6 +14,8 @@ import {
   getDashboardSnapshot,
   defaultFilters,
   filtersFrom,
+  chinaStripAmount,
+  sumKnown,
   entityMetric,
 } from "../lib/dashboard";
 import { parseDashboardWorkbook } from "../lib/workbook-parser";
@@ -645,4 +647,24 @@ test("DCP OB reads L10 even when K17 differs and preserves other BUs/raw data",(
  close(raw.turnover.group,2431.542);close(raw.orderbook.group,6.161);
  close(getDashboardSnapshot(state,admin,{...defaultFilters,entity:"ddc",scenario:"Sales"}).totals.base,7158.8329);
  close(getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dhk",scenario:"Sales"}).totals.base,32518.276);
+});
+
+
+test("Sales scenario changes only first-row values with H12/H10 provenance",()=>{
+ const sales={...defaultFilters,scenario:"Sales" as const};
+ const d=getDashboardSnapshot(state,admin,sales);
+ const expected={dhk:26606.729,ddc:5136.274,dcp:200.091};
+ for(const row of d.china){close(chinaStripAmount(row,sales),expected[row.entity.id as keyof typeof expected]);
+ assert.equal(row.snapshot!.sourceCells.salesCardValue,row.entity.id==="dhk"?"H12":"H10");}
+ close(sumKnown(d.china.map(r=>chinaStripAmount(r,sales))),31943.094);
+ close(d.totals.base,39878.3839); // Lower Sales + OB KPI unchanged.
+ const prospect=getDashboardSnapshot(state,admin,defaultFilters);
+ for(const row of prospect.china){const expected=row.entity.id==="dhk"?32518.276:row.entity.id==="ddc"?7158.8329:200.091;
+ close(chinaStripAmount(row,defaultFilters),expected);}
+ const row=d.china.find(r=>r.entity.id==="dhk")!;
+ close(chinaStripAmount({...row,snapshot:{...row.snapshot!,salesCardValue:123}},sales),123); // Cached H12, not reconstructed sum.
+ assert.equal(chinaStripAmount({...row,snapshot:{...row.snapshot!,salesCardValue:null}},sales),null);
+ close(chinaStripAmount(row,{...sales,salesType:"external"}),row.metrics.sales!);
+ const future=getDashboardSnapshot(state,admin,{...sales,year:2027,entity:"dhk"});
+ close(chinaStripAmount(future.rows[0],{...sales,year:2027}),2597);
 });

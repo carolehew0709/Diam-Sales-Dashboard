@@ -79,7 +79,7 @@ Rechecked raw source cells: DEHK W40 H10+H11 = 26,606.729; K17+K18 = 5,911.547; 
 
 ## DDC External-row reporting correction (2026-10-03)
 
-The owner superseded the previous DDC H10+H11 rule. For FY2026 DDC only: top China-strip DDC card and Sales to date use H10; annual Sales + OB uses cached O10 directly (H10+K17 in the source); Dashboard OB uses K17. W40 values: sales 5,136.274, OB 2,022.5589, annual total 7,158.8329 kEUR, displayed as 5,136 / 2,023 / 7,159. The top strip labels DDC as Sales to date because it now differs from the annual base used for other BU cards.
+The owner superseded the previous DDC H10+H11 rule. For FY2026 DDC only: Sales to date uses H10; the top China-strip DDC card and annual Sales + OB use cached O10 directly (H10+K17 in the source); Dashboard OB uses K17. W40 values: sales 5,136.274, OB 2,022.5589, annual total 7,158.8329 kEUR, displayed as 5,136 / 2,023 / 7,159. The top strip labels DDC as Sales + OB, matching its O10 annual total.
 
 The raw parser retains O10 as ddcAnnualTotal with source address, and preserves H11 and Group source rows. The reporting projection excludes FY2026 DDC Group invoicing, monthly actuals/estimates and OB; Group order detail FY2026 amounts become zero while FY2027 source allocations remain intact. This applies consistently to annual metrics, historical weekly views, monthly/cumulative figures, China totals and export. Existing stores without cached O10 use H10+K17; an explicitly missing O10 remains unknown. DEHK, DCP, all other BUs, approved budgets and FY2027 values are unchanged.
 

@@ -45,7 +45,7 @@ export async function GET(request: Request) {
             };
             if (typeof cell.v === "number")
               cell.z =
-                name === "Executive Summary" && c === 7 ? "0.0%" : "#,##0.0";
+                name === "Executive Summary" && c === 7 ? "0%" : "#,##0";
           }
         }
       XLSX.utils.book_append_sheet(wb, sheet, name);

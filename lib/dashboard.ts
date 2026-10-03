@@ -347,10 +347,10 @@ export type Dashboard = ReturnType<typeof getDashboardSnapshot>;
 export function formatK(value: Amount) {
   return value === null
     ? "—"
-    : new Intl.NumberFormat("en-US", { maximumFractionDigits: 1 }).format(
+    : new Intl.NumberFormat("en-US", { maximumFractionDigits: 0 }).format(
         value,
       );
 }
 export function percent(value: Amount) {
-  return value === null ? "Review" : `${(value * 100).toFixed(1)}%`;
+  return value === null ? "Review" : `${(value * 100).toFixed(0)}%`;
 }

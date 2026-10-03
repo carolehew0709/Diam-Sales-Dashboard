@@ -18,6 +18,8 @@ DSI, DDJ and DDI have no supplied records and remain blank. DCP now uses its own
 
 ## Units and provenance
 
+All dashboard amounts, chart labels, percentages and exported Excel numeric cells display whole numbers (Excel-style rounding to zero decimal places). Stored workbook values and calculations retain source precision; rounding is applied only at presentation, after intercompany deductions and aggregation. Displayed rounded BU values may therefore differ from the rounded total by 1 kEUR. Missing values remain blank/dashes.
+
 All amounts are kEUR. Weekly entity sheets explicitly label their amounts K€. The parser uses the worksheet's used-range origin and retains actual source cell addresses and row numbers. The source adapter reads YTD, MTD, full-month estimates, annual orderbook and monthly order allocations directly from W tabs, not the ambiguous Synth turnover column. Cached workbook values are used; XLSX formulas are not recalculated by the server. Submit recalculated/saved workbooks.
 
 For closed months, month-end YTD is the next month's YTD minus its MTD. Monthly invoicing is the difference between consecutive observed month-end balances; missing boundaries remain null. Current-month actual uses explicit MTD, future invoicing is zero, and committed OB uses supplied monthly allocations. A cumulative current-month anchor uses actual YTD plus current-month OB, then adds future OB. Historical monthly figures can reflect source corrections.

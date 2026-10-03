@@ -99,3 +99,14 @@ The owner subsequently requested pending FY2027 DCP/DSI/DDI/DDJ budgets display 
 The active manifest now selects W40-- Dashboard 2026 - DCP.xlsx; W38 remains archived unchanged. All three China BUs now report W40 / 2026-10-02 / October. The seed contains 119 populated entity-week observations and 2,414 historical lines. DCP W40 YTD invoices H10 200.091 + H11 2,431.542 = 2,631.633 kEUR. Raw OB is External 1.184 + Group 6.161. The Group line is DDC at source row24 and is excluded under the existing counterparty rule; no DEHK duplicate appears in W40. Net OB and October Remaining are each 1.184; net annual Sales + OB is 2,632.817 (displayed 2,633). FY2026 DCP budget remains 2,608; its FY2027 budget remains pending, displayed as 0.
 
 With the established DDC H10/O10 rule and unchanged DEHK W40, China sales to date is 34,374.636; net OB is 7,935.2899; annual base is 42,309.9259 (displayed 42,310); October Remaining is 2,804.1399 (displayed 2,804). Prospect remains unavailable. Raw workbook data and original invoices remain intact, and source replacement follows review/publish for the local persistent store. These figures supersede earlier W38 DCP baseline examples above.
+
+
+## DCP H10 / L10 reporting correction (2026-10-03)
+
+The owner superseded the earlier DCP H10+H11 invoicing rule. FY2026 direct DCP entity snapshots now use only H10 for Sales to date and the top China-strip DCP card; OB is read directly from L10 (source full-month External estimate), not K17/K18. Annual Sales + OB = H10 + L10. W40 H10 is 200.091 and L10 is 1.184 kEUR: top card/Sales to date display 200, OB displays 1, annual base displays 201. The DCP top card is explicitly labelled Sales to date. Group invoices, estimates and orders are excluded from reporting copies; all original stored/source values are preserved.
+
+Monthly actuals use External only; the selected source month carries the L10 reporting OB and other months carry no additional committed OB under this owner-specific annual rule. Current Remaining retains L10 minus J10, bounded at zero. Historical weekly views and exports apply the same H10/L10 rule; original order detail remains evidence of the source lines and can differ from an L10 estimate. Legacy PDA unsplit observations keep their prior handling. DEHK/DDC rules and all budgets/FY2027 data are unchanged.
+
+China FY2026 sales is 31,943.094; OB is 7,935.2899; base is 39,878.3839 (displayed 39,878). October Remaining is unchanged at 2,804.1399. These totals supersede the previous DCP Group-inclusive examples above.
+
+Top China strip presentation order is China Total, DEHK, DDC, DCP (owner request, 2026-10-03). Other entity tables retain their existing ordering.

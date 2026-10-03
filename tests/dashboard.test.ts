@@ -88,15 +88,15 @@ test("China uses fixed budgets and latest entity-specific operating sources", ()
     d.rows.map((r) => r.entity.code),
     ["DEHK", "DCP", "DDC"],
   );
-  close(d.totals.base, 32518.276 + 7158.8329 + 2632.817);
+  close(d.totals.base, 32518.276 + 7158.8329 + 201.275);
   close(d.totals.budget, 33207);
-  close(d.totals.coverage, 42309.9259 / 33207);
-  close(d.totals.gap, 33207 - 42309.9259);
+  close(d.totals.coverage, 39878.3839 / 33207);
+  close(d.totals.gap, 33207 - 39878.3839);
   assert.deepEqual(d.weeks, [40]);
   const dcp = d.rows.find((r) => r.entity.id === "dcp")!;
   close(dcp.metrics.budget, 2608);
   assert.equal(dcp.metrics.prospect, null);
-  close(dcp.metrics.sales, 2631.633);
+  close(dcp.metrics.sales, 200.091);
 });
 test("entity matrix preserves differences and cumulative December matches annual base", () => {
   for (const id of ["dhk", "ddc", "dcp"]) {
@@ -338,10 +338,10 @@ test("DCP W38 uses direct entity data and handles shifted used ranges", () => {
   close(s.turnover.group, 2421.376);
   const m = entityMetric(s, { ...defaultFilters, scenario: "Sales" });
   close(m.budget, 2608);
-  close(m.base, 2622.104117529132);
-  close(m.orderbook, 1.45311752913171);
-  close(m.remaining, 1.45311752913171);
-  close(m.coverage, 2622.104117529132 / 2608);
+  close(m.base, 199.275);
+  close(m.orderbook, 0);
+  close(m.remaining, 0);
+  close(m.coverage, 199.275 / 2608);
   assert.equal(s.prospect, null); // Never carry forward legacy PDA Prospect.
 });
 
@@ -352,7 +352,7 @@ test("intercompany projection reconciles all metrics without modifying sources o
   assert.deepEqual(reportingState(adjusted).snapshots, adjusted.snapshots);
   for (const [id, base, remaining, removed] of [
     ["ddc", 7158.8329, 819.7699, 2872.248],
-    ["dcp", 2632.817, 1.184, 6.161],
+    ["dcp", 201.275, 1.184, 6.161],
   ] as const) {
     const d = getDashboardSnapshot(state, admin, {
       ...defaultFilters,
@@ -369,7 +369,7 @@ test("intercompany projection reconciles all metrics without modifying sources o
       (x) => x.entityId === id && x.week === s.week,
     )!;
     close(gross.orderbook.group! - s.orderbook.group!, removed);
-    if (id === "ddc") {
+    if (id === "ddc" || id === "dcp") {
       close(s.turnover.external, gross.turnover.external!);
       close(s.turnover.group, 0);
     } else assert.deepEqual(gross.turnover, s.turnover);
@@ -395,7 +395,7 @@ test("intercompany projection reconciles all metrics without modifying sources o
     ...defaultFilters,
     scenario: "Sales",
   });
-  close(china.totals.base, 42309.9259);
+  close(china.totals.base, 39878.3839);
   close(china.totals.remaining, 2804.1399);
 });
 
@@ -535,7 +535,7 @@ test("DEHK display code and legacy BU filters preserve entity identity and recon
     close(d.totals.base, 32518.276);
   }
   const china = getDashboardSnapshot(state, admin, defaultFilters);
-  close(china.totals.sales, 34374.636);
+  close(china.totals.sales, 31943.094);
   close(china.totals.orderbook, 7935.2899);
   close(china.totals.base, china.totals.sales! + china.totals.orderbook!);
   assert.equal(china.totals.scenarioComplete, false);
@@ -591,7 +591,7 @@ test("DDC H10/O10 reporting preserves raw Group sources and other BUs", () => {
       entity: "dcp",
       scenario: "Sales",
     }).totals.base,
-    2632.817,
+    201.275,
   );
 });
 
@@ -629,8 +629,20 @@ test("DCP W40 refresh reconciles sales, current month and counterparty exclusion
  close(s.orderbook.external,1.184);close(s.orderbook.group,6.161);
  const d=getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dcp",scenario:"Sales"});
  assert.equal(d.rows[0].snapshot!.sourceFile,"W40-- Dashboard 2026 - DCP.xlsx");
- close(d.totals.sales,2631.633);close(d.totals.orderbook,1.184);close(d.totals.base,2632.817);
- close(d.totals.remaining,1.184);close(d.totals.cumulative[11].base,2632.817);close(d.totals.budget,2608);
+ close(d.totals.sales,200.091);close(d.totals.orderbook,1.184);close(d.totals.base,201.275);
+ close(d.totals.remaining,1.184);close(d.totals.cumulative[11].base,201.275);close(d.totals.budget,2608);
  const excluded=reportingState(state).intercompanyExcluded.filter(l=>l.entityId==="dcp"&&l.week===40);
  assert.equal(excluded.length,1);assert.equal(excluded[0].customer,"DDC");close(excluded[0].total2026,6.161);
+});
+
+
+test("DCP OB reads L10 even when K17 differs and preserves other BUs/raw data",()=>{
+ const raw=state.snapshots.find(s=>s.entityId==="dcp"&&s.week===40)!;
+ const modified={...raw,monthEstimate:{external:12.5,group:999},orderbook:{external:88,group:999}};
+ const m=entityMetric(modified,{...defaultFilters,scenario:"Sales"});
+ close(m.sales,200.091);close(m.orderbook,12.5);close(m.base,212.591);close(m.cumulative[11].base,212.591);
+ const adjusted=reportingState({...state,snapshots:[modified]});assert.deepEqual(reportingState(adjusted).snapshots,adjusted.snapshots);
+ close(raw.turnover.group,2431.542);close(raw.orderbook.group,6.161);
+ close(getDashboardSnapshot(state,admin,{...defaultFilters,entity:"ddc",scenario:"Sales"}).totals.base,7158.8329);
+ close(getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dhk",scenario:"Sales"}).totals.base,32518.276);
 });

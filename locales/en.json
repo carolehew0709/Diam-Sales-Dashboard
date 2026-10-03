@@ -321,5 +321,6 @@
   "notes.partialBudget": " · {entities} confirmed; pending BU budgets shown as 0",
   "notes.pendingBudget": " · Pending budget displayed as 0",
   "metric.budgetPending": "Pending",
-  "checks.pending2027Budget": "FY2027 annual budget pending; displayed as 0"
+  "checks.pending2027Budget": "FY2027 annual budget pending; displayed as 0",
+  "checks.dcpExternal": "DCP reporting uses H10 sales and L10 orderbook; Group values excluded"
 }

@@ -443,7 +443,7 @@ function DashboardView({
           </strong>
           <span>{tr("china.known")}</span>
         </button>
-        {data.china.map((r) => (
+        {[...data.china].sort((a,b) => ["dhk","ddc","dcp"].indexOf(a.entity.id) - ["dhk","ddc","dcp"].indexOf(b.entity.id)).map((r) => (
           <button
             key={r.entity.id}
             className={filters.bu === r.entity.businessUnit ? "selected" : ""}
@@ -453,10 +453,11 @@ function DashboardView({
               {r.entity.code} · {display(r.entity.description)}
             </small>
             <strong>
-              {formatK(r.metrics.base)} <em>kEUR</em>
+              {formatK(r.entity.id === "dcp" && filters.year === 2026 && r.snapshot?.sourceCells.dcpReporting ? r.metrics.sales : r.metrics.base)} <em>kEUR</em>
             </strong>
             <span>
               {r.entity.id === "ddc" && filters.year === 2026 && `${tr("metric.baseOB")} · `}
+              {r.entity.id === "dcp" && filters.year === 2026 && r.snapshot?.sourceCells.dcpReporting && `${tr("metric.salesDate")} · `}
               {r.snapshot
                 ? `W${r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`
                 : tr("china.pending")}

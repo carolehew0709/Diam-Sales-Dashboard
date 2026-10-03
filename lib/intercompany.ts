@@ -96,7 +96,7 @@ export function reportingState(state: Store) {
     lines: state.lines
       .filter((l) => !isDuplicateIntercompanyOrder(l))
       .map((l) =>
-        l.entityId === "ddc" && l.year === 2026 && l.customerType === "Group"
+        ["ddc", "dcp"].includes(l.entityId) && l.year === 2026 && l.customerType === "Group"
           ? { ...l, total2026: 0, monthly2026: Array(12).fill(0) }
           : l,
       ),

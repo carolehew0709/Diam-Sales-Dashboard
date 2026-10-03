@@ -177,10 +177,10 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId
     budget,
     budgetComplete,
     coverage:
-      budgetComplete && budget !== null && budget > 0 && scenarioComplete
-        ? scenario! / budget
+      budgetComplete && budget !== null && budget > 0 && base !== null
+        ? base / budget
         : null,
-    gap: budgetComplete && budget !== null && scenarioComplete ? budget - scenario! : null,
+    gap: budgetComplete && budget !== null && base !== null ? budget - base : null,
     remaining,
     monthSales,
     monthEstimate,
@@ -213,6 +213,8 @@ export function combine(metrics: Metric[], showKnownBudget = false): Metric {
   const completeBudget = metrics.every((m) => m.budgetComplete)
     ? sumComplete(metrics.map((m) => m.budget)) : null;
   const budget = showKnownBudget ? sumKnown(metrics.map((m) => m.budget)) : completeBudget;
+  // Coverage and Gap always compare the complete annual Sales + OB base, excluding Prospect.
+  const completeBase = sumComplete(metrics.map((m) => m.base));
   const scenarioComplete =
     metrics.length > 0 && metrics.every((m) => m.scenarioComplete)
       ? sumComplete(metrics.map((m) => m.scenario))
@@ -227,12 +229,12 @@ export function combine(metrics: Metric[], showKnownBudget = false): Metric {
     budget,
     budgetComplete: completeBudget !== null,
     coverage:
-      completeBudget !== null && completeBudget > 0 && scenarioComplete !== null
-        ? scenarioComplete / completeBudget
+      completeBudget !== null && completeBudget > 0 && completeBase !== null
+        ? completeBase / completeBudget
         : null,
     gap:
-      completeBudget !== null && scenarioComplete !== null
-        ? completeBudget - scenarioComplete
+      completeBudget !== null && completeBase !== null
+        ? completeBudget - completeBase
         : null,
     remaining: total("remaining"),
     monthSales: total("monthSales"),

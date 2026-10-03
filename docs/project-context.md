@@ -30,8 +30,8 @@ DCP follows the same direct entity-week sales/orderbook parsing rules as DEHK/DD
 
 - Annual Dashboard: approved annual budget for the selected scope/year; null if any selected entity budget is missing. Budgets have no External/Group allocation, so filtered sales-type coverage/gap are unavailable.
 - Sales & Dashboard (OB): YTD invoiced + current-year committed OB. DCP uses the provided unsplit annual scenario, with no invented component split.
-- Sales + Prospect: base + supplied Prospect. Known subtotals remain visible when inputs are missing, clearly marked partial. Unknown Prospect is not asserted to be zero; coverage/gap remain unavailable for incomplete scenarios.
-- Coverage: selected annual scenario / complete comparable annual budget. Never divide by an artificial denominator of one.
+- Sales + Prospect: base + supplied Prospect. Known subtotals remain visible when inputs are missing, clearly marked partial. Unknown Prospect is not asserted to be zero; it does not block Coverage or Residual Gap.
+- Coverage: annual Sales + OB / complete comparable annual budget, excluding Prospect in both scenarios. Never divide by an artificial denominator of one.
 - Residual Gap: annual budget minus selected annual scenario. Positive means below budget; negative means above budget.
 - Remaining this month: max(full-month estimate − MTD invoiced, 0). Missing entity values remain unknown; known subtotal is marked partial. For 2027 this current-month metric is unavailable.
 - 2027 base uses supplied next-year OB; no future budget or Prospect is invented.
@@ -131,3 +131,7 @@ W40 External: DEHK 18,256.216 + 5,282.382 = 23,538.598; DDC 5,136.274 + 2,022.55
 The owner supplied a corrected DCP YTD sales figure of approximately 260.8K, with screenshot value 260,814.49 EUR. Reporting converts it to 260.81449 kEUR and applies it to FY2026 DCP W40 only. It is entirely External, affects both All sales and External invoices and top cards, and leaves Group at zero. Original workbook H10 (200.091 kEUR), stored raw source records, previous weeks and other BUs remain unchanged. Source provenance identifies the owner screenshot and conversion. The owner supplied no monthly allocation: existing monthly invoice observations and J10 stay intact, with a Review finding, while the annual/cumulative-current-month anchor uses the corrected YTD total.
 
 DCP OB is unchanged at 1.184; Sales + OB = 261.99849 (displayed 262), Sales to date/top sales card displays 261. China All-sales YTD is 32,003.81749, annual base 39,939.10739; External YTD is 23,653.30449, base 30,959.42939. Approved budgets and FY2027 records remain unchanged.
+
+## Coverage and Residual Gap exclude Prospect (2026-10-03)
+
+Owner confirmation supersedes earlier scenario-completeness restrictions above: both scenario selections calculate Coverage as annual Sales + OB / approved annual budget and Residual Gap as approved annual budget minus annual Sales + OB. Supplied or missing Prospect never affects these two metrics. Scenario totals, Prospect readiness, top-strip rules and monthly calculations remain unchanged. Complete comparable budgets and complete annual Sales + OB are still required; External/Group budget allocations and pending FY2027 budgets are not invented. Entity, aggregate, history and export share this rule.

@@ -185,8 +185,8 @@ test("manual import preserves YTD/MTD, both order years, Prospect and source not
   assert.equal(s.sourceNote, "Test source");
   const m = entityMetric(s, defaultFilters);
   close(m.scenario, 130);
-  close(m.coverage, 130 / 5769);
-  close(m.gap, 5769 - 130);
+  close(m.coverage, 120 / 5769);
+  close(m.gap, 5769 - 120);
   close(m.remaining, 20);
 });
 test("validation rejects nonfinite/fractional weeks, unknown entity and inconsistent allocation", () => {
@@ -313,7 +313,8 @@ test("W40 refresh reconciles metrics and fixed budgets ignore weekly overrides",
   }
   const scenario = getDashboardSnapshot(state, admin, defaultFilters);
   close(scenario.totals.budget, 33207);
-  assert.equal(scenario.totals.coverage, null); // Missing Prospect remains unknown.
+  close(scenario.totals.coverage, scenario.totals.base! / 33207); // Prospect is excluded from Coverage.
+  close(scenario.totals.gap, 33207 - scenario.totals.base!);
   const all = getDashboardSnapshot(state, admin, {
     ...defaultFilters,
     region: "APAC",
@@ -707,4 +708,22 @@ test("DCP owner YTD correction is External, W40 only, and preserves raw invoices
  const group=getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dcp",salesType:"group",scenario:"Sales"});close(group.totals.sales,0);close(group.totals.base,0);
  close(getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dhk",scenario:"Sales"}).totals.base,32518.276);
  close(getDashboardSnapshot(state,admin,{...defaultFilters,entity:"ddc",scenario:"Sales"}).totals.base,7158.8329);
+});
+
+
+test("Coverage and Gap exclude missing and supplied Prospect in both scenarios", () => {
+  const snapshot = getDashboardSnapshot(state, admin, defaultFilters).rows.find(r => r.entity.id === "dhk")!.snapshot!;
+  for (const prospect of [null, 5000]) {
+    for (const scenario of ["Sales", "Sales + Prospect"] as const) {
+      const m = entityMetric({ ...snapshot, prospect }, { ...defaultFilters, scenario });
+      close(m.coverage, m.base! / 24830);
+      close(m.gap, 24830 - m.base!);
+      assert.equal(m.prospect, prospect);
+      close(m.scenario, m.base! + (scenario === "Sales" ? 0 : prospect ?? 0));
+      const modified = { ...state, snapshots: state.snapshots.map(s => s.entityId === snapshot.entityId && s.year === snapshot.year && s.week === snapshot.week ? { ...s, prospect } : s) };
+      const total = getDashboardSnapshot(modified, admin, { ...defaultFilters, scenario }).totals;
+      close(total.coverage, total.base! / 33207);
+      close(total.gap, 33207 - total.base!);
+    }
+  }
 });

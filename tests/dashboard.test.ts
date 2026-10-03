@@ -668,3 +668,25 @@ test("Sales scenario changes only first-row values with H12/H10 provenance",()=>
  const future=getDashboardSnapshot(state,admin,{...sales,year:2027,entity:"dhk"});
  close(chinaStripAmount(future.rows[0],{...sales,year:2027}),2597);
 });
+
+
+test("External uses H10 plus K17 independently of All-sales overrides",()=>{
+ const f={...defaultFilters,salesType:"external" as const,scenario:"Sales" as const};
+ for(const [id,sales,ob,total] of [["dhk",18256.216,5282.382,23538.598],["ddc",5136.274,2022.5589,7158.8329],["dcp",200.091,1.184,201.275]] as const){
+ const d=getDashboardSnapshot(state,admin,{...f,entity:id});close(d.totals.sales,sales);close(d.totals.orderbook,ob);close(d.totals.base,total);
+ close(d.totals.cumulative[11].base,total);
+ close(chinaStripAmount(d.rows[0],{...f,scenario:"Sales + Prospect"}),total);
+ }
+ const china=getDashboardSnapshot(state,admin,f);close(china.totals.sales,23592.581);close(china.totals.orderbook,7306.1249);close(china.totals.base,30898.7059);
+ const raw=state.snapshots.find(s=>s.entityId==="dcp"&&s.week===40)!;
+ const altered={...raw,monthEstimate:{external:12.5,group:999},orderbook:{external:88,group:999},monthlyOrderbook:{external:[...Array(9).fill(0),88,0,0],group:Array(12).fill(0)}};
+ close(entityMetric(altered,f).base,288.091);close(entityMetric(altered,{...f,salesType:"all"}).base,212.591);
+ const projected=reportingState({...state,snapshots:[altered]},"all");
+ close(entityMetric(projected.snapshots[0],f).orderbook,88);
+ const ext=reportingState(projected,"external");assert.deepEqual(reportingState(ext,"external").snapshots,ext.snapshots);
+ close(entityMetric(ext.snapshots[0],f).cumulative[11].base,288.091);
+ const ddc=state.snapshots.find(s=>s.entityId==="ddc"&&s.week===40)!;
+ close(entityMetric({...ddc,ddcAnnualTotal:99999},f).base,7158.8329);
+ close(getDashboardSnapshot(state,admin,{...defaultFilters,salesType:"group",scenario:"Sales"}).totals.base,8979.678);
+ close(getDashboardSnapshot(state,admin,{...defaultFilters,scenario:"Sales"}).totals.base,39878.3839);
+});

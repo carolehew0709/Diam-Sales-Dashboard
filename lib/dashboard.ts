@@ -65,7 +65,7 @@ export const sumComplete = (values: Amount[]): Amount =>
 export const splitValue = (split: Split, type: SalesType): Amount =>
   type === "all" ? sumComplete([split.external, split.group]) : split[type];
 export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId = s?.entityId) {
-  if (s) s = applyReportingOverrides(applyApprovedBudget(s));
+  if (s) s = applyReportingOverrides(applyApprovedBudget(s), filters.salesType);
   const future = filters.year === 2027,
     type = filters.salesType;
   const sales = s && !future ? splitValue(s.turnover, type) : s ? 0 : null;
@@ -81,7 +81,7 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId
     !future &&
     s.entityId === "ddc" &&
     s.ddcAnnualTotal !== undefined &&
-    type !== "group"
+    type === "all"
       ? s.ddcAnnualTotal
       : s && !future && s.baseOverride !== null
         ? type === "all"
@@ -195,7 +195,7 @@ export function chinaStripAmount(row: { snapshot?: Snapshot; metrics: Metric }, 
     return filters.salesType === "all" && row.snapshot?.salesCardValue !== undefined
       ? row.snapshot.salesCardValue : row.metrics.sales;
   }
-  return filters.year === 2026 && row.snapshot?.entityId === "dcp" && row.snapshot.sourceCells.dcpReporting
+  return filters.year === 2026 && filters.salesType === "all" && row.snapshot?.entityId === "dcp" && row.snapshot.sourceCells.dcpReporting
     ? row.metrics.sales : row.metrics.base;
 }
 export function combine(metrics: Metric[], showKnownBudget = false): Metric {
@@ -258,7 +258,7 @@ export function getDashboardSnapshot(
   user: User,
   filters: Filters,
 ) {
-  state = reportingState(state);
+  state = reportingState(state, filters.salesType);
   const allowed = entities.filter((e) => canView(user, e));
   const latest = (id: string) =>
     state.snapshots

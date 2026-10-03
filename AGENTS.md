@@ -46,3 +46,5 @@ The current dashboard snapshot is extracted from the three workbooks in `Dashboa
 ## Reporting Region and BU mapping
 
 Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DEHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.
+
+FY2026 sales-type formulas: All sales retains established BU rules; External uses H10 sales + K17 OB for every direct entity source, independent of DDC O10/DCP L10 overrides. Group stays unchanged (DEHK H11 + K18; DDC/DCP excluded). Sales scenario top strip continues its invoices-only rule.

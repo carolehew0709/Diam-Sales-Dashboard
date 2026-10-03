@@ -460,7 +460,7 @@ function DashboardView({
             <span>
               {filters.year === 2026 && filters.scenario === "Sales" ? `${tr("metric.salesDate")} · ` : <>
                 {r.entity.id === "ddc" && filters.year === 2026 && `${tr("metric.baseOB")} · `}
-                {r.entity.id === "dcp" && filters.year === 2026 && r.snapshot?.sourceCells.dcpReporting && `${tr("metric.salesDate")} · `}
+                {r.entity.id === "dcp" && filters.year === 2026 && r.snapshot?.sourceCells.dcpReporting && `${tr(filters.salesType === "external" ? "metric.baseOB" : "metric.salesDate")} · `}
               </>}
               {r.snapshot
                 ? `W${r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`

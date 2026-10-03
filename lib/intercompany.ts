@@ -1,4 +1,4 @@
-import type { Amount, OrderBookLine, Snapshot, Store } from "./types";
+import type { Amount, OrderBookLine, Snapshot, Store, SalesType } from "./types";
 import { applyReportingOverrides } from "./reporting-overrides";
 
 const normalize = (value: string) =>
@@ -32,7 +32,7 @@ const key = (value: { entityId: string; year: number; week: number }) =>
 /** Pure reporting projection. Raw workbooks, stored snapshots and imports remain intact.
  * Removing excluded lines makes repeated projection idempotent.
  */
-export function reportingState(state: Store) {
+export function reportingState(state: Store, salesType: SalesType = "all") {
   const excluded = state.lines.filter(isDuplicateIntercompanyOrder);
   const byWeek = new Map<string, OrderBookLine[]>();
   for (const line of excluded)
@@ -92,7 +92,7 @@ export function reportingState(state: Store) {
   });
   return {
     ...state,
-    snapshots: snapshots.map(applyReportingOverrides),
+    snapshots: snapshots.map(s => applyReportingOverrides(s, salesType)),
     lines: state.lines
       .filter((l) => !isDuplicateIntercompanyOrder(l))
       .map((l) =>

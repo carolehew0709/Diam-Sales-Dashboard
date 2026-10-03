@@ -7,8 +7,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const user = await currentUser();
-    const state = reportingState(await repository.read());
     const filters = filtersFrom(new URL(request.url));
+    const state = reportingState(await repository.read(), filters.salesType);
     const d = getDashboardSnapshot(state, user, filters);
     const wb = XLSX.utils.book_new();
     const context = [

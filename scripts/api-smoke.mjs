@@ -185,6 +185,16 @@ const ar=await fetch(base+"/api/export?year=2027&region=APAC&scenario=Sales",{he
 assert.equal(ar.status,200);const aw=XLSX.read(Buffer.from(await ar.arrayBuffer()));const as=XLSX.utils.sheet_to_json(aw.Sheets["Executive Summary"],{header:1});
 assert.equal(as.find(r=>r[0]==="Selected total")[1],35031);
 assert.ok(as.some(r=>String(r[0]).includes("pending FY2027 budgets displayed as 0")));
+
+for(const [id,sales,ob,total] of [["dhk",18256.216,5282.382,23538.598],["ddc",5136.274,2022.5589,7158.8329],["dcp",200.091,1.184,201.275]]){
+ const q="?entity="+id+"&salesType=external&scenario=Sales";
+ const x=await(await fetch(base+"/api/dashboard"+q,{headers:{cookie:admin}})).json();
+ for(const [key,value] of [["sales",sales],["orderbook",ob],["base",total]])assert.ok(Math.abs(x.data.totals[key]-value)<0.000001);
+ const er=await fetch(base+"/api/export"+q,{headers:{cookie:admin}});assert.equal(er.status,200);
+ const ew=XLSX.read(Buffer.from(await er.arrayBuffer()));const es=XLSX.utils.sheet_to_json(ew.Sheets["Executive Summary"],{header:1});
+ assert.ok(Math.abs(es[4][2]-sales)<0.000001);assert.ok(Math.abs(es[4][3]-ob)<0.000001);assert.ok(Math.abs(es[4][4]-total)<0.000001);
+}
+const eg=await(await fetch(base+"/api/dashboard?salesType=group&scenario=Sales",{headers:{cookie:admin}})).json();assert.ok(Math.abs(eg.data.totals.base-8979.678)<0.000001);
 const testPassword = randomUUID();
 const created = await request("/api/admin/users", {
   name: "API smoke viewer",

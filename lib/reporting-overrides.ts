@@ -1,28 +1,36 @@
-import type { Snapshot } from "./types";
+import type { Snapshot, SalesType } from "./types";
 
 /** Owner-confirmed WK40 aggregate; never invent a customer, sales-type or monthly allocation. */
-export function applyReportingOverrides(snapshot: Snapshot): Snapshot {
+export function applyReportingOverrides(snapshot: Snapshot, salesType: SalesType = "all"): Snapshot {
   if (snapshot.entityId === "dcp" && snapshot.year === 2026 && snapshot.baseOverride === null) {
     // DCP-specific owner correction: H10 invoices + L10 OB, not H11 or K17/K18.
-    const ob = snapshot.monthEstimate.external;
+    const sourceOB = snapshot.sourceExternalOrderbook !== undefined ? snapshot.sourceExternalOrderbook : snapshot.orderbook.external;
+    const sourceMonthlyOB = snapshot.sourceExternalMonthlyOrderbook ?? snapshot.monthlyOrderbook.external;
+    const external = salesType === "external";
+    const ob = external ? sourceOB : snapshot.monthEstimate.external;
     return {
       ...snapshot,
+      sourceExternalOrderbook: sourceOB,
+      sourceExternalMonthlyOrderbook: sourceMonthlyOB,
       turnover: { ...snapshot.turnover, group: 0 },
       monthTurnover: { ...snapshot.monthTurnover, group: 0 },
       monthEstimate: { ...snapshot.monthEstimate, group: 0 },
       orderbook: { external: ob, group: 0 },
       monthlySales: { ...snapshot.monthlySales, group: Array(12).fill(0) },
       monthlyOrderbook: {
-        external: Array.from({length:12}, (_, i) => i === snapshot.month - 1 ? ob : 0),
+        external: external ? sourceMonthlyOB : Array.from({length:12}, (_, i) => i === snapshot.month - 1 ? ob : 0),
         group: Array(12).fill(0),
       },
       sourceCells: {
         ...snapshot.sourceCells,
-        dcpReporting: "Project owner correction · 2026-10-03 · FY2026 DCP: top card and Sales to date H10; OB L10; annual total H10+L10; External row only",
+        dcpReporting: external
+          ? "Project owner correction · 2026-10-03 · FY2026 External: Sales H10; OB K17; total H10+K17"
+          : "Project owner correction · 2026-10-03 · FY2026 DCP: top card and Sales to date H10; OB L10; annual total H10+L10; External row only",
       },
       findings: [...new Set(snapshot.findings
         .filter(f => f !== "Intercompany orderbook excluded; invoiced sales unchanged")
-        .concat("DCP reporting uses H10 sales and L10 orderbook; Group values excluded"))],
+        .filter(f => !["DCP reporting uses H10 sales and L10 orderbook; Group values excluded", "External reporting uses H10 sales and K17 orderbook"].includes(f))
+        .concat(external ? "External reporting uses H10 sales and K17 orderbook" : "DCP reporting uses H10 sales and L10 orderbook; Group values excluded"))],
     };
   }
   if (snapshot.entityId === "ddc" && snapshot.year === 2026) {

@@ -117,3 +117,10 @@ Top China strip presentation order is China Total, DEHK, DDC, DCP (owner request
 Only the FY2026 top China strip changes when Scenario = Sales: DEHK reads cached H12 (W40 26,606.729); DDC and DCP read cached H10 (5,136.274 and 200.091). China Total sums the permitted BU values, 31,943.094 kEUR (displayed 31,943). The parser preserves these values and source addresses in salesCardValue. Missing cells stay null; older stores/manual imports without the field fall back to existing invoicing metrics. External/Group filters retain their scoped invoicing metrics.
 
 `chinaStripAmount` affects this first row only. Lower KPI cards, scenario calculations, charts, history and export are unchanged. Sales + Prospect retains its existing top-row display (DEHK annual base, DDC O10 annual base, DCP H10 sales). FY2027 first-row behavior is unchanged.
+
+
+## External sales-type formula (2026-10-03)
+
+All sales retains all owner-specific formulas. For FY2026 External, each direct BU source uses H10 invoices, K17 annual OB, and H10+K17 base (sum of source values, not the cached DDC O10 nor the DCP All-sales L10). DCP reporting preserves original K17/monthly External allocations before applying its All-sales override, so changing sales type or repeated export projections cannot lose the source values. External monthly/history/export use the same K17 source allocations. The Sales-scenario first strip continues to show H10 invoices; Sales + Prospect External strip shows H10+K17 totals. Group numbers remain unchanged: DEHK H11+K18, DDC/DCP zero. FY2027 rules are unchanged.
+
+W40 External: DEHK 18,256.216 + 5,282.382 = 23,538.598; DDC 5,136.274 + 2,022.5589 = 7,158.8329; DCP 200.091 + 1.184 = 201.275. China sales 23,592.581, OB 7,306.1249, total 30,898.7059 (displayed 30,899).

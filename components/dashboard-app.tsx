@@ -453,9 +453,10 @@ function DashboardView({
               {r.entity.code} · {display(r.entity.description)}
             </small>
             <strong>
-              {formatK(r.metrics.base)} <em>kEUR</em>
+              {formatK(r.entity.id === "ddc" && filters.year === 2026 ? r.metrics.sales : r.metrics.base)} <em>kEUR</em>
             </strong>
             <span>
+              {r.entity.id === "ddc" && filters.year === 2026 && `${tr("metric.salesDate")} · `}
               {r.snapshot
                 ? `W${r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`
                 : tr("china.pending")}

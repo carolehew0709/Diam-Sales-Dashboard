@@ -168,6 +168,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -175,7 +176,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 1190.6519
     },
     {
       "entityId": "ddc",
@@ -336,6 +338,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -343,7 +346,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 1560.5729000000001
     },
     {
       "entityId": "ddc",
@@ -504,6 +508,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -511,7 +516,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 1585.3269000000003
     },
     {
       "entityId": "ddc",
@@ -672,6 +678,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -679,7 +686,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 2075.4579
     },
     {
       "entityId": "ddc",
@@ -840,6 +848,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -847,7 +856,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 2105.4579
     },
     {
       "entityId": "ddc",
@@ -1008,6 +1018,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -1015,7 +1026,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 2271.1219
     },
     {
       "entityId": "ddc",
@@ -1176,6 +1188,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -1183,7 +1196,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 2271.1219
     },
     {
       "entityId": "ddc",
@@ -1344,6 +1358,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -1351,7 +1366,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 2271.1219
     },
     {
       "entityId": "ddc",
@@ -1512,6 +1528,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -1519,7 +1536,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 2722.0289
     },
     {
       "entityId": "ddc",
@@ -1680,6 +1698,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -1687,7 +1706,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 3087.5059
     },
     {
       "entityId": "ddc",
@@ -1848,6 +1868,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -1855,7 +1876,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 3090.5059
     },
     {
       "entityId": "ddc",
@@ -2016,6 +2038,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -2023,7 +2046,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 3110.5059
     },
     {
       "entityId": "ddc",
@@ -2184,6 +2208,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -2191,7 +2216,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 3315.3208999999997
     },
     {
       "entityId": "ddc",
@@ -2352,6 +2378,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -2359,7 +2386,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 3670.0749000000005
     },
     {
       "entityId": "ddc",
@@ -2520,6 +2548,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -2527,7 +2556,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 3941.0748999999996
     },
     {
       "entityId": "ddc",
@@ -2688,6 +2718,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -2695,7 +2726,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 4410.3688999999995
     },
     {
       "entityId": "ddc",
@@ -2856,6 +2888,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -2863,7 +2896,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 4493.3689
     },
     {
       "entityId": "ddc",
@@ -3024,6 +3058,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -3031,7 +3066,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 4591.3688999999995
     },
     {
       "entityId": "ddc",
@@ -3192,6 +3228,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -3199,7 +3236,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 4674.3688999999995
     },
     {
       "entityId": "ddc",
@@ -3360,6 +3398,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -3367,7 +3406,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 4695.018899999999
     },
     {
       "entityId": "ddc",
@@ -3528,6 +3568,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -3535,7 +3576,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 4718.536899999999
     },
     {
       "entityId": "ddc",
@@ -3696,6 +3738,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -3703,7 +3746,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 4836.223899999999
     },
     {
       "entityId": "ddc",
@@ -3864,6 +3908,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -3871,7 +3916,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 4884.8018999999995
     },
     {
       "entityId": "ddc",
@@ -4032,6 +4078,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -4039,7 +4086,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 4888.9538999999995
     },
     {
       "entityId": "ddc",
@@ -4200,6 +4248,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -4207,7 +4256,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 5029.3629
     },
     {
       "entityId": "ddc",
@@ -4368,6 +4418,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -4375,7 +4426,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 5185.3629
     },
     {
       "entityId": "ddc",
@@ -4536,6 +4588,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -4543,7 +4596,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 5238.3619
     },
     {
       "entityId": "ddc",
@@ -4704,6 +4758,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -4711,7 +4766,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 5493.6729
     },
     {
       "entityId": "ddc",
@@ -4872,6 +4928,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -4879,7 +4936,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 5875.9059
     },
     {
       "entityId": "ddc",
@@ -5040,6 +5098,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -5047,7 +5106,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 6010.5359
     },
     {
       "entityId": "ddc",
@@ -5208,6 +5268,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -5215,7 +5276,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 6129.0359
     },
     {
       "entityId": "ddc",
@@ -5376,6 +5438,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -5383,7 +5446,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 6258.9048999999995
     },
     {
       "entityId": "ddc",
@@ -5544,6 +5608,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -5551,7 +5616,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 6283.9049
     },
     {
       "entityId": "ddc",
@@ -5712,6 +5778,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -5719,7 +5786,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 6386.265899999999
     },
     {
       "entityId": "ddc",
@@ -5880,6 +5948,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -5887,7 +5956,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 6638.7639
     },
     {
       "entityId": "ddc",
@@ -6048,6 +6118,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -6055,7 +6126,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 6777.7639
     },
     {
       "entityId": "ddc",
@@ -6216,6 +6288,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -6223,7 +6296,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 6841.6889
     },
     {
       "entityId": "ddc",
@@ -6384,6 +6458,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -6391,7 +6466,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 6904.3919
     },
     {
       "entityId": "ddc",
@@ -6552,6 +6628,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -6559,7 +6636,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 7019.6449
     },
     {
       "entityId": "ddc",
@@ -6720,6 +6798,7 @@
         "monthEstimate": "L10:L11",
         "orderbook": "K17:L18",
         "monthlyOrderbook": "N17:AL18",
+        "ddcAnnualTotal": "O10",
         "budget": "Project owner approval · 2026-09-29 · lib/annual-budgets.ts · kEUR · fixed FY2026",
         "nextBudget": "Project owner approval · 2026-10-03 · lib/annual-budgets.ts · kEUR · FY2027 version"
       },
@@ -6727,7 +6806,8 @@
         "Prospect not supplied",
         "Approved annual budget has no supplied monthly phasing"
       ],
-      "sourceCheck": "Review"
+      "sourceCheck": "Review",
+      "ddcAnnualTotal": 7158.8329
     },
     {
       "entityId": "dhk",

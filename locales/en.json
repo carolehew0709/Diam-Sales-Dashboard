@@ -316,5 +316,6 @@
   "validation.budgetPhasing": "Approved annual budget has no supplied monthly phasing",
   "validation.intercompany": "Intercompany orderbook excluded; invoiced sales unchanged",
   "checks.nextOrderbookUnallocated": "Approved next-year orderbook has no supplied monthly or sales-type allocation",
-  "metric.knownSubtotal": "Known subtotal"
+  "metric.knownSubtotal": "Known subtotal",
+  "checks.ddcExternal": "DDC reporting uses External row only: H10 sales, O10 annual total, K17 orderbook"
 }

@@ -93,7 +93,13 @@ export function reportingState(state: Store) {
   return {
     ...state,
     snapshots: snapshots.map(applyReportingOverrides),
-    lines: state.lines.filter((l) => !isDuplicateIntercompanyOrder(l)),
+    lines: state.lines
+      .filter((l) => !isDuplicateIntercompanyOrder(l))
+      .map((l) =>
+        l.entityId === "ddc" && l.year === 2026 && l.customerType === "Group"
+          ? { ...l, total2026: 0, monthly2026: Array(12).fill(0) }
+          : l,
+      ),
     intercompanyExcluded: excluded,
   };
 }

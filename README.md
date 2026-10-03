@@ -40,3 +40,5 @@ See [architecture](docs/architecture.md), [source contract](docs/project-context
 ## Reporting Region and BU mapping
 
 Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DEHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.
+
+DDC FY2026 uses the owner-approved External-row reporting rule: H10 for Sales to date and its China strip card, O10 for annual Sales + OB, K17 for OB. Raw Group source data is preserved but excluded from DDC FY2026 reports; other BUs retain their existing rules.

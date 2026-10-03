@@ -126,6 +126,7 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
     }
     const s = emptySnapshot(entity.id, year, week, month, fileName, name);
     s.turnover = { external: number(at(9, 4)), group: number(at(10, 4)) };
+    if (entity.id === "ddc") s.ddcAnnualTotal = number(at(9, 11));
     s.monthTurnover = { external: number(at(9, 6)), group: number(at(10, 6)) };
     s.monthEstimate = { external: number(at(9, 8)), group: number(at(10, 8)) };
     s.orderbook = { external: number(at(16, 7)), group: number(at(17, 7)) };
@@ -147,6 +148,7 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
       monthEstimate: `${cell(9, 8)}:${cell(10, 8)}`,
       orderbook: `${cell(16, 7)}:${cell(17, 8)}`,
       monthlyOrderbook: `${cell(16, 10)}:${cell(17, 34)}`,
+      ...(entity.id === "ddc" ? { ddcAnnualTotal: cell(9, 11) } : {}),
     };
     s.findings = ["Annual budget not supplied", "Prospect not supplied"];
     if (text(at(20, 6)).toUpperCase() !== "OK")

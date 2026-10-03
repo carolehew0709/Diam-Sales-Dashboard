@@ -37,7 +37,10 @@ export const defaultFilters: Filters = {
 export function filtersFrom(url: URL): Filters {
   return {
     region: url.searchParams.get("region") ?? "China",
-    bu: url.searchParams.get("bu") === "DHK" ? "DEHK" : url.searchParams.get("bu") ?? "all",
+    bu:
+      url.searchParams.get("bu") === "DHK"
+        ? "DEHK"
+        : (url.searchParams.get("bu") ?? "all"),
     entity: url.searchParams.get("entity") ?? "all",
     year: url.searchParams.get("year") === "2027" ? 2027 : 2026,
     scenario:
@@ -74,11 +77,17 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters) {
         ? splitValue(future ? s.nextOrderbook : s.orderbook, type)
         : null;
   const base =
-    s && !future && s.baseOverride !== null
-      ? type === "all"
-        ? s.baseOverride
-        : null
-      : sumComplete([sales, orderbook]);
+    s &&
+    !future &&
+    s.entityId === "ddc" &&
+    s.ddcAnnualTotal !== undefined &&
+    type !== "group"
+      ? s.ddcAnnualTotal
+      : s && !future && s.baseOverride !== null
+        ? type === "all"
+          ? s.baseOverride
+          : null
+        : sumComplete([sales, orderbook]);
   const prospect =
     s && type === "all" ? (future ? s.nextProspect : s.prospect) : null;
   const budget =
@@ -247,7 +256,8 @@ export function getDashboardSnapshot(
   const selected = rows.filter(
     (r) =>
       matchesRegion(r.entity, filters.region) &&
-      (filters.bu === "all" || r.entity.businessUnit === filters.bu ||
+      (filters.bu === "all" ||
+        r.entity.businessUnit === filters.bu ||
         (filters.bu === "DHK" && r.entity.id === "dhk")) &&
       (filters.entity === "all" || r.entity.id === filters.entity),
   );

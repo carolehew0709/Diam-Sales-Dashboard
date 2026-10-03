@@ -38,7 +38,7 @@ DCP follows the same direct entity-week sales/orderbook parsing rules as DEHK/DD
 
 China's pinned strip shows Sales & Dashboard across all permitted China entities under the selected year/sales type even when one entity or another BU is selected. Detail rows include all KPIs. Reporting applies the owner-approved intercompany orderbook deductions described below before aggregation. External and Group remain separately filterable.
 
-## Known baseline checks
+## Earlier baseline checks (superseded for DDC by the correction below)
 
 117 populated entity-week snapshots and 2,409 historical order lines. DEHK/DDC use W40 (2026-10-02); DCP remains W38 (2026-09-18). Net Sales + Orderbook: DEHK 32,518.276, DDC 22,644.4709, DCP 2,620.651 kEUR; China 57,783.3979 kEUR. DDC gross 25,516.7189 includes 2,872.248 kEUR of DEHK HK orders, excluded from every reporting projection. Current-month remaining: DEHK 1,983.186 and DDC 819.7699 (October), DCP 0 (September). Mixed reporting dates remain visible. Prospect is absent, so Sales + Prospect coverage/gap remain unavailable. FY2026 China budget stays 33,207.
 
@@ -75,3 +75,12 @@ The owner explicitly confirmed WK40 DEHK FY2027 Orderbook as 2,597 kEUR, overrid
 The Hong Kong BU display code is DEHK. Stored entity ID `dhk`, permission keys, original workbooks and legacy DHK aliases remain compatible. BU filters, entity cards, charts and exports use DEHK. Legacy `bu=DHK` links still select DEHK.
 
 Rechecked raw source cells: DEHK W40 H10+H11 = 26,606.729; K17+K18 = 5,911.547; base = 32,518.276. DCP W38 H10+H11 = 2,620.651; raw OB 1.45311752913171 is wholly excluded (DEHK row24, DDC row25 zero), leaving OB 0 and base 2,620.651. DDC W40 H10+H11 = 20,621.912; K17+K18 minus DEHK K24 2,872.248 = net OB 2,022.5589; base = 22,644.4709. China YTD 49,849.292 + net OB 7,934.1059 = 57,783.3979. No new numeric discrepancy was found. Missing Prospect means Sales + Prospect is a known subtotal, not a complete forecast. Legacy unsplit-DCP warnings display only when an actual unsplit legacy override is selected.
+
+
+## DDC External-row reporting correction (2026-10-03)
+
+The owner superseded the previous DDC H10+H11 rule. For FY2026 DDC only: top China-strip DDC card and Sales to date use H10; annual Sales + OB uses cached O10 directly (H10+K17 in the source); Dashboard OB uses K17. W40 values: sales 5,136.274, OB 2,022.5589, annual total 7,158.8329 kEUR, displayed as 5,136 / 2,023 / 7,159. The top strip labels DDC as Sales to date because it now differs from the annual base used for other BU cards.
+
+The raw parser retains O10 as ddcAnnualTotal with source address, and preserves H11 and Group source rows. The reporting projection excludes FY2026 DDC Group invoicing, monthly actuals/estimates and OB; Group order detail FY2026 amounts become zero while FY2027 source allocations remain intact. This applies consistently to annual metrics, historical weekly views, monthly/cumulative figures, China totals and export. Existing stores without cached O10 use H10+K17; an explicitly missing O10 remains unknown. DEHK, DCP, all other BUs, approved budgets and FY2027 values are unchanged.
+
+Current China FY2026 base is DEHK 32,518.276 + DCP 2,620.651 + DDC 7,158.8329 = 42,297.7599 kEUR. Sales to date totals 34,363.654; OB totals 7,934.1059. Original source files and stored raw invoices remain intact.

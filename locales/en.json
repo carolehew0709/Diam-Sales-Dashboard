@@ -168,7 +168,7 @@
   "matrix.note": "Blank cells mean unavailable source detail. Weekly snapshots are never added together.",
   "checks.controls": "Executive controls",
   "checks.items": "items to review",
-  "checks.note": "Coverage and annual gap require complete comparable budgets and Sales + OB for all selected entities; Prospect is excluded.",
+  "checks.note": "Coverage and annual gap require complete comparable budgets and Sales + OB for all selected entities; Prospect is excluded. FY2027 pending budgets count as 0 for provisional calculations.",
   "footer.title": "DIAM · APAC Sales Performance",
   "auth.loading": "Loading account…",
   "auth.performance": "APAC sales performance",
@@ -324,5 +324,6 @@
   "checks.pending2027Budget": "FY2027 annual budget pending; displayed as 0",
   "checks.dcpExternal": "DCP reporting uses H10 sales and L10 orderbook; Group values excluded",
   "checks.externalCells": "External reporting uses H10 sales and K17 orderbook",
-  "checks.dcpYtdCorrection": "DCP External YTD sales updated by owner; monthly allocation not supplied"
+  "checks.dcpYtdCorrection": "DCP External YTD sales updated by owner; monthly allocation not supplied",
+  "notes.provisionalBudgetCalculation": " · provisional: pending budgets counted as 0"
 }

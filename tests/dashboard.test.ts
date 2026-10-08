@@ -514,8 +514,8 @@ test("FY2027 budgets and WK40 owner orderbook confirmation preserve source and m
   });
   close(china.totals.budget, 35031); // Approved DEHK + DDC subtotal only.
   assert.equal(china.totals.budgetComplete,false);
-  assert.equal(china.totals.coverage,null);
-  assert.equal(china.totals.gap,null);
+  close(china.totals.coverage, china.totals.base! / 35031);
+  close(china.totals.gap, china.totals.base! - 35031);
 });
 
 test("DEHK display code and legacy BU filters preserve entity identity and reconciliation", () => {
@@ -599,11 +599,12 @@ test("DDC H10/O10 reporting preserves raw Group sources and other BUs", () => {
 });
 
 
-test("2027 known budget subtotals respect scope and never enable incomplete coverage",()=>{
+test("2027 provisional budgets respect scope and require complete operating inputs",()=>{
  for(const region of ["China","APAC"]){
   const d=getDashboardSnapshot(state,admin,{...defaultFilters,year:2027,region,scenario:"Sales"});
   close(d.totals.budget,35031);assert.equal(d.totals.budgetComplete,false);
-  assert.equal(d.totals.coverage,null);assert.equal(d.totals.gap,null);
+  if(region === "China") { close(d.totals.coverage, d.totals.base! / 35031); close(d.totals.gap, d.totals.base! - 35031); }
+  else { assert.equal(d.totals.coverage,null);assert.equal(d.totals.gap,null); }
  }
  const user={...admin,role:"viewer" as const,permissions:{dhk:["view" as const]}};
  const d=getDashboardSnapshot(state,user,{...defaultFilters,year:2027,scenario:"Sales"});
@@ -617,7 +618,7 @@ test("2027 known budget subtotals respect scope and never enable incomplete cove
 test("FY2027 pending BUs display zero without inventing approved budgets or operating data",()=>{
  for(const id of ["dcp","dsi","ddi","ddj"]){
  const d=getDashboardSnapshot(state,admin,{...defaultFilters,entity:id,region:"APAC",year:2027,scenario:"Sales"});
- close(d.totals.budget,0);assert.equal(d.totals.budgetComplete,false);assert.equal(d.totals.gap,null);assert.equal(d.totals.coverage,null);
+ close(d.totals.budget,0);assert.equal(d.totals.budgetComplete,false);if(id === "dcp") close(d.totals.gap, d.totals.base!); else assert.equal(d.totals.gap,null);assert.equal(d.totals.coverage,null);
  assert.ok(d.checks.some(c=>c.message==="FY2027 annual budget pending; displayed as 0"));
  if(id!=="dcp")assert.equal(d.totals.base,null);
  }

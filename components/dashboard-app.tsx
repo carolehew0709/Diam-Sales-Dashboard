@@ -524,7 +524,7 @@ function DashboardView({
           periodDetail={String(filters.year)}
           unit="FY"
           value={display(percent(t.coverage))}
-          note={tr("notes.coverage", { year: filters.year })}
+          note={tr("notes.coverage", { year: filters.year }) + (t.coverage !== null && !t.budgetComplete ? tr("notes.provisionalBudgetCalculation") : "")}
         >
           <div className="kpi-meter">
             <span
@@ -539,7 +539,7 @@ function DashboardView({
           value={formatK(t.gap)}
           note={tr("notes.gap", {
             year: filters.year,
-            note: t.gap === null ? tr("notes.reviewSuffix") : "",
+            note: t.gap === null ? tr("notes.reviewSuffix") : !t.budgetComplete ? tr("notes.provisionalBudgetCalculation") : "",
           })}
         />
         <MetricCard

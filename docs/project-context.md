@@ -139,3 +139,7 @@ Owner confirmation supersedes earlier scenario-completeness restrictions above: 
 ## Residual Gap sign convention (2026-10-08)
 
 Owner confirmation supersedes the earlier budget-minus-base sign: Residual Gap = annual Sales + OB minus approved annual budget, excluding Prospect in both scenarios. Positive means above budget; negative means below budget; zero means at budget. No absolute-value conversion is applied. Entity KPIs, China/selected aggregates, Gap by BU, and Excel exports share the same calculation. FY2026 China W40 base 39,939.10739 minus approved budget 33,207 = +6,732.10739 kEUR (displayed 6,732). Coverage stays 120%; monthly Remaining, invoice-only top strip, BU sales-type rules and missing-budget protections remain unchanged.
+
+## FY2027 provisional comparisons (2026-10-08)
+
+Owner requested FY2027 calculations as well. Pending DCP/DSI/DDI/DDJ budgets now count as 0 for provisional comparisons only; budgetComplete remains false and UI/export retain pending status. Coverage = complete annual Sales + OB / comparable budget total, Gap = complete annual Sales + OB minus comparable budget total, excluding Prospect. China uses 35,031 budget. Missing BU Sales + OB still prevents complete aggregate comparisons (APAC stays blank while DSI/DDI/DDJ have no source). A zero budget permits signed Gap when Sales + OB exists, but never permits division for Coverage. FY2026 and External/Group budget availability are unchanged. FY2027 uses next-year OB with YTD sales 0; Remaining stays blank because no future MTD invoicing is supplied.

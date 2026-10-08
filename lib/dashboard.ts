@@ -95,6 +95,7 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId
       ? (approved2027Budgets[entityId] ?? pending2027Budgets[entityId] ?? s?.nextAnnualBudget ?? null)
       : s && type === "all" ? s.annualBudget : null;
   const budgetComplete = budget !== null && !(future && entityId && entityId in pending2027Budgets);
+  const budgetComparable = budgetComplete || (future && type === "all" && !!entityId && entityId in pending2027Budgets);
   const scenarioComplete =
     base !== null && (filters.scenario === "Sales" || prospect !== null);
   const scenario =
@@ -176,11 +177,12 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId
     scenarioComplete,
     budget,
     budgetComplete,
+    budgetComparable,
     coverage:
-      budgetComplete && budget !== null && budget > 0 && base !== null
+      budgetComparable && budget !== null && budget > 0 && base !== null
         ? base / budget
         : null,
-    gap: budgetComplete && budget !== null && base !== null ? base - budget : null,
+    gap: budgetComparable && budget !== null && base !== null ? base - budget : null,
     remaining,
     monthSales,
     monthEstimate,
@@ -212,6 +214,8 @@ export function combine(metrics: Metric[], showKnownBudget = false): Metric {
   ) => sumKnown(metrics.map((m) => m[key]));
   const completeBudget = metrics.every((m) => m.budgetComplete)
     ? sumComplete(metrics.map((m) => m.budget)) : null;
+  const comparableBudget = metrics.every(m => m.budgetComparable)
+    ? sumComplete(metrics.map(m => m.budget)) : null;
   const budget = showKnownBudget ? sumKnown(metrics.map((m) => m.budget)) : completeBudget;
   // Coverage and Gap always compare the complete annual Sales + OB base, excluding Prospect.
   const completeBase = sumComplete(metrics.map((m) => m.base));
@@ -228,13 +232,14 @@ export function combine(metrics: Metric[], showKnownBudget = false): Metric {
     scenarioComplete: scenarioComplete !== null,
     budget,
     budgetComplete: completeBudget !== null,
+    budgetComparable: comparableBudget !== null,
     coverage:
-      completeBudget !== null && completeBudget > 0 && completeBase !== null
-        ? completeBase / completeBudget
+      comparableBudget !== null && comparableBudget > 0 && completeBase !== null
+        ? completeBase / comparableBudget
         : null,
     gap:
-      completeBudget !== null && completeBase !== null
-        ? completeBase - completeBudget
+      comparableBudget !== null && completeBase !== null
+        ? completeBase - comparableBudget
         : null,
     remaining: total("remaining"),
     monthSales: total("monthSales"),

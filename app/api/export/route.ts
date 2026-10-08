@@ -95,10 +95,10 @@ export async function GET(request: Request) {
         d.totals.remaining,
       ],
       [
-        "Missing values remain blank. Totals with unavailable entity inputs are partial; coverage and gap require complete comparable data.",
+        "Missing values remain blank. Totals with unavailable entity inputs are partial; coverage and gap require complete comparable Sales + OB. FY2027 pending budgets count as 0 for provisional comparisons; a zero denominator leaves coverage blank.",
       ],
       ...(!d.totals.budgetComplete && d.totals.budget !== null ? [[
-        `Annual budget includes confirmed budgets: ${d.rows.filter(r => r.metrics.budgetComplete).map(r => r.entity.code).join(" + ") || "none"}; pending FY2027 budgets displayed as 0, not approved.`,
+        `Annual budget includes confirmed budgets: ${d.rows.filter(r => r.metrics.budgetComplete).map(r => r.entity.code).join(" + ") || "none"}; pending FY2027 budgets counted as 0 for provisional Coverage/Gap, not approved.`,
       ]] : []),
     ]);
     add("Weekly Review", [

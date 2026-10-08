@@ -168,7 +168,7 @@
   "matrix.note": "空白单元格表示来源明细不可用，周度快照不进行累加。",
   "checks.controls": "管理层检查",
   "checks.items": "项待审核",
-  "checks.note": "所有所选实体具备完整、可比较的预算及 Sales + OB 数据后，才计算覆盖率和年度缺口；不含 Prospect。",
+  "checks.note": "所有所选实体具备完整、可比较的预算及 Sales + OB 数据后，才计算覆盖率和年度缺口；不含 Prospect。2027 待定预算按 0 进行暂定计算。",
   "footer.title": "DIAM · 亚太区销售业绩",
   "auth.loading": "正在加载账户…",
   "auth.performance": "亚太区销售业绩",
@@ -324,5 +324,6 @@
   "checks.pending2027Budget": "2027 年度预算待定，暂按 0 显示",
   "checks.dcpExternal": "DCP 报表使用 H10 已开票销售和 L10 订单簿；排除 Group 数值",
   "checks.externalCells": "External 报表使用 H10 已开票销售和 K17 订单簿",
-  "checks.dcpYtdCorrection": "DCP 外销累计销售已按负责人提供的数据更新；尚未提供月度分配"
+  "checks.dcpYtdCorrection": "DCP 外销累计销售已按负责人提供的数据更新；尚未提供月度分配",
+  "notes.provisionalBudgetCalculation": " · 暂定计算：待定预算按 0"
 }

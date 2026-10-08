@@ -93,7 +93,7 @@ test("China uses fixed budgets and latest entity-specific operating sources", ()
   close(d.totals.base, 32518.276 + 7158.8329 + 261.99849);
   close(d.totals.budget, 33207);
   close(d.totals.coverage, 39939.10739 / 33207);
-  close(d.totals.gap, 33207 - 39939.10739);
+  close(d.totals.gap, 39939.10739 - 33207);
   assert.deepEqual(d.weeks, [40]);
   const dcp = d.rows.find((r) => r.entity.id === "dcp")!;
   close(dcp.metrics.budget, 2608);
@@ -186,7 +186,7 @@ test("manual import preserves YTD/MTD, both order years, Prospect and source not
   const m = entityMetric(s, defaultFilters);
   close(m.scenario, 130);
   close(m.coverage, 120 / 5769);
-  close(m.gap, 5769 - 120);
+  close(m.gap, 120 - 5769);
   close(m.remaining, 20);
 });
 test("validation rejects nonfinite/fractional weeks, unknown entity and inconsistent allocation", () => {
@@ -314,7 +314,7 @@ test("W40 refresh reconciles metrics and fixed budgets ignore weekly overrides",
   const scenario = getDashboardSnapshot(state, admin, defaultFilters);
   close(scenario.totals.budget, 33207);
   close(scenario.totals.coverage, scenario.totals.base! / 33207); // Prospect is excluded from Coverage.
-  close(scenario.totals.gap, 33207 - scenario.totals.base!);
+  close(scenario.totals.gap, scenario.totals.base! - 33207);
   const all = getDashboardSnapshot(state, admin, {
     ...defaultFilters,
     region: "APAC",
@@ -366,7 +366,7 @@ test("intercompany projection reconciles all metrics without modifying sources o
     close(d.totals.remaining, remaining);
     close(d.totals.cumulative[11].base, base);
     close(d.totals.coverage, base / d.totals.budget!);
-    close(d.totals.gap, d.totals.budget! - base);
+    close(d.totals.gap, base - d.totals.budget!);
     const s = d.rows[0].snapshot!;
     const gross = state.snapshots.find(
       (x) => x.entityId === id && x.week === s.week,
@@ -487,7 +487,7 @@ test("FY2027 budgets and WK40 owner orderbook confirmation preserve source and m
     scenario: "Sales",
   });
   close(d.totals.orderbook, 2597);
-  close(d.totals.gap, 29014 - 2597);
+  close(d.totals.gap, 2597 - 29014);
   assert.ok(
     d.totals.monthly.every((m) => m.base === null && m.budget === null),
   );
@@ -717,13 +717,34 @@ test("Coverage and Gap exclude missing and supplied Prospect in both scenarios",
     for (const scenario of ["Sales", "Sales + Prospect"] as const) {
       const m = entityMetric({ ...snapshot, prospect }, { ...defaultFilters, scenario });
       close(m.coverage, m.base! / 24830);
-      close(m.gap, 24830 - m.base!);
+      close(m.gap, m.base! - 24830);
       assert.equal(m.prospect, prospect);
       close(m.scenario, m.base! + (scenario === "Sales" ? 0 : prospect ?? 0));
       const modified = { ...state, snapshots: state.snapshots.map(s => s.entityId === snapshot.entityId && s.year === snapshot.year && s.week === snapshot.week ? { ...s, prospect } : s) };
       const total = getDashboardSnapshot(modified, admin, { ...defaultFilters, scenario }).totals;
       close(total.coverage, total.base! / 33207);
-      close(total.gap, 33207 - total.base!);
+      close(total.gap, total.base! - 33207);
     }
   }
+});
+
+
+test("signed variance reconciles BU totals and coverage across years, scenarios and sales types", () => {
+  for (const year of [2026, 2027] as const) {
+    for (const scenario of ["Sales", "Sales + Prospect"] as const) {
+      for (const salesType of ["all", "external", "group"] as const) {
+        const d = getDashboardSnapshot(state, admin, { ...defaultFilters, year, scenario, salesType });
+        for (const m of [d.totals, ...d.rows.map(r => r.metrics), ...d.buGroups.map(b => b.metrics)]) {
+          if (m.gap !== null) {
+            close(m.gap, m.base! - m.budget!);
+            if (m.coverage !== null) close(m.gap, (m.coverage - 1) * m.budget!);
+          } else assert.ok(!m.budgetComplete || m.base === null);
+        }
+        if (d.totals.gap !== null) close(d.totals.gap, d.buGroups.reduce((sum, b) => sum + b.metrics.gap!, 0));
+      }
+    }
+  }
+  const china = getDashboardSnapshot(state, admin, defaultFilters);
+  assert.ok(china.totals.gap! > 0);
+  assert.ok(china.rows.find(r => r.entity.id === "dcp")!.metrics.gap! < 0);
 });

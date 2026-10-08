@@ -180,7 +180,7 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId
       budgetComplete && budget !== null && budget > 0 && base !== null
         ? base / budget
         : null,
-    gap: budgetComplete && budget !== null && base !== null ? budget - base : null,
+    gap: budgetComplete && budget !== null && base !== null ? base - budget : null,
     remaining,
     monthSales,
     monthEstimate,
@@ -234,7 +234,7 @@ export function combine(metrics: Metric[], showKnownBudget = false): Metric {
         : null,
     gap:
       completeBudget !== null && completeBase !== null
-        ? completeBudget - completeBase
+        ? completeBase - completeBudget
         : null,
     remaining: total("remaining"),
     monthSales: total("monthSales"),

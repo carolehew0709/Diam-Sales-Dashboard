@@ -271,7 +271,7 @@
   "notes.missingBudget": " · Review missing budgets",
   "notes.base": "YTD invoiced + committed annual OB{note}",
   "notes.coverage": "Annual Sales + OB / approved annual budget {year} · excludes Prospect",
-  "notes.gap": "Annual budget less Sales + OB · {year}{note} · excludes Prospect",
+  "notes.gap": "Sales + OB less annual budget · {year}{note} · excludes Prospect · positive: above budget; negative: below budget",
   "notes.reviewSuffix": " · Review",
   "notes.remaining": "Full-month estimate less MTD invoiced{note}{future}",
   "notes.future": " · future year unavailable",

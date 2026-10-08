@@ -271,7 +271,7 @@
   "notes.missingBudget": " · 请审核缺失预算",
   "notes.base": "本年累计已开票 + 年度已确认订单簿{note}",
   "notes.coverage": "年度 Sales + OB / {year} 年已批准年度预算 · 不含 Prospect",
-  "notes.gap": "年度预算减去 Sales + OB · {year}{note} · 不含 Prospect",
+  "notes.gap": "Sales + OB 减去年度预算 · {year}{note} · 不含 Prospect · 正数超预算，负数未达预算",
   "notes.reviewSuffix": " · 待审核",
   "notes.remaining": "全月预计金额减去本月累计已开票{note}{future}",
   "notes.future": " · 未来年份数据不可用",

@@ -135,3 +135,7 @@ DCP OB is unchanged at 1.184; Sales + OB = 261.99849 (displayed 262), Sales to d
 ## Coverage and Residual Gap exclude Prospect (2026-10-03)
 
 Owner confirmation supersedes earlier scenario-completeness restrictions above: both scenario selections calculate Coverage as annual Sales + OB / approved annual budget and Residual Gap as approved annual budget minus annual Sales + OB. Supplied or missing Prospect never affects these two metrics. Scenario totals, Prospect readiness, top-strip rules and monthly calculations remain unchanged. Complete comparable budgets and complete annual Sales + OB are still required; External/Group budget allocations and pending FY2027 budgets are not invented. Entity, aggregate, history and export share this rule.
+
+## Residual Gap sign convention (2026-10-08)
+
+Owner confirmation supersedes the earlier budget-minus-base sign: Residual Gap = annual Sales + OB minus approved annual budget, excluding Prospect in both scenarios. Positive means above budget; negative means below budget; zero means at budget. No absolute-value conversion is applied. Entity KPIs, China/selected aggregates, Gap by BU, and Excel exports share the same calculation. FY2026 China W40 base 39,939.10739 minus approved budget 33,207 = +6,732.10739 kEUR (displayed 6,732). Coverage stays 120%; monthly Remaining, invoice-only top strip, BU sales-type rules and missing-budget protections remain unchanged.

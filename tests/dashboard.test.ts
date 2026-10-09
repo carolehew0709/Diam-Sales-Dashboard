@@ -154,7 +154,7 @@ test("restricted editor cannot see or edit other accounts; cross-region view nev
   assert.equal(canView(cross, entities[0]), true);
   assert.equal(canEdit(cross, entities[0]), false);
 });
-test("2027 uses supplied budgets and orderbook; sales-type budgets stay unknown", () => {
+test("2027 uses supplied budgets and orderbook; sales-type budgets use approved splits", () => {
   const d = getDashboardSnapshot(state, admin, {
     ...defaultFilters,
     entity: "dhk",
@@ -162,8 +162,8 @@ test("2027 uses supplied budgets and orderbook; sales-type budgets stay unknown"
     scenario: "Sales",
   });
   close(d.totals.base, 2597);
-  close(d.totals.budget, 29014);
-  close(d.totals.coverage, 2597 / 29014);
+  close(d.totals.budget, 29771);
+  close(d.totals.coverage, 2597 / 29771);
   assert.equal(d.totals.remaining, null);
   const e = getDashboardSnapshot(state, admin, {
     ...defaultFilters,
@@ -172,7 +172,8 @@ test("2027 uses supplied budgets and orderbook; sales-type budgets stay unknown"
     scenario: "Sales",
   });
   close(e.totals.base, 23538.598);
-  assert.equal(e.totals.coverage, null);
+  close(e.totals.budget, 19344);
+  close(e.totals.coverage, e.totals.base! / 19344);
 });
 test("manual import preserves YTD/MTD, both order years, Prospect and source note", () => {
   const b = manualBatch(input(), admin),
@@ -185,8 +186,8 @@ test("manual import preserves YTD/MTD, both order years, Prospect and source not
   assert.equal(s.sourceNote, "Test source");
   const m = entityMetric(s, defaultFilters);
   close(m.scenario, 130);
-  close(m.coverage, 120 / 5769);
-  close(m.gap, 120 - 5769);
+  close(m.coverage, 120 / 5467);
+  close(m.gap, 120 - 5467);
   close(m.remaining, 20);
 });
 test("validation rejects nonfinite/fractional weeks, unknown entity and inconsistent allocation", () => {
@@ -289,8 +290,8 @@ test("reporting regions select their BUs and APAC includes all six", () => {
 
 test("W40 refresh reconciles metrics and fixed budgets ignore weekly overrides", () => {
   for (const [id, budget, base, remaining] of [
-    ["dhk", 24830, 32518.276, 1983.186],
-    ["ddc", 5769, 7158.8329, 819.7699],
+    ["dhk", 25132, 32518.276, 1983.186],
+    ["ddc", 5467, 7158.8329, 819.7699],
   ] as const) {
     const d = getDashboardSnapshot(state, admin, {
       ...defaultFilters,
@@ -454,7 +455,7 @@ test("intercompany rules match counterparties rather than row numbers or all Gro
 
 test("FY2027 budgets and WK40 owner orderbook confirmation preserve source and missing allocations", () => {
   for (const [id, budget] of [
-    ["dhk", 29014],
+    ["dhk", 29771],
     ["ddc", 6017],
   ] as const) {
     const d = getDashboardSnapshot(state, admin, {
@@ -475,7 +476,7 @@ test("FY2027 budgets and WK40 owner orderbook confirmation preserve source and m
     close(
       entityMetric(
         { ...s, year: 2027, annualBudget: 99999 },
-        { ...defaultFilters, year: 2026 },
+        { ...defaultFilters, year: 2027 },
       ).budget,
       budget,
     );
@@ -487,7 +488,7 @@ test("FY2027 budgets and WK40 owner orderbook confirmation preserve source and m
     scenario: "Sales",
   });
   close(d.totals.orderbook, 2597);
-  close(d.totals.gap, 2597 - 29014);
+  close(d.totals.gap, 2597 - 29771);
   assert.ok(
     d.totals.monthly.every((m) => m.base === null && m.budget === null),
   );
@@ -512,10 +513,10 @@ test("FY2027 budgets and WK40 owner orderbook confirmation preserve source and m
     year: 2027,
     scenario: "Sales",
   });
-  close(china.totals.budget, 35031); // Approved DEHK + DDC subtotal only.
+  close(china.totals.budget, 35788); // Approved DEHK + DDC subtotal only.
   assert.equal(china.totals.budgetComplete,false);
-  close(china.totals.coverage, china.totals.base! / 35031);
-  close(china.totals.gap, china.totals.base! - 35031);
+  close(china.totals.coverage, china.totals.base! / 35788);
+  close(china.totals.gap, china.totals.base! - 35788);
 });
 
 test("DEHK display code and legacy BU filters preserve entity identity and reconciliation", () => {
@@ -602,13 +603,13 @@ test("DDC H10/O10 reporting preserves raw Group sources and other BUs", () => {
 test("2027 provisional budgets respect scope and require complete operating inputs",()=>{
  for(const region of ["China","APAC"]){
   const d=getDashboardSnapshot(state,admin,{...defaultFilters,year:2027,region,scenario:"Sales"});
-  close(d.totals.budget,35031);assert.equal(d.totals.budgetComplete,false);
-  if(region === "China") { close(d.totals.coverage, d.totals.base! / 35031); close(d.totals.gap, d.totals.base! - 35031); }
+  close(d.totals.budget,35788);assert.equal(d.totals.budgetComplete,false);
+  if(region === "China") { close(d.totals.coverage, d.totals.base! / 35788); close(d.totals.gap, d.totals.base! - 35788); }
   else { assert.equal(d.totals.coverage,null);assert.equal(d.totals.gap,null); }
  }
  const user={...admin,role:"viewer" as const,permissions:{dhk:["view" as const]}};
  const d=getDashboardSnapshot(state,user,{...defaultFilters,year:2027,scenario:"Sales"});
- close(d.totals.budget,29014);assert.equal(d.totals.budgetComplete,true);close(d.totals.coverage,2597/29014);
+ close(d.totals.budget,29771);assert.equal(d.totals.budgetComplete,true);close(d.totals.coverage,2597/29771);
  const missing=getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dcp",year:2027});
  close(missing.totals.budget,0);
  assert.equal(missing.totals.budgetComplete,false);
@@ -717,8 +718,8 @@ test("Coverage and Gap exclude missing and supplied Prospect in both scenarios",
   for (const prospect of [null, 5000]) {
     for (const scenario of ["Sales", "Sales + Prospect"] as const) {
       const m = entityMetric({ ...snapshot, prospect }, { ...defaultFilters, scenario });
-      close(m.coverage, m.base! / 24830);
-      close(m.gap, m.base! - 24830);
+      close(m.coverage, m.base! / 25132);
+      close(m.gap, m.base! - 25132);
       assert.equal(m.prospect, prospect);
       close(m.scenario, m.base! + (scenario === "Sales" ? 0 : prospect ?? 0));
       const modified = { ...state, snapshots: state.snapshots.map(s => s.entityId === snapshot.entityId && s.year === snapshot.year && s.week === snapshot.week ? { ...s, prospect } : s) };
@@ -748,4 +749,36 @@ test("signed variance reconciles BU totals and coverage across years, scenarios 
   const china = getDashboardSnapshot(state, admin, defaultFilters);
   assert.ok(china.totals.gap! > 0);
   assert.ok(china.rows.find(r => r.entity.id === "dcp")!.metrics.gap! < 0);
+});
+
+
+test("final owner budgets reconcile External/Group/All by BU and year without changing source", () => {
+  const before = JSON.stringify(state);
+  const expected = {
+    2026: { dhk: [19344, 5788], ddc: [5467, 0], dcp: [2608, 0] },
+    2027: { dhk: [24732, 5039], ddc: [6017, 0], dcp: [0, 0] },
+  };
+  for (const year of [2026, 2027] as const) {
+    for (const scenario of ["Sales", "Sales + Prospect"] as const) {
+      for (const [entity, [external, group]] of Object.entries(expected[year])) {
+        for (const [salesType, budget] of [["external", external], ["group", group], ["all", external + group]] as const) {
+          const d = getDashboardSnapshot(state, admin, { ...defaultFilters, year, entity, scenario, salesType });
+          close(d.totals.budget, budget);
+          close(d.totals.gap, d.totals.base! - budget);
+          if (budget > 0) close(d.totals.coverage, d.totals.base! / budget);
+          else assert.equal(d.totals.coverage, null);
+          assert.equal(d.totals.budgetComplete, !(year === 2027 && entity === "dcp"));
+          assert.ok(d.totals.monthly.every(m => m.budget === null));
+        }
+      }
+      const totalBudgets = year === 2026 ? [27419, 5788, 33207] : [30749, 5039, 35788];
+      for (const [index, salesType] of (["external", "group", "all"] as const).entries()) {
+        const d = getDashboardSnapshot(state, admin, { ...defaultFilters, year, scenario, salesType });
+        close(d.totals.budget, totalBudgets[index]);
+        close(d.totals.coverage, d.totals.base! / totalBudgets[index]);
+        close(d.totals.gap, d.totals.base! - totalBudgets[index]);
+      }
+    }
+  }
+  assert.equal(JSON.stringify(state), before);
 });

@@ -143,3 +143,17 @@ Owner confirmation supersedes the earlier budget-minus-base sign: Residual Gap =
 ## FY2027 provisional comparisons (2026-10-08)
 
 Owner requested FY2027 calculations as well. Pending DCP/DSI/DDI/DDJ budgets now count as 0 for provisional comparisons only; budgetComplete remains false and UI/export retain pending status. Coverage = complete annual Sales + OB / comparable budget total, Gap = complete annual Sales + OB minus comparable budget total, excluding Prospect. China uses 35,031 budget. Missing BU Sales + OB still prevents complete aggregate comparisons (APAC stays blank while DSI/DDI/DDJ have no source). A zero budget permits signed Gap when Sales + OB exists, but never permits division for Coverage. FY2026 and External/Group budget availability are unchanged. FY2027 uses next-year OB with YTD sales 0; Remaining stays blank because no future MTD invoicing is supplied.
+
+## Final budget allocations (2026-10-09)
+
+Owner table in screenshot 4bdcb716c2c1194b6363ecb78198efa8.png supersedes all earlier FY2026/FY2027 budget versions above. Unit: kEUR.
+
+| BU / Sales Type | FY2026 | FY2027 |
+| --- | ---: | ---: |
+| DDC External | 5,467 | 6,017 |
+| DEHK External | 19,344 | 24,732 |
+| DEHK Group | 5,788 | 5,039 |
+| DCP External | 2,608 | Pending (dash) |
+| All Sales approved/known total | 33,207 | 35,788 |
+
+DDC/DCP are External-only in the supplied table, so their Group allocation is 0. DCP FY2027 dash remains pending, displayed and provisionally compared as 0 under the prior owner rule. DSI/DDI/DDJ remain unavailable in FY2026 and pending in FY2027. FY2026 External total 27,419 and Group 5,788 reconcile to 33,207. FY2027 External known total 30,749 and Group 5,039 reconcile to 35,788. All Sales BU budgets derive from the split table; they are not separately maintained. The Sales Type selection uses the matching annual budget for entity, China/region totals, Coverage, Gap by BU and Executive Summary export. Coverage = Sales + OB / matching annual budget; Gap = Sales + OB minus matching annual budget, excluding Prospect. Zero denominators never produce a ratio. Monthly budget phasing stays unavailable. Existing sales/OB rules, including the owner-confirmed FY2027 DEHK OB 2,597 aggregate vs workbook splits 2,478 External + 101.224 Group, remain unchanged and documented. Source workbooks and generated raw seed are not modified.

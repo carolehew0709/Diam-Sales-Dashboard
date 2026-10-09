@@ -1,5 +1,5 @@
 import { reportingState } from "./intercompany";
-import { applyApprovedBudget, approved2027Budgets, pending2027Budgets } from "./annual-budgets";
+import { applyApprovedBudget, approvedAnnualBudget, pending2027Budgets } from "./annual-budgets";
 import { applyReportingOverrides } from "./reporting-overrides";
 import { entities, regions, matchesRegion } from "./entities";
 import { canView } from "./permissions";
@@ -90,12 +90,12 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId
         : sumComplete([sales, orderbook]);
   const prospect =
     s && type === "all" ? (future ? s.nextProspect : s.prospect) : null;
-  const budget =
-    type === "all" && future && entityId
-      ? (approved2027Budgets[entityId] ?? pending2027Budgets[entityId] ?? s?.nextAnnualBudget ?? null)
-      : s && type === "all" ? s.annualBudget : null;
-  const budgetComplete = budget !== null && !(future && entityId && entityId in pending2027Budgets);
-  const budgetComparable = budgetComplete || (future && type === "all" && !!entityId && entityId in pending2027Budgets);
+  const approvedBudget = entityId ? approvedAnnualBudget(entityId, filters.year, type) : undefined;
+  const pendingBudget = future && !!entityId && entityId in pending2027Budgets;
+  const budget = approvedBudget ?? (pendingBudget ? 0
+    : s && type === "all" ? (future ? s.nextAnnualBudget : s.annualBudget) : null);
+  const budgetComplete = budget !== null && !pendingBudget;
+  const budgetComparable = budgetComplete || pendingBudget;
   const scenarioComplete =
     base !== null && (filters.scenario === "Sales" || prospect !== null);
   const scenario =

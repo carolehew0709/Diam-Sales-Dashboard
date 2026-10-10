@@ -51,4 +51,4 @@ Region options are APAC (Total), China, Singapore, India and Japan. APAC include
 
 FY2026 sales-type formulas: All sales retains established BU rules; External uses H10 sales + K17 OB for every direct entity source, independent of DDC O10/DCP L10 overrides. Group stays unchanged (DEHK H11 + K18; DDC/DCP excluded). Sales scenario top strip continues its invoices-only rule.
 
-DCP FY2026 W40 External YTD owner correction: screenshot 260,814.49 EUR = 260.81449 kEUR (approximately 260.8K), applies to All/External invoices and top sales cards only for W40. Raw H10, prior weeks, monthly allocation and other BUs remain preserved.
+DCP FY2026 W40/W41 External YTD owner correction: screenshot 260,814.49 EUR = 260.81449 kEUR (approximately 260.8K), applies to All/External invoices and top sales cards only for W40 and, after owner confirmation on 2026-10-11, W41. Do not carry into later weeks without confirmation. Raw H10, prior weeks, monthly allocation and other BUs remain preserved.

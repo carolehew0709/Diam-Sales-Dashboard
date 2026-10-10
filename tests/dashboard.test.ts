@@ -30,12 +30,15 @@ const admin: User = {
   crossRegionView: false,
   permissions: {},
 };
+// Archived W40 fixtures keep prior owner-rule regressions stable as the live seed advances.
+const w40 = ["Dashboard 2026 - DDC(1).xlsx", "Dashboard 2026 - DEHK(1).xlsx", "W40-- Dashboard 2026 - DCP.xlsx"]
+  .map(file => parseDashboardWorkbook(fs.readFileSync(`Dashboard/${file}`), file));
 const state: Store = {
   version: 2,
   revision: 1,
   users: [admin],
-  snapshots: source.snapshots as unknown as Snapshot[],
-  lines: source.lines as OrderBookLine[],
+  snapshots: w40.flatMap(p => p.snapshots),
+  lines: w40.flatMap(p => p.lines),
   batches: [],
   audit: [],
 };
@@ -695,7 +698,7 @@ test("External uses H10 plus K17 independently of All-sales overrides",()=>{
 });
 
 
-test("DCP owner YTD correction is External, W40 only, and preserves raw invoices/monthly sources",()=>{
+test("DCP original W40 owner YTD correction is External, and preserves raw invoices/monthly sources",()=>{
  const raw=state.snapshots.find(s=>s.entityId==="dcp"&&s.week===40)!;close(raw.turnover.external,200.091);
  for(const salesType of ["all","external"] as const){
  const f={...defaultFilters,entity:"dcp",salesType,scenario:"Sales" as const};const d=getDashboardSnapshot(state,admin,f);
@@ -781,4 +784,37 @@ test("final owner budgets reconcile External/Group/All by BU and year without ch
     }
   }
   assert.equal(JSON.stringify(state), before);
+});
+
+
+test("W41 live seed preserves BU rules, approved budgets, owner DCP YTD and future OB", () => {
+  const latest: Store = { ...state, snapshots: source.snapshots as unknown as Snapshot[], lines: source.lines as OrderBookLine[] };
+  const before = JSON.stringify(latest);
+  for (const scenario of ["Sales", "Sales + Prospect"] as const) {
+    for (const salesType of ["all", "external", "group"] as const) {
+      const filters = { ...defaultFilters, scenario, salesType };
+      const d = getDashboardSnapshot(latest, admin, filters);
+      assert.deepEqual(d.weeks, [41]);
+      const expected = salesType === "all" ? [39973.10739, 33207, 2807.6859]
+        : salesType === "external" ? [30984.42939, 27419, 2591.6969] : [8988.678, 5788, 215.989];
+      close(d.totals.base, expected[0]); close(d.totals.budget, expected[1]); close(d.totals.remaining, expected[2]);
+      close(d.totals.coverage, expected[0] / expected[1]); close(d.totals.gap, expected[0] - expected[1]);
+      close(d.totals.cumulative[11].base, expected[0]);
+      const dcp = d.rows.find(r => r.entity.id === "dcp")!;
+      close(dcp.metrics.sales, salesType === "group" ? 0 : 260.81449);
+      assert.ok(dcp.snapshot!.sourceCells.dcpYtdSales.includes("2026-10-11"));
+      const future = getDashboardSnapshot(latest, admin, { ...filters, year: 2027 });
+      const futureExpected = salesType === "all" ? [3133.688, 35788] : salesType === "external" ? [2983.464, 30749] : [150.224, 5039];
+      close(future.totals.base, futureExpected[0]);close(future.totals.budget, futureExpected[1]);
+      close(future.totals.gap, futureExpected[0] - futureExpected[1]);close(future.totals.coverage, futureExpected[0] / futureExpected[1]);
+      close(future.rows.find(r => r.entity.id === "ddc")!.metrics.base, salesType === "group" ? 0 : 51);
+      assert.equal(future.totals.remaining, null);
+    }
+  }
+  const rawDcp = latest.snapshots.find(s => s.entityId === "dcp" && s.week === 41)!;
+  close(rawDcp.turnover.external, 200.091);
+  close(entityMetric({ ...rawDcp, week: 42 }, defaultFilters).sales, 200.091); // W41 approval does not carry into unconfirmed weeks.
+  const historical = latest.snapshots.find(s => s.entityId === "dcp" && s.week === 40)!;
+  close(entityMetric(historical, defaultFilters).sales, 260.81449);
+  assert.equal(JSON.stringify(latest), before);
 });

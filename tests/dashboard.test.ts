@@ -17,6 +17,7 @@ import {
   chinaStripAmount,
   sumKnown,
   entityMetric,
+  formatUpdateDate,
 } from "../lib/dashboard";
 import { parseDashboardWorkbook } from "../lib/workbook-parser";
 import { manualBatch } from "../lib/import-validation";
@@ -222,8 +223,12 @@ test("publish requires permission and review, is idempotent and replaces same-gr
   await assert.rejects(repository.publishImportBatch(batch.id, editor, true));
   await assert.rejects(repository.publishImportBatch(batch.id, admin, false));
   await repository.publishImportBatch(batch.id, admin, true);
+  const firstPublishedAt = (await storage.read()).dataUpdatedAt;
+  assert.ok(firstPublishedAt);
   await repository.publishImportBatch(batch.id, admin, true);
   let s = await storage.read();
+  assert.equal(s.dataUpdatedAt, firstPublishedAt); // Retrying publish never changes the update date.
+  assert.equal(s.dataUpdatedAt, s.batches[0].publishedAt);
   assert.equal(
     s.lines.filter((l) => l.entityId === "ddc" && l.week === 37).length,
     1,
@@ -817,4 +822,20 @@ test("W41 live seed preserves BU rules, approved budgets, owner DCP YTD and futu
   const historical = latest.snapshots.find(s => s.entityId === "dcp" && s.week === 40)!;
   close(entityMetric(historical, defaultFilters).sales, 260.81449);
   assert.equal(JSON.stringify(latest), before);
+});
+
+
+test("data update date uses seed/publication metadata and a stable APAC calendar date", () => {
+  close(source.snapshots.length, 122);
+  assert.ok(!Number.isNaN(Date.parse(source.meta.generatedAt)));
+  const seeded = { ...state, dataUpdatedAt: source.meta.generatedAt };
+  assert.equal(getDashboardSnapshot(seeded, admin, defaultFilters).latestDataUpdate, source.meta.generatedAt);
+  const at = "2026-10-10T17:30:00.000Z";
+  const legacy = { ...state, audit: [{ id: "publish-test", at, actor: admin.id, action: "publish", subject: "test" }] };
+  assert.equal(getDashboardSnapshot(legacy, admin, defaultFilters).latestDataUpdate, at);
+  assert.equal(formatUpdateDate(at, "en"), "October 11, 2026");
+  assert.equal(formatUpdateDate(at, "zh-CN"), "2026年10月11日");
+  assert.equal(formatUpdateDate(null), "—");
+  assert.equal(formatUpdateDate("invalid"), "—");
+  assert.equal(getDashboardSnapshot(state, admin, defaultFilters).latestDataUpdate, null);
 });

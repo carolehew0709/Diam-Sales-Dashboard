@@ -38,3 +38,7 @@ Eight sheets: Executive Summary, Weekly Review, Data Weekly, Orderbook Detail, E
 ## Frontend
 
 The reference's stylesheet and section structure provide the dark topbar, typography stacks, warm canvas, six KPI cards, briefing strip, wide cumulative/narrow gap layout, monthly/invoicing panels, commercial detail, matrix, BU table and checks. APAC additions include hierarchical filters and the persistent China/entity strip. Original source URLs, credentials and session material are excluded from the repository. No fake brand sales or made-up region totals are presented.
+
+## Data update date
+
+The dashboard footer shows Data updated on: October 11, 2026 in English and 数据更新于：2026年10月11日 in Chinese, using Asia/Singapore calendar dates. Extraction records the seed meta.generatedAt; initial stores copy it to dataUpdatedAt. Successful publish transactions update dataUpdatedAt atomically with the active records. Legacy stores fall back to their last publish audit event; unavailable timestamps display a dash. Browser refresh, login, user administration, source workbook reporting dates and redeployment do not change the data timestamp.

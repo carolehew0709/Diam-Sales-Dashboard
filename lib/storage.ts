@@ -11,6 +11,7 @@ export function passwordHash(password: string) {
 }
 function initial(): Store {
   const seed = source as unknown as {
+    meta?: { generatedAt?: string };
     snapshots: Snapshot[];
     lines: OrderBookLine[];
   };
@@ -18,6 +19,7 @@ function initial(): Store {
   return {
     version: 2,
     revision: 1,
+    dataUpdatedAt: seed.meta?.generatedAt,
     users: password
       ? [
           {

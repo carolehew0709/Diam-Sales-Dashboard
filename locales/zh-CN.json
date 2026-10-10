@@ -325,5 +325,6 @@
   "checks.dcpExternal": "DCP 报表使用 H10 已开票销售和 L10 订单簿；排除 Group 数值",
   "checks.externalCells": "External 报表使用 H10 已开票销售和 K17 订单簿",
   "checks.dcpYtdCorrection": "DCP 外销累计销售已按负责人提供的数据更新；尚未提供月度分配",
-  "notes.provisionalBudgetCalculation": " · 暂定计算：待定预算按 0"
+  "notes.provisionalBudgetCalculation": " · 暂定计算：待定预算按 0",
+  "footer.latestUpdate": "数据更新于：{date}"
 }

@@ -68,6 +68,7 @@ export const repository = {
       batch.status = "published";
       batch.publishedBy = user.id;
       batch.publishedAt = now;
+      state.dataUpdatedAt = now;
       batch.revision = ++state.revision;
       state.audit.push({
         id: randomUUID(),

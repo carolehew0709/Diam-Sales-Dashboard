@@ -12,6 +12,7 @@ import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   defaultFilters,
   formatK,
+  formatUpdateDate,
   percent,
   months,
   combine,
@@ -941,6 +942,7 @@ function DashboardView({
       </section>
       <footer className="apac-footer">
         <span>{tr("footer.title")}</span>
+        <span>{tr("footer.latestUpdate", { date: formatUpdateDate(data.latestDataUpdate, locale) })}</span>
         <span>
           {data.latestPublish
             ? tr("notes.lastPublish", {

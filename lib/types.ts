@@ -107,6 +107,7 @@ export type AuditEvent = {
 export type Store = {
   version: number;
   revision: number;
+  dataUpdatedAt?: string;
   users: User[];
   snapshots: Snapshot[];
   lines: OrderBookLine[];

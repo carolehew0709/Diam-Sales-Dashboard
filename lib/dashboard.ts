@@ -361,6 +361,7 @@ export function getDashboardSnapshot(
     commercial,
     history,
     revision: state.revision,
+    latestDataUpdate: state.dataUpdatedAt ?? state.audit.filter(a => a.action === "publish").at(-1)?.at ?? null,
     latestPublish:
       state.audit.filter((a) => a.action === "publish").at(-1)?.at ?? null,
     sourceCount: selected.filter((r) => r.snapshot).length,
@@ -390,4 +391,11 @@ export function formatK(value: Amount) {
 }
 export function percent(value: Amount) {
   return value === null ? "Review" : `${(value * 100).toFixed(0)}%`;
+}
+/** Stable calendar date in APAC reporting time; never the browser refresh date. */
+export function formatUpdateDate(value: string | null, locale: string = "en") {
+  if (!value || Number.isNaN(Date.parse(value))) return "—";
+  return new Intl.DateTimeFormat(locale === "zh-CN" ? "zh-CN" : "en-US", {
+    timeZone: "Asia/Singapore", year: "numeric", month: "long", day: "numeric",
+  }).format(new Date(value));
 }

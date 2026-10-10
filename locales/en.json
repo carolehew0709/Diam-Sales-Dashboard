@@ -325,5 +325,6 @@
   "checks.dcpExternal": "DCP reporting uses H10 sales and L10 orderbook; Group values excluded",
   "checks.externalCells": "External reporting uses H10 sales and K17 orderbook",
   "checks.dcpYtdCorrection": "DCP External YTD sales updated by owner; monthly allocation not supplied",
-  "notes.provisionalBudgetCalculation": " · provisional: pending budgets counted as 0"
+  "notes.provisionalBudgetCalculation": " · provisional: pending budgets counted as 0",
+  "footer.latestUpdate": "Data updated on: {date}"
 }

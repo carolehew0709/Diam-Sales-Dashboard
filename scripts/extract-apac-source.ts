@@ -11,7 +11,7 @@ const parsed = files.map((f) =>
 const snapshots = parsed.flatMap((p) => p.snapshots);
 const lines = parsed.flatMap((p) => p.lines);
 const output = {
-  meta: { fiscalYear: 2026, unit: "kEUR", sourceFiles: files },
+  meta: { fiscalYear: 2026, unit: "kEUR", sourceFiles: files, generatedAt: new Date().toISOString() },
   snapshots,
   lines,
   findings: parsed.flatMap((p) => p.findings),

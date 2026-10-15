@@ -1,6 +1,6 @@
 # Deployment configuration
 
-No cloud database is provisioned in this change. Current Vercel production is not updated by local development.
+The application supports Vercel and self-hosted Node.js deployments. Provisioning a database and deploying application code are separate steps; a local build does not update either live deployment.
 
 ## Required authentication environment
 
@@ -17,6 +17,20 @@ Set DATABASE_URL to a PostgreSQL connection string with the provider's required 
 AWS RDS PostgreSQL and Alibaba Cloud PostgreSQL can use this adapter without frontend changes. Add provider-specific networking and certificate configuration when the database is selected. Backups, retention, least-privilege credentials and normalized tables should be configured as part of that deployment.
 
 Without DATABASE_URL, local Node persists to DIAM_DATA_PATH (default `.local/dashboard-store.json`). Vercel intentionally rejects persistent mutations and serves only the authenticated configured baseline. No successful publication is reported without durable storage.
+
+## AWS EC2 and private RDS
+
+Run the complete Next.js application on EC2 in the same VPC as RDS. Keep RDS Public access disabled and allow PostgreSQL TCP 5432 from the application security group. EC2 requires its own inbound HTTPS and restricted administration rules. This architecture does not require Vercel static egress IPs.
+
+Download the AWS RDS CA bundle over HTTPS to a persistent path outside the release archive, such as `/home/ubuntu/diam-dashboard/certs/global-bundle.pem`. Verify the endpoint, database and administrator credentials with `psql` using `sslmode=verify-full` and `sslrootcert` before configuring the application.
+
+Create a separate `diam_app` login with CONNECT on `diam_dashboard` and USAGE/CREATE on its public schema. Set its password interactively with psql `\password diam_app`; do not put plaintext passwords in shell commands or SQL history. The application creates and owns its state table on first initialization.
+
+The existing node-postgres connection-string parser supports certificate verification without changing the storage adapter. Configure server-only DATABASE_URL with URL-encoded username/password and query parameters `sslmode=verify-full&sslrootcert=/home/ubuntu/diam-dashboard/certs/global-bundle.pem`. Do not use `sslmode=no-verify`, disable verification, or mix URL SSL parameters with a separate Pool SSL object. The certificate file must exist before starting the application. Keep `.env.local` readable only by the service owner and configure administrator/India bootstrap credentials before the first persistent write.
+
+Use an HTTPS reverse proxy in front of the Next.js server, bind Node to loopback, and run the service under a non-root account with automatic restart. Login uses secure cookies in production and must be tested over HTTPS. Verify database persistence and India-only API/export/import permissions before switching users to the AWS deployment. Initial network/psql success is not application or RBAC verification.
+
+For the 2026-10-15 deployment preparation, upgrade Next.js to at least 15.5.27, sharp to at least 0.35.5 and source-map-js to at least 1.2.2, retain the lockfile, and run audit/tests/build before transferring the release archive. Existing server credentials and downloaded certificates must be preserved when extracting a new archive.
 
 ## Release verification
 

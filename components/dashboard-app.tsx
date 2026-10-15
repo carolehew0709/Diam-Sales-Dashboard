@@ -983,9 +983,9 @@ export default function Home() {
   useEffect(() => {
     if (!sessionChecked || !parsePagePath(pathname)) return;
     if (!user && view !== "login") {
-      router.replace(`${pagePath(locale, "login")}?next=${encodeURIComponent(pathname + window.location.search + window.location.hash)}`);
+      router.replace(pagePath(locale, "login"));
     } else if (user && view === "login") {
-      router.replace(loginDestination(new URLSearchParams(window.location.search).get("next"), locale));
+      router.replace(loginDestination(locale));
     }
   }, [sessionChecked, user, view, pathname, locale, router]);
   useEffect(() => {

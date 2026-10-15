@@ -36,30 +36,13 @@ export function parsePagePath(path: string) {
     return null;
   return { locale: parts[0], page: parts[1] };
 }
-export function loginDestination(value: string | null, locale: Locale): string {
-  const fallback = pagePath(locale, "home");
-  if (!value?.startsWith("/") || value.startsWith("//")) return fallback;
-  try {
-    const url = new URL(value, "https://dashboard.invalid");
-    const route = parsePagePath(url.pathname);
-    if (
-      url.origin !== "https://dashboard.invalid" ||
-      !route ||
-      route.page === "login"
-    )
-      return fallback;
-    return pagePath(locale, route.page) + url.search + url.hash;
-  } catch {
-    return fallback;
-  }
+// Every sign-in starts at the workspace, including stale login links with next.
+export function loginDestination(locale: Locale): string {
+  return pagePath(locale, "home");
 }
 export function switchLanguagePath(path: string, locale: Locale) {
   const url = new URL(path, "https://dashboard.invalid");
   const route = parsePagePath(url.pathname);
-  if (url.searchParams.has("next"))
-    url.searchParams.set(
-      "next",
-      loginDestination(url.searchParams.get("next"), locale),
-    );
+  if (route?.page === "login") url.searchParams.delete("next");
   return pagePath(locale, route?.page ?? "home") + url.search + url.hash;
 }

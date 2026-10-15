@@ -21,23 +21,23 @@ test("language switch preserves page and URL state", () => {
     switchLanguagePath("/en/imports?draft=1#form", "zh-CN"),
     "/zh-CN/imports?draft=1#form",
   );
-  assert.equal(
-    loginDestination("/en/imports?draft=1", "zh-CN"),
-    "/zh-CN/imports?draft=1",
-  );
+  assert.equal(loginDestination("zh-CN"), "/zh-CN/home");
 });
-test("login return paths cannot redirect externally or loop", () => {
-  for (const path of [
-    null,
+test("login language switching drops stale return paths", () => {
+  for (const next of [
+    "/en/overview",
+    "/en/overview#analysis",
+    "/en/imports",
     "https://evil.test",
-    "//evil.test",
-    "/\\evil.test",
     "/en/login",
-    "/en/unknown",
-  ])
-    assert.equal(loginDestination(path, "en"), "/en/home");
+  ]) {
+    assert.equal(
+      switchLanguagePath("/en/login?next=" + encodeURIComponent(next), "zh-CN"),
+      "/zh-CN/login",
+    );
+  }
 });
-test("dashboard modules share a page and preserve anchors across language and login", () => {
+test("dashboard deep links preserve anchors while sign-in starts at home", () => {
   assert.equal(
     sectionPath("en", "business-units"),
     "/en/overview#business-units",
@@ -46,15 +46,12 @@ test("dashboard modules share a page and preserve anchors across language and lo
     switchLanguagePath("/en/overview#analysis", "zh-CN"),
     "/zh-CN/overview#analysis",
   );
-  assert.equal(
-    loginDestination("/en/overview#management-checks", "zh-CN"),
-    "/zh-CN/overview#management-checks",
-  );
+  assert.equal(loginDestination("en"), "/en/home");
   assert.equal(isDashboardSection("imports"), false);
 });
 
 test("home is the default login destination and retains its locale", () => {
-  assert.equal(loginDestination(null, "zh-CN"), "/zh-CN/home");
+  assert.equal(loginDestination("zh-CN"), "/zh-CN/home");
   assert.equal(switchLanguagePath("/en/home", "zh-CN"), "/zh-CN/home");
   assert.equal(isDashboardSection("home"), false);
 });

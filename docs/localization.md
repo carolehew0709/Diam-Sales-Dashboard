@@ -12,8 +12,9 @@ sentences; use named interpolation such as `{year}` or `{amount}`.
 
 The authenticated landing page is `/{locale}/home`, with a Sales Performance
 card linking to `/{locale}/overview`. The root and locale root redirect to home;
-login without a valid return path also opens home. Valid deep links still return
-to their requested page after login. The DIAM logo and Home navigation return
+every successful login also opens home, including after signing out from a
+dashboard page. Legacy login `next` parameters are ignored and removed when
+switching languages. Authenticated users can still open dashboard deep links. The DIAM logo and Home navigation return
 to the workspace. The home page uses the existing session and does not fetch
 dashboard metrics until a dashboard page is opened.
 
@@ -25,7 +26,7 @@ and `login` remain separate pages. The root redirects using the `diam_locale` co
 (English by default). Language switching retains the page, query and fragment;
 the persistent application shell retains filters and form drafts. Refreshing
 retains the page but not unsaved drafts. Unknown routes return 404.
-Unauthenticated deep links go to login with a validated local return path.
+Unauthenticated deep links go to login, then home after successful sign-in.
 Page visibility is not authorization: API permission checks remain authoritative.
 
 The fixed header separates account/product actions from section navigation.

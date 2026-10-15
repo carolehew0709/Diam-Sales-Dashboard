@@ -826,7 +826,7 @@ test("W41 live seed preserves BU rules, approved budgets, owner DCP YTD and futu
 
 
 test("data update date uses seed/publication metadata and a stable APAC calendar date", () => {
-  close(source.snapshots.length, 122);
+  close(source.snapshots.length, 163);
   assert.ok(!Number.isNaN(Date.parse(source.meta.generatedAt)));
   const seeded = { ...state, dataUpdatedAt: source.meta.generatedAt };
   assert.equal(getDashboardSnapshot(seeded, admin, defaultFilters).latestDataUpdate, source.meta.generatedAt);
@@ -838,4 +838,59 @@ test("data update date uses seed/publication metadata and a stable APAC calendar
   assert.equal(formatUpdateDate(null), "—");
   assert.equal(formatUpdateDate("invalid"), "—");
   assert.equal(getDashboardSnapshot(state, admin, defaultFilters).latestDataUpdate, null);
+});
+
+
+test("India source imports actual order ranges and retains monthly/source evidence", () => {
+  const p = parseDashboardWorkbook(fs.readFileSync("Dashboard/2. Dashboard_2026_DDI_Week-41.xlsx"), "2. Dashboard_2026_DDI_Week-41.xlsx");
+  assert.equal(p.snapshots.length, 41);
+  assert.ok(p.snapshots.every(s => s.entityId === "ddi"));
+  assert.ok(!p.findings.some(f => f.severity === "error"));
+  const s = p.snapshots.find(s => s.week === 41)!;
+  const lines = p.lines.filter(l => l.week === 41);
+  assert.equal(lines.length, 84); assert.ok(lines.every(l => l.sourceRow <= 115 && l.customerType !== "Unclassified"));
+  assert.ok(!s.findings.some(f => f.includes("classification missing") || f.includes("does not reconcile")));
+  assert.ok(s.findings.includes("Orderbook movement bridge has an unexplained difference; source amounts retained"));
+  const m = entityMetric(s, defaultFilters);
+  close(m.sales, 6195); close(m.orderbook, 2909.3515846505334);close(m.base, 9104.351584650532);close(m.remaining, 1484.396964781534);
+  assert.equal(m.budget, null);assert.equal(m.prospect, null);assert.equal(m.coverage, null);
+  close(entityMetric(s, { ...defaultFilters, year: 2027 }).orderbook, 109.15973);
+  assert.deepEqual(s.monthlySales.external.slice(0, 10), [600,320,797,430,396,688,856,605,1021,304]);
+});
+
+test("India editor cannot view, edit, publish or aggregate China records", async () => {
+  const { configuredIndiaEditor } = await import("../lib/india-account");
+  const { passwordHash } = await import("../lib/storage");
+  const india = configuredIndiaEditor({ DIAM_INDIA_EMAIL: "india.editor@diam.local", DIAM_INDIA_PASSWORD_HASH: passwordHash("test-india-password") })!;
+  assert.equal(india.role, "editor");
+  assert.equal(configuredIndiaEditor({}), null);
+  const plain = configuredIndiaEditor({ DIAM_INDIA_EMAIL: "india.editor@diam.local", DIAM_INDIA_PASSWORD: "india-test-password" })!;
+  const { verifyPassword } = await import("../lib/auth");
+  assert.ok(verifyPassword("india-test-password", plain.passwordHash));
+  assert.equal(plain.role, "editor");
+  assert.equal(configuredIndiaEditor({ DIAM_INDIA_EMAIL: "india.editor@diam.local", DIAM_INDIA_PASSWORD: "short" }), null);
+  for (const e of entities) { assert.equal(canView(india, e), e.id === "ddi");assert.equal(canEdit(india, e), e.id === "ddi");assert.equal(canPublish(india, e), false); }
+  const live: Store = { ...state, snapshots: source.snapshots as unknown as Snapshot[], lines: source.lines as OrderBookLine[] };
+  for (const region of ["China", "APAC", "India"]) {
+    const d = getDashboardSnapshot(live, india, { ...defaultFilters, region });
+    assert.deepEqual(d.entities.map(e => e.id), ["ddi"]);
+    assert.deepEqual(d.china, []); assert.equal(d.chinaTotal.base, null);
+    assert.ok(d.regionRows.every(r => r.entity.id === "ddi"));
+    assert.ok(!d.regions.includes("China"));
+    assert.ok(d.rows.every(r => r.entity.id === "ddi"));assert.ok(d.history.every(r => r.entity.id === "ddi"));
+    if (region === "China") assert.equal(d.totals.base, null);else close(d.totals.base, 9104.351584650532);
+    assert.ok(!JSON.stringify(d).includes("Dashboard 2026 - DEHK"));
+  }
+  const { repository } = await import("../lib/repository");
+  await assert.rejects(repository.createImportBatch(manualBatch(input(), admin), india));
+});
+
+
+test("region briefing switches between India and China, retaining full permitted country totals", () => {
+ const live: Store={...state,snapshots:source.snapshots as unknown as Snapshot[],lines:source.lines as OrderBookLine[]};
+ const india=getDashboardSnapshot(live,admin,{...defaultFilters,region:"India"});
+ assert.deepEqual(india.regionRows.map(r=>r.entity.code),["DDI"]);close(india.regionTotal.base,9104.351584650532);
+ close(chinaStripAmount(india.regionRows[0],{...defaultFilters,region:"India",scenario:"Sales"}),6195);
+ const china=getDashboardSnapshot(live,admin,{...defaultFilters,region:"China",bu:"DDC"});
+ assert.equal(china.regionRows.length,3);close(china.regionTotal.base,39973.10739);close(china.totals.base,7158.8329);
 });

@@ -28,3 +28,7 @@ Without DATABASE_URL, local Node persists to DIAM_DATA_PATH (default `.local/das
 6. In the deployment test environment, verify analyze → review → publish, reload/new session persistence, role restrictions and export reconciliation before using live submissions.
 
 The local API smoke script (`node scripts/api-smoke.mjs`) only targets localhost and uses local environment credentials without printing them.
+
+## India account bootstrap
+
+Optional Production variables `DIAM_INDIA_EMAIL` and `DIAM_INDIA_PASSWORD` (at least 12 characters, same configuration style as admin) create an India-only editor in an uninitialized store or read-only seed deployment. `DIAM_INDIA_PASSWORD_HASH` remains supported as an alternative when DIAM_INDIA_PASSWORD is absent. The hash must be salted scrypt in the existing 32-hex-salt:128-hex-hash format. Role, APAC boundary, no cross-region view, and DDI-only view/edit permissions are fixed in code. Never commit account credentials or hashes. Production values must be configured in the correct Vercel team and redeployed; Git push alone cannot set secrets. Existing database/file users are authoritative and must be managed through user administration. With no DATABASE_URL the account can log in, view and export, but uploads cannot be saved; do not bypass the durable-storage guard. Editors never publish or manage users.

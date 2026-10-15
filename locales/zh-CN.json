@@ -326,5 +326,9 @@
   "checks.externalCells": "External 报表使用 H10 已开票销售和 K17 订单簿",
   "checks.dcpYtdCorrection": "DCP 外销累计销售已按负责人提供的数据更新；尚未提供月度分配",
   "notes.provisionalBudgetCalculation": " · 暂定计算：待定预算按 0",
-  "footer.latestUpdate": "数据更新于：{date}"
+  "footer.latestUpdate": "数据更新于：{date}",
+  "checks.orderbookMovement": "订单簿变动核对存在未解释差额，保留源表金额",
+  "strip.total": "{region}合计 · ",
+  "strip.details": "{region}汇总及业务单元明细",
+  "entity.ddi": "印度销售"
 }

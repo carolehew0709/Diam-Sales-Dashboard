@@ -288,6 +288,8 @@ export function getDashboardSnapshot(
   const totals = combineSelected(selected.map((r) => r.metrics));
   const china = rows.filter((r) => r.entity.reportingRegion === "China");
   const chinaTotal = combineSelected(china.map((r) => r.metrics));
+  const regionRows = rows.filter(r => matchesRegion(r.entity, filters.region));
+  const regionTotal = combineSelected(regionRows.map(r => r.metrics));
   const weeks = [
     ...new Set(selected.flatMap((r) => (r.snapshot ? [r.snapshot.week] : []))),
   ].sort((a, b) => a - b);
@@ -349,11 +351,13 @@ export function getDashboardSnapshot(
   return {
     filters,
     entities: allowed,
-    regions,
+    regions: regions.filter(region => allowed.some(entity => matchesRegion(entity, region))),
     rows: selected,
     totals,
     china,
     chinaTotal,
+    regionRows,
+    regionTotal,
     buGroups,
     weeks,
     checks,

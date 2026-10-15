@@ -126,7 +126,7 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
     }
     const s = emptySnapshot(entity.id, year, week, month, fileName, name);
     s.turnover = { external: number(at(9, 4)), group: number(at(10, 4)) };
-    s.salesCardValue = number(at(entity.id === "dhk" ? 11 : 9, 4));
+    s.salesCardValue = number(at(["dhk", "ddi"].includes(entity.id) ? 11 : 9, 4));
     if (entity.id === "ddc") s.ddcAnnualTotal = number(at(9, 11));
     s.monthTurnover = { external: number(at(9, 6)), group: number(at(10, 6)) };
     s.monthEstimate = { external: number(at(9, 8)), group: number(at(10, 8)) };
@@ -145,7 +145,7 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
     }
     s.sourceCells = {
       turnover: `${cell(9, 4)}:${cell(10, 4)}`,
-      salesCardValue: cell(entity.id === "dhk" ? 11 : 9, 4),
+      salesCardValue: cell(["dhk", "ddi"].includes(entity.id) ? 11 : 9, 4),
       monthTurnover: `${cell(9, 6)}:${cell(10, 6)}`,
       monthEstimate: `${cell(9, 8)}:${cell(10, 8)}`,
       orderbook: `${cell(16, 7)}:${cell(17, 8)}`,
@@ -155,7 +155,21 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
     s.findings = ["Annual budget not supplied", "Prospect not supplied"];
     if (text(at(20, 6)).toUpperCase() !== "OK")
       s.findings.push("Workbook source check requires review");
-    for (let i = 23; i < rows.length; i++) {
+    // Respect the source SUMIF order range; notes below it are not order records.
+    const firstOrderRow = range.s.r + 24;
+    const detailEnds = [16, 17].flatMap(r => {
+      const formula = ws[cell(r, 7)]?.f ?? "";
+      const matches = [...formula.matchAll(/\$?[A-Z]+\$?(\d+):\$?[A-Z]+\$?(\d+)/g)];
+      return matches.filter(m => Number(m[1]) === firstOrderRow).map(m => Number(m[2]));
+    });
+    const lastOrderRow = detailEnds.length ? Math.max(...detailEnds) : rows.length + range.s.r;
+    s.sourceCells.orderDetail = `${cell(23, 1)}:${XLSX.utils.encode_cell({ r: lastOrderRow - 1, c: range.s.c + 34 })}`;
+    if (entity.id === "ddi") {
+      const movementDifference = rows.find(r => text(r[1]).toLowerCase() === "difference");
+      if (movementDifference && number(movementDifference[3]) !== null && Math.abs(number(movementDifference[3])!) > 0.1)
+        s.findings.push("Orderbook movement bridge has an unexplained difference; source amounts retained");
+    }
+    for (let i = 23; i < rows.length && i + range.s.r + 1 <= lastOrderRow; i++) {
       const r = rows[i];
       if (!text(r[1]) && !text(r[3])) continue;
       const type = text(r[2]).toLowerCase();

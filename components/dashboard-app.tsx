@@ -3,7 +3,7 @@ import { usePathname, useRouter } from "next/navigation";
 import { loginDestination, pagePath, parsePagePath, type Page } from "@/lib/routes";
 import { useI18n } from "@/components/i18n-provider";
 import { matchesRegion } from "@/lib/entities";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
@@ -20,7 +20,7 @@ import {
   sumKnown,
 } from "@/lib/dashboard";
 import type { Dashboard, Metric } from "@/lib/dashboard";
-import type { Amount, Filters, User } from "@/lib/types";
+import type { Amount, Filters, User, Entity } from "@/lib/types";
 function Segmented({
   label,
   value,
@@ -213,21 +213,21 @@ function DashboardView({
   const selectEntity = (id: string) =>
     setFilters({
       ...filters,
-      region: "China",
+      region: filters.region,
       bu: id === "all" ? "all" : (data.entities.find((e) => e.id === id)?.businessUnit ?? "all"),
       entity: "all",
     });
   const totalRows = [
     {
-      id: "china",
-      name: tr("china.total"),
+      id: filters.region,
+      name: tr("strip.total", { region: display(filters.region) }),
       description: tr("notes.sources", {
-        count: data.china.filter((r) => r.snapshot).length,
-        total: data.china.length,
+        count: data.regionRows.filter((r) => r.snapshot).length,
+        total: data.regionRows.length,
       }),
-      metrics: data.chinaTotal,
+      metrics: data.regionTotal,
     },
-    ...data.china.map((r) => ({
+    ...data.regionRows.map((r) => ({
       id: r.entity.id,
       name: r.entity.code,
       description: r.entity.description,
@@ -426,11 +426,10 @@ function DashboardView({
           }
         />
       </section>
-      <section className="china-strip" aria-label={tr("china.details")}>
+      {data.regionRows.length > 0 && <section className="china-strip" style={{ "--summary-columns": data.regionRows.length + 1 } as CSSProperties} aria-label={tr("strip.details", { region: display(filters.region) })}>
         <button
           onClick={() => selectEntity("all")}
           className={
-            filters.region === "China" &&
             filters.bu === "all" &&
             filters.entity === "all"
               ? "selected"
@@ -438,15 +437,15 @@ function DashboardView({
           }
         >
           <small>
-            {tr("china.totalUpper")}
+            {tr("strip.total", { region: display(filters.region) })}
             {filters.year}
           </small>
           <strong>
-            {formatK(filters.year === 2026 && filters.scenario === "Sales" ? sumKnown(data.china.map(r => chinaStripAmount(r, filters))) : data.chinaTotal.base)} <em>kEUR</em>
+            {formatK(filters.year === 2026 && filters.scenario === "Sales" ? sumKnown(data.regionRows.map(r => chinaStripAmount(r, filters))) : data.regionTotal.base)} <em>kEUR</em>
           </strong>
           <span>{filters.year === 2026 && filters.scenario === "Sales" ? tr("metric.salesDate") : tr("china.known")}</span>
         </button>
-        {[...data.china].sort((a,b) => ["dhk","ddc","dcp"].indexOf(a.entity.id) - ["dhk","ddc","dcp"].indexOf(b.entity.id)).map((r) => (
+        {[...data.regionRows].sort((a,b) => ["dhk","ddc","dcp"].indexOf(a.entity.id) - ["dhk","ddc","dcp"].indexOf(b.entity.id)).map((r) => (
           <button
             key={r.entity.id}
             className={filters.bu === r.entity.businessUnit ? "selected" : ""}
@@ -469,7 +468,7 @@ function DashboardView({
             </span>
           </button>
         ))}
-      </section>
+      </section>}
       {!data.rows.length && (
         <p className="apac-notice">{tr("overview.noData")}</p>
       )}
@@ -1005,6 +1004,10 @@ export default function Home() {
       })
       .then((j) => {
         if (!j.ok) throw new Error(j.error);
+        if (j.data.entities.length && !j.data.entities.some((e: Entity) => matchesRegion(e, filters.region))) {
+          setFilters({ ...filters, region: j.data.entities[0].reportingRegion, bu: "all", entity: "all" });
+          return;
+        }
         setData(j.data);
         setWritable(j.storage.writable);
         setError("");

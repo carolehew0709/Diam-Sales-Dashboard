@@ -1,14 +1,13 @@
 import fs from "node:fs/promises";
 import path from "node:path";
-import { randomBytes, scryptSync } from "node:crypto";
+import { randomBytes } from "node:crypto";
 import { Pool } from "pg";
 import source from "@/data/apac-dashboard.json";
 import { entities } from "./entities";
+import { configuredIndiaEditor } from "./india-account";
 import type { Store, Snapshot, OrderBookLine } from "./types";
-export function passwordHash(password: string) {
-  const salt = randomBytes(16).toString("hex");
-  return `${salt}:${scryptSync(password, salt, 64).toString("hex")}`;
-}
+import { passwordHash } from "./passwords";
+export { passwordHash } from "./passwords";
 function initial(): Store {
   const seed = source as unknown as {
     meta?: { generatedAt?: string };
@@ -16,11 +15,12 @@ function initial(): Store {
     lines: OrderBookLine[];
   };
   const password = process.env.DIAM_ADMIN_PASSWORD;
+  const indiaEditor = configuredIndiaEditor(process.env);
   return {
     version: 2,
     revision: 1,
     dataUpdatedAt: seed.meta?.generatedAt,
-    users: password
+    users: [...(password
       ? [
           {
             id: "admin",
@@ -36,7 +36,7 @@ function initial(): Store {
             sessionVersion: 1,
           },
         ]
-      : [],
+      : []), ...(indiaEditor && indiaEditor.email !== (process.env.DIAM_ADMIN_EMAIL ?? "admin@diam.local").toLowerCase() ? [indiaEditor] : [])] as Store["users"],
     snapshots: seed.snapshots ?? [],
     lines: seed.lines ?? [],
     batches: [],

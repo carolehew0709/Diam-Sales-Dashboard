@@ -39,8 +39,8 @@ export const entities: Entity[] = [
       { DSI: "Singapore", DDI: "India", DDJ: "Japan" } as Record<string, string>
     )[code],
     businessUnit: code,
-    description: "Source pending",
-    aliases: [code],
+    description: code === "DDI" ? "India sales" : "Source pending",
+    aliases: code === "DDI" ? [code, "Diam India"] : [code],
   })),
 ];
 entities.sort(

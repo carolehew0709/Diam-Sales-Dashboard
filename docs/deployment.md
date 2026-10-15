@@ -34,6 +34,18 @@ For the 2026-10-15 deployment preparation, upgrade Next.js to at least 15.5.27, 
 
 ## Release verification
 
+### Automatic AWS releases
+
+`.github/workflows/ci.yml` validates main pushes and pull requests with Node 22, a lockfile install, npm audit, tests and a production build. Only successful **main push** runs for that exact workflow/commit authorize deployment. A newer failed or incomplete rerun blocks that commit. The workflow uses read-only repository permissions, no production secrets, and pinned first-party actions.
+
+EC2 runs `scripts/aws-auto-deploy.mjs` via a two-minute systemd timer installed by `bash scripts/install-aws-auto-deploy.sh` as ubuntu. The current repository is public; the controller reads GitHub over outbound HTTPS without a token or inbound webhook/SSH rules. Making the repository private requires a new authenticated read mechanism; deployment fails closed until that is configured. GitHub Actions usage is subject to the repository/account allowance; no Vercel networking add-on is required.
+
+The controller builds the exact main commit under `/home/ubuntu/diam-deploy/releases/<sha>` while the old website remains live. `.env.local` and certificates are symlinked from `/home/ubuntu/diam-dashboard`, never taken from Git. The candidate runs on loopback port 3001 and must pass read-only PostgreSQL, login and India visibility checks. The branch head and CI are checked again before the current symlink switches and `diam-dashboard` restarts. A failed check after switching restores the previous symlink and restarts the previous release. The switch has a short restart window and is not a zero-downtime/load-balanced rollout. Database schema/data migrations are not performed or reversed by this mechanism.
+
+The controller keeps current/previous compiled releases and the original manual deployment. Its own installed copy stays outside releases; deployment-controller or unit changes require rerunning the reviewed installer. Application credentials used by smoke checks must remain valid: if a persisted user password changes through administration, update its server environment health credentials too. Otherwise new releases are intentionally blocked. Smoke checks never create imports, publish, or modify business data.
+
+Inspect: `sudo systemctl list-timers diam-auto-deploy.timer` and `sudo journalctl -u diam-auto-deploy -n 80 --no-pager`. Last deployed commit: `cat /home/ubuntu/diam-deploy/deployed-sha`. Stop deployments: `sudo systemctl stop diam-auto-deploy.timer`. A failed candidate is not rebuilt repeatedly: inspect the error, fix it, then remove `/home/ubuntu/diam-deploy/failed-sha` and run `sudo systemctl start diam-auto-deploy`. A new main commit is checked normally. Rollback does not roll back database content. Do not print `.env.local` or candidate logs publicly.
+
 1. `npm ci`
 2. `npm run extract:source` when workbook baseline changes.
 3. `npm test` and `npm run typecheck`.

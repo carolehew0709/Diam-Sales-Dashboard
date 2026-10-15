@@ -10,6 +10,13 @@ parameters. Add new interface copy to both catalogs rather than using inline
 language conditionals. Do not concatenate translated words to construct new
 sentences; use named interpolation such as `{year}` or `{amount}`.
 
+The authenticated landing page is `/{locale}/home`, with a Sales Performance
+card linking to `/{locale}/overview`. The root and locale root redirect to home;
+login without a valid return path also opens home. Valid deep links still return
+to their requested page after login. The DIAM logo and Home navigation return
+to the workspace. The home page uses the existing session and does not fetch
+dashboard metrics until a dashboard page is opened.
+
 The URL is authoritative: `/en/overview` and `/zh-CN/overview` select the locale.
 The dashboard is one continuous page with `#overview`, `#analysis`,
 `#business-units`, and `#management-checks` anchors under `/{locale}/overview`.

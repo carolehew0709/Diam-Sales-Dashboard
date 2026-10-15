@@ -40,6 +40,7 @@ export function AccountMenu({
             ))}
           </details>
           <nav className="account-page-links" aria-label={tr("nav.area")}>
+            <Link href={pagePath(locale, "home")} onClick={() => setOpen(false)}>{tr("nav.home")}</Link>
             <Link href={pagePath(locale, "overview")} onClick={() => setOpen(false)}>{tr("nav.overview")}</Link>
             <Link href={sectionPath(locale, "analysis")} onClick={() => setOpen(false)}>{tr("nav.analysis")}</Link>
             <Link href={sectionPath(locale, "business-units")} onClick={() => setOpen(false)}>{tr("nav.entities")}</Link>

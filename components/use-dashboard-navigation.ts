@@ -16,7 +16,7 @@ export function useDashboardNavigation(page: Page, locale: Locale) {
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => observer.disconnect();
-  }, []);
+  }, [page]);
 
   useEffect(() => {
     if (page !== "overview") return;

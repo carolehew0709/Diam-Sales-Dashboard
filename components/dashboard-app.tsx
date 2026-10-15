@@ -5,6 +5,7 @@ import { useI18n } from "@/components/i18n-provider";
 import { matchesRegion } from "@/lib/entities";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { DashboardShell } from "@/components/dashboard-shell";
+import { WorkspaceHome } from "@/components/workspace-home";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
 import { PerformanceChart } from "@/components/performance-chart";
@@ -959,7 +960,7 @@ export default function Home() {
   const pathname = usePathname();
   const router = useRouter();
   const route = parsePagePath(pathname);
-  const view = route?.page ?? "overview";
+  const view = route?.page ?? "home";
   const setView = (page: Page) => router.push(pagePath(locale, page));
   const [user, setUser] = useState<User | null>(null),
     [sessionChecked, setSessionChecked] = useState(false),
@@ -988,7 +989,7 @@ export default function Home() {
     }
   }, [sessionChecked, user, view, pathname, locale, router]);
   useEffect(() => {
-    if (!user) return;
+    if (!user || view === "home" || view === "login") return;
     const controller = new AbortController();
     setLoading(true);
     const query = new URLSearchParams(
@@ -1019,7 +1020,7 @@ export default function Home() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [user, filters, revision]);
+  }, [user, filters, revision, view]);
   const login = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -1099,7 +1100,7 @@ export default function Home() {
       onLogout={() => void logout()}
       page={view}
     >
-      <main className="page-shell">
+      {view === "home" ? <WorkspaceHome user={user} /> : <main className="page-shell">
         {error && (
           <p className="apac-notice" role="alert">
             {display(error)}
@@ -1144,7 +1145,7 @@ export default function Home() {
         ) : (
           <p>{tr("auth.dashboardLoading")}</p>
         )}
-      </main>
+      </main>}
     </DashboardShell>
   );
 }

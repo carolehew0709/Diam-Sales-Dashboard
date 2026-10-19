@@ -151,3 +151,8 @@ localhost-overview*.png
 
 .vercel
 .local/
+
+# Customer receivables, payments and PICs stay in private storage, never public Git.
+Dashboard/DEHK+DDC OVERDUE.xlsx
+Dashboard/Unknown Payment.xlsx
+data/ar-aging.json

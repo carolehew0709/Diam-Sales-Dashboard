@@ -9,6 +9,7 @@
     "lint": "tsc --noEmit",
     "test": "tsx --test tests/*.test.ts && node --test tests/*.test.mjs",
     "extract:source": "tsx scripts/extract-apac-source.ts",
+    "extract:receivables": "tsx scripts/extract-receivables.ts",
     "typecheck": "tsc --noEmit",
     "setup:local": "node scripts/setup-local.mjs"
   },

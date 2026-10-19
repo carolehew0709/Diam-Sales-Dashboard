@@ -9,7 +9,9 @@ import {
   Layers3,
   Target,
   TrendingUp,
+  WalletCards,
 } from "lucide-react";
+import { hasReceivablesAccess } from "@/lib/receivables";
 import { useI18n } from "@/components/i18n-provider";
 import { pagePath } from "@/lib/routes";
 import type { User } from "@/lib/types";
@@ -110,6 +112,14 @@ export function WorkspaceHome({ user }: { user: User }) {
               </span>
             </div>
           </Link>
+          {hasReceivablesAccess(user) && <Link className="home-module-card" href={pagePath(locale, "ar-aging")}
+            aria-labelledby="home-ar-title" aria-describedby="home-ar-description">
+            <div className="home-card-top"><span className="home-module-icon"><WalletCards size={28} strokeWidth={1.6} aria-hidden="true" /></span>
+              <span className="home-module-tag">{tr("ar.homeTag")}</span><ArrowUpRight className="home-card-arrow" size={23} aria-hidden="true" /></div>
+            <h3 id="home-ar-title">{tr("ar.title")}</h3><p id="home-ar-description">{tr("ar.homeDescription")}</p>
+            <div className="home-module-features"><span>{tr("ar.featureAging")}</span><span>{tr("ar.featureTeams")}</span><span>{tr("ar.featureReceipts")}</span></div>
+            <div className="home-card-footer"><span>{tr("ar.homeOpen")}</span><span className="home-card-action"><ArrowRight size={19} aria-hidden="true" /></span></div>
+          </Link>}
         </div>
       </section>
       <footer className="home-footer">

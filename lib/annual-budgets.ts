@@ -33,6 +33,7 @@ export const pending2027Budgets: Readonly<Record<string, number>> = {
 };
 
 export function applyApprovedBudget(snapshot: Snapshot): Snapshot {
+  if (snapshot.teamScope) return snapshot;
   const approved =
     snapshot.year === 2026
       ? approved2026Budgets[snapshot.entityId]

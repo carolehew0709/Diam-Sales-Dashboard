@@ -1,3 +1,4 @@
+import type { ReceivableRecord } from "./receivables-types";
 export type Role =
   "superadmin" | "region_admin" | "editor" | "viewer" | "audit_viewer";
 export type Permission = "view" | "edit";
@@ -36,6 +37,7 @@ export type OrderBookLine = {
   customer: string;
   customerType: "External" | "Group" | "Unclassified";
   dgc: string;
+  salesTeam?: string;
   quantity: Amount;
   total2026: number;
   total2027: number;
@@ -46,6 +48,7 @@ export type OrderBookLine = {
   sourceRow: number;
 };
 export type Snapshot = {
+  teamScope?: boolean;
   entityId: string;
   year: number;
   week: number;
@@ -82,6 +85,8 @@ export type Snapshot = {
 };
 export type Finding = { severity: "error" | "review"; message: string };
 export type ImportBatch = {
+  receivables?: ReceivableRecord[];
+  receivablesKind?: "aging" | "payments";
   id: string;
   fileName: string;
   sourceType: "Excel" | "Manual";
@@ -105,6 +110,8 @@ export type AuditEvent = {
   subject: string;
 };
 export type Store = {
+  receivables?: ReceivableRecord[];
+  receivablesUpdatedAt?: string;
   version: number;
   revision: number;
   dataUpdatedAt?: string;
@@ -115,6 +122,7 @@ export type Store = {
   audit: AuditEvent[];
 };
 export type Filters = {
+  salesTeam?: string;
   region: string;
   bu: string;
   entity: string;

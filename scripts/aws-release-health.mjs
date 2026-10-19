@@ -41,6 +41,8 @@ try {
       assert.equal(hidden.data.rows.length, 0);
       assert.equal(hidden.data.china.length, 0);
       assert.equal((await request('/api/admin/users', { headers: { cookie } })).status, 403);
+      assert.equal((await request('/api/receivables', { headers: { cookie } })).status, 403);
+      assert.equal((await request('/api/receivables/export', { headers: { cookie } })).status, 403);
     }
     console.log(`${kind}: login, scoped data and PostgreSQL checks passed`);
   }

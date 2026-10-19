@@ -3396,6 +3396,8 @@ summary:focus-visible .disclosure-action i {
   }
 }
 
+
+
 .import-modal[hidden] {
   display: none;
 }
@@ -5302,3 +5304,38 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
   .home-module-card, .home-card-arrow, .home-card-action { transition: none; }
   .home-module-card:hover, .home-module-card:focus-visible, .home-module-card:hover .home-card-arrow { transform: none; }
 }
+
+/* Receivables keeps the sales dashboard hierarchy and DIAM card treatments. */
+.ar-workspace { display: grid; gap: 24px; padding-top: 16px; }
+.ar-heading { padding: 20px 0 8px; align-items: center; }
+.ar-heading h1 { font-size: clamp(30px, 3.5vw, 56px); letter-spacing: -.045em; margin: 10px 0; }
+.ar-heading p, .ar-context { color: var(--muted); line-height: 1.65; }
+.ar-asof { display: flex; align-items: center; gap: 16px; background: #171813; color: #fff; border-radius: 18px; padding: 22px 28px; min-width: 250px; }
+.ar-asof span { display: grid; gap: 6px; font-size: 11px; }
+.ar-asof strong { font-size: 20px; font-weight: 600; }
+.ar-filter-bar { position: static; display: grid; grid-template-columns: repeat(7,minmax(130px,1fr)); gap: 12px; overflow: visible; }
+.ar-filter-bar .filter-field { min-width: 0; }
+.ar-context { margin: -10px 0 0; font-size: 12px; }
+.ar-kpi-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 18px; }
+.ar-kpi-grid .kpi-card { min-height: 220px; padding: 24px; }
+.ar-kpi-values { display: grid; gap: 12px; margin: 28px 0 18px; }
+.ar-kpi-values > div { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
+.ar-kpi-values strong { font-size: clamp(25px,2.7vw,42px); letter-spacing: -.04em; font-weight: 600; }
+.ar-kpi-values span { color: var(--muted); font-size: 12px; }
+.ar-chart-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap: 20px; }
+.ar-chart-grid .panel, .ar-detail { padding: 28px; }
+.ar-bars { display: grid; gap: 17px; margin-top: 22px; }
+.ar-bar-row { display: grid; grid-template-columns: 110px minmax(40px,1fr) 110px; gap: 14px; align-items: center; font-size: 12px; }
+.ar-bar-row > strong { text-align: right; font-variant-numeric: tabular-nums; }
+.ar-bar-track { height: 12px; background: #eeeae2; border-radius: 8px; overflow: hidden; }
+.ar-bar-track i { display: block; height: 100%; background: #ac7b2f; border-radius: inherit; }
+.ar-table td { vertical-align: top; }
+.ar-table td:nth-child(2), .ar-table td:nth-child(3) { white-space: nowrap; }
+.ar-note-cell { min-width: 220px; max-width: 340px; white-space: normal; line-height: 1.6; }
+.ar-pagination { display: flex; justify-content: flex-end; align-items: center; gap: 18px; margin-top: 20px; }
+.ar-workspace .dashboard-footer { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 12px; color: var(--muted); font-size: 11px; padding: 12px 0 24px; }
+@media(max-width:1200px) { .ar-filter-bar { grid-template-columns: repeat(4,minmax(130px,1fr)); } .ar-kpi-grid { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+@media(max-width:640px) { .ar-heading { display: grid; gap: 16px; } .ar-filter-bar { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); } .ar-kpi-grid { grid-template-columns: 1fr; } .ar-chart-grid { grid-template-columns: 1fr; } .ar-detail, .ar-chart-grid .panel { padding: 18px; } .ar-bar-row { grid-template-columns: 85px 1fr 95px; gap: 8px; } }
+
+.ar-detail .table-wrap { max-height: 600px; overflow: auto; }
+.ar-detail .bu-table thead th { position: sticky; top: 0; z-index: 1; background: #faf8f3; }

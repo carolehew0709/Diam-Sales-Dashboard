@@ -54,3 +54,7 @@ FY2026 sales-type formulas: All sales retains established BU rules; External use
 DCP FY2026 W40/W41 External YTD owner correction: screenshot 260,814.49 EUR = 260.81449 kEUR (approximately 260.8K), applies to All/External invoices and top sales cards only for W40 and, after owner confirmation on 2026-10-11, W41. Do not carry into later weeks without confirmation. Raw H10, prior weeks, monthly allocation and other BUs remain preserved.
 
 India onboarding: map Diam India to DDI. Read only actual order rows bounded by source SUMIF ranges; exclude footer notes. India All YTD includes H10+H11 (H12 for Sales top card). Preserve missing budget/Prospect and source movement-bridge Review. The India editor may view/edit/import only DDI, never China/other BU, publish, or user administration.
+
+## Owner decisions 2026-10-19
+
+W42 DCP External YTD is confirmed at 260.81449 kEUR, preserving raw H10 200.091; do not carry into W43 or later. Sales Team currently filters source OB only; team invoices/budgets/attainment remain pending. AR uses DEHK OVERDUE and DDC OVERDUE with source aging at 2026-09-30. Unknown/Advance uses Summary EUR balances once, has no BU allocation, ignores BU/aging filters, and requires both DEHK/DDC view scopes. India must never access China AR. See docs/receivables.md.

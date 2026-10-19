@@ -46,7 +46,7 @@ export const repository = {
       if (batch.status === "published") return batch;
       if (
         batch.status !== "review" ||
-        !batch.snapshots.length ||
+        (!batch.snapshots.length && !batch.receivables?.length) ||
         batch.findings.some((f) => f.severity === "error")
       )
         throw new ApiError(409, "Resolve validation errors before publishing.");
@@ -59,6 +59,12 @@ export const repository = {
         batch.snapshots.map((s) => `${s.entityId}:${s.year}:${s.week}`),
       );
       const now = new Date().toISOString();
+      if (batch.receivables?.length) {
+        const category = batch.receivablesKind === "aging" ? "aging" : "payments";
+        state.receivables = (state.receivables ?? []).filter(r =>
+          category === "aging" ? r.category !== "invoice" : r.category === "invoice").concat(batch.receivables);
+        state.receivablesUpdatedAt = now;
+      }
       state.snapshots = state.snapshots
         .filter((s) => !keys.has(`${s.entityId}:${s.year}:${s.week}`))
         .concat(batch.snapshots.map((s) => ({ ...s, publishedAt: now })));
@@ -68,7 +74,7 @@ export const repository = {
       batch.status = "published";
       batch.publishedBy = user.id;
       batch.publishedAt = now;
-      state.dataUpdatedAt = now;
+      if (batch.snapshots.length) state.dataUpdatedAt = now;
       batch.revision = ++state.revision;
       state.audit.push({
         id: randomUUID(),

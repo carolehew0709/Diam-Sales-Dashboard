@@ -3,6 +3,7 @@ import { applyApprovedBudget, approvedAnnualBudget, pending2027Budgets } from ".
 import { applyReportingOverrides } from "./reporting-overrides";
 import { entities, regions, matchesRegion } from "./entities";
 import { canView } from "./permissions";
+import { salesTeamState, teamName } from "./sales-teams";
 import type {
   Amount,
   Filters,
@@ -27,6 +28,7 @@ export const months = [
   "Dec",
 ];
 export const defaultFilters: Filters = {
+  salesTeam: "all",
   region: "China",
   bu: "all",
   entity: "all",
@@ -36,6 +38,7 @@ export const defaultFilters: Filters = {
 };
 export function filtersFrom(url: URL): Filters {
   return {
+    salesTeam: url.searchParams.get("salesTeam") || "all",
     region: url.searchParams.get("region") ?? "China",
     bu:
       url.searchParams.get("bu") === "DHK"
@@ -65,7 +68,7 @@ export const sumComplete = (values: Amount[]): Amount =>
 export const splitValue = (split: Split, type: SalesType): Amount =>
   type === "all" ? sumComplete([split.external, split.group]) : split[type];
 export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId = s?.entityId) {
-  if (s) s = applyReportingOverrides(applyApprovedBudget(s), filters.salesType);
+  if (s && !s.teamScope) s = applyReportingOverrides(applyApprovedBudget(s), filters.salesType);
   const future = filters.year === 2027,
     type = filters.salesType;
   const sales = s && !future ? splitValue(s.turnover, type) : s ? 0 : null;
@@ -90,8 +93,8 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId
         : sumComplete([sales, orderbook]);
   const prospect =
     s && type === "all" ? (future ? s.nextProspect : s.prospect) : null;
-  const approvedBudget = entityId ? approvedAnnualBudget(entityId, filters.year, type) : undefined;
-  const pendingBudget = future && !!entityId && entityId in pending2027Budgets;
+  const approvedBudget = entityId && !s?.teamScope ? approvedAnnualBudget(entityId, filters.year, type) : undefined;
+  const pendingBudget = !s?.teamScope && future && !!entityId && entityId in pending2027Budgets;
   const budget = approvedBudget ?? (pendingBudget ? 0
     : s && type === "all" ? (future ? s.nextAnnualBudget : s.annualBudget) : null);
   const budgetComplete = budget !== null && !pendingBudget;
@@ -267,13 +270,18 @@ export function getDashboardSnapshot(
 ) {
   state = reportingState(state, filters.salesType);
   const allowed = entities.filter((e) => canView(user, e));
+  const salesTeams = [...new Set(state.lines.filter(line => allowed.some(e => e.id === line.entityId &&
+    matchesRegion(e, filters.region) && (filters.bu === "all" || filters.bu === e.businessUnit)) &&
+    line.week === Math.max(...state.snapshots.filter(s => s.entityId === line.entityId && s.year === 2026).map(s => s.week)))
+    .map(line => teamName(line.salesTeam)))].sort();
+  state = salesTeamState(state, filters.salesTeam);
   const latest = (id: string) =>
     state.snapshots
       .filter((s) => s.entityId === id && s.year === 2026)
       .sort((a, b) => b.week - a.week)[0];
   const rows = allowed.map((entity) => {
     const raw = latest(entity.id);
-    const snapshot = raw ? applyApprovedBudget(raw) : undefined;
+    const snapshot = raw ? raw.teamScope ? raw : applyApprovedBudget(raw) : undefined;
     return { entity, snapshot, metrics: entityMetric(snapshot, filters, entity.id) };
   });
   const selected = rows.filter(
@@ -350,6 +358,7 @@ export function getDashboardSnapshot(
   }));
   return {
     filters,
+    salesTeams,
     entities: allowed,
     regions: regions.filter(region => allowed.some(entity => matchesRegion(entity, region))),
     rows: selected,

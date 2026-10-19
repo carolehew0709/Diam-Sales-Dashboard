@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { api, ApiError, currentUser, sameOrigin } from "@/lib/auth";
 import { repository } from "@/lib/repository";
 import { parseDashboardWorkbook } from "@/lib/workbook-parser";
+import { parseReceivablesWorkbook } from "@/lib/receivables-parser";
 export async function POST(request: Request) {
   return api(async () => {
     sameOrigin(request);
@@ -20,10 +21,12 @@ export async function POST(request: Request) {
       throw new ApiError(400, "Choose an .xlsx workbook up to 12 MB");
     let parsed;
     try {
-      parsed = parseDashboardWorkbook(
-        Buffer.from(await file.arrayBuffer()),
-        file.name,
-      );
+      const bytes = Buffer.from(await file.arrayBuffer());
+      parsed = parseDashboardWorkbook(bytes, file.name);
+      if (!parsed.snapshots.length) {
+        const ar = parseReceivablesWorkbook(bytes, file.name, { paymentEntityId: "china-payments" });
+        parsed = { snapshots: [], lines: [], sheets: ar.sheets, findings: ar.findings, receivables: ar.records, receivablesKind: ar.sourceKind };
+      }
     } catch {
       throw new ApiError(400, "Workbook could not be parsed");
     }
@@ -33,7 +36,7 @@ export async function POST(request: Request) {
         fileName: file.name,
         sourceType: "Excel",
         status: "review",
-        entityIds: [...new Set(parsed.snapshots.map((s) => s.entityId))],
+        entityIds: "receivables" in parsed ? ["dhk", "ddc"] : [...new Set(parsed.snapshots.map((s) => s.entityId))],
         submittedBy: user.id,
         submittedAt: new Date().toISOString(),
         ...parsed,

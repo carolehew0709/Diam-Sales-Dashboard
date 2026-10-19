@@ -2,13 +2,14 @@ import type { Snapshot, SalesType } from "./types";
 
 /** Owner-confirmed WK40 aggregate; never invent a customer, sales-type or monthly allocation. */
 export function applyReportingOverrides(snapshot: Snapshot, salesType: SalesType = "all"): Snapshot {
+  if (snapshot.teamScope) return snapshot;
   if (snapshot.entityId === "dcp" && snapshot.year === 2026 && snapshot.baseOverride === null) {
     // DCP-specific owner correction: H10 invoices + L10 OB, not H11 or K17/K18.
     const sourceOB = snapshot.sourceExternalOrderbook !== undefined ? snapshot.sourceExternalOrderbook : snapshot.orderbook.external;
     const sourceMonthlyOB = snapshot.sourceExternalMonthlyOrderbook ?? snapshot.monthlyOrderbook.external;
     const external = salesType === "external";
     const ob = external ? sourceOB : snapshot.monthEstimate.external;
-    const correctedSales = [40, 41].includes(snapshot.week) ? 260814.49 / 1000 : undefined;
+    const correctedSales = [40, 41, 42].includes(snapshot.week) ? 260814.49 / 1000 : undefined;
     return {
       ...snapshot,
       sourceExternalOrderbook: sourceOB,
@@ -26,7 +27,9 @@ export function applyReportingOverrides(snapshot: Snapshot, salesType: SalesType
       sourceCells: {
         ...snapshot.sourceCells,
         ...(correctedSales !== undefined ? {
-          dcpYtdSales: snapshot.week === 41
+          dcpYtdSales: snapshot.week === 42
+            ? "Project owner confirmation · 2026-10-19 · retain 260.81449 kEUR External YTD for FY2026 W42; workbook H10 200.091 kEUR preserved; no monthly allocation supplied"
+            : snapshot.week === 41
             ? "Project owner confirmation · 2026-10-11 · retain 260.81449 kEUR External YTD for FY2026 W41; workbook H10 200.091 kEUR preserved; no monthly allocation supplied"
             : "Project owner update · 2026-10-03 · screenshot de36605ef8221b65a112da2d841ee66a.png · 260814.49 EUR / 1000 = 260.81449 kEUR · FY2026 W40 · External YTD · no monthly allocation supplied",
         } : {}),

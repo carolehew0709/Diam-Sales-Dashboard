@@ -188,6 +188,7 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
         customer: text(r[3]),
         customerType,
         dgc: text(r[5]),
+        salesTeam: text(r[0]).toUpperCase() === "X" ? "" : text(r[0]).replace(/\s+/g, " "),
         quantity: number(r[4]),
         total2026: number(r[7]) ?? 0,
         total2027: number(r[8]) ?? 0,

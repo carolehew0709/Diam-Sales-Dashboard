@@ -1,4 +1,5 @@
 import { reportingState } from "@/lib/intercompany";
+import { salesTeamState, teamName } from "@/lib/sales-teams";
 import * as XLSX from "xlsx-js-style";
 import { currentUser, ApiError } from "@/lib/auth";
 import { repository } from "@/lib/repository";
@@ -8,11 +9,12 @@ export async function GET(request: Request) {
   try {
     const user = await currentUser();
     const filters = filtersFrom(new URL(request.url));
-    const state = reportingState(await repository.read(), filters.salesType);
+    const rawState = reportingState(await repository.read(), filters.salesType);
+    const state = { ...salesTeamState(rawState, filters.salesTeam), intercompanyExcluded: rawState.intercompanyExcluded.filter(line => !filters.salesTeam || filters.salesTeam === "all" || teamName(line.salesTeam) === filters.salesTeam) };
     const d = getDashboardSnapshot(state, user, filters);
     const wb = XLSX.utils.book_new();
     const context = [
-      `${filters.year} · ${filters.region} / ${filters.bu} / ${filters.entity} · ${filters.scenario} · ${filters.salesType} · kEUR · ${d.weeks.map((w) => `W${w}`).join(", ")}`,
+      `${filters.year} · ${filters.region} / ${filters.bu} / ${filters.entity} · Team: ${filters.salesTeam ?? "all"} · ${filters.scenario} · ${filters.salesType} · kEUR · ${d.weeks.map((w) => `W${w}`).join(", ")}`,
     ];
     function add(name: string, rows: unknown[][]) {
       const sheet = XLSX.utils.aoa_to_sheet(rows);
@@ -146,6 +148,7 @@ export async function GET(request: Request) {
         "Product",
         "Customer",
         "Type",
+        "Sales Team",
         "2026 total",
         "2027 total",
         ...months.map((m) => `${m} 2026`),
@@ -169,6 +172,7 @@ export async function GET(request: Request) {
           l.product,
           l.customer,
           l.customerType,
+          l.salesTeam ?? "",
           l.total2026,
           l.total2027,
           ...l.monthly2026,

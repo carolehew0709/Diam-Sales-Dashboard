@@ -13,6 +13,7 @@ import { Download, FileUp, House } from "lucide-react";
 import type { Filters, User } from "@/lib/types";
 import { AccountMenu } from "./account-menu";
 import { LanguageSwitcher } from "./language-switcher";
+import { hasReceivablesAccess } from "@/lib/receivables";
 export function DashboardShell({
   user,
   filters,
@@ -63,10 +64,11 @@ export function DashboardShell({
               <>
                 <Link
                   href={pagePath(locale, "overview")}
-                  aria-current={page !== "brand" ? "page" : undefined}
+                  aria-current={page !== "brand" && page !== "ar-aging" ? "page" : undefined}
                 >
                   {tr("nav.performance")}
                 </Link>
+                {hasReceivablesAccess(user) && <Link href={pagePath(locale, "ar-aging")} aria-current={page === "ar-aging" ? "page" : undefined}>{tr("ar.nav")}</Link>}
                 <Link
                   href={pagePath(locale, "brand")}
                   aria-current={page === "brand" ? "page" : undefined}
@@ -77,7 +79,7 @@ export function DashboardShell({
             )}
           </nav>
         </div>
-        {page !== "home" && (
+        {page !== "home" && page !== "ar-aging" && (
           <nav className="topnav">
             <span className="topnav-links">
               {[
@@ -134,7 +136,7 @@ export function DashboardShell({
                 <span>{tr("nav.import")}</span>
               </Link>
             )}
-          {page !== "home" && (
+          {page !== "home" && page !== "ar-aging" && (
             <a
               className="excel-export"
               href={`/api/export?${query}`}

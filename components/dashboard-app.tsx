@@ -6,6 +6,8 @@ import { matchesRegion } from "@/lib/entities";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { WorkspaceHome } from "@/components/workspace-home";
+import { ReceivablesApp } from "@/components/receivables-app";
+import { hasReceivablesAccess } from "@/lib/receivables";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
 import { PerformanceChart } from "@/components/performance-chart";
@@ -363,6 +365,7 @@ function DashboardView({
                 region: e.target.value,
                 bu: "all",
                 entity: "all",
+                salesTeam: "all",
               })
             }
           >
@@ -379,7 +382,7 @@ function DashboardView({
             id="bu"
             value={filters.bu}
             onChange={(e) =>
-              setFilters({ ...filters, bu: e.target.value, entity: "all" })
+              setFilters({ ...filters, bu: e.target.value, entity: "all", salesTeam: "all" })
             }
           >
             <option value="all">{tr("filters.allBU")}</option>
@@ -394,6 +397,11 @@ function DashboardView({
             ))}
           </select>
         </div>
+        <div className="filter-field"><label htmlFor="sales-team">{tr("team.label")}</label>
+          <select id="sales-team" value={filters.salesTeam ?? "all"} onChange={e => setFilters({ ...filters, salesTeam: e.target.value })}>
+            <option value="all">{tr("team.all")}</option>
+            {data.salesTeams.map(team => <option key={team} value={team}>{team === "__unassigned__" ? tr("team.unassigned") : team}</option>)}
+          </select></div>
         <Segmented
           label={tr("filters.years")}
           value={String(filters.year)}
@@ -427,6 +435,7 @@ function DashboardView({
           }
         />
       </section>
+      {filters.salesTeam && filters.salesTeam !== "all" && <p className="apac-notice">{tr("team.limitation")}</p>}
       {data.regionRows.length > 0 && <section className="china-strip" style={{ "--summary-columns": data.regionRows.length + 1 } as CSSProperties} aria-label={tr("strip.details", { region: display(filters.region) })}>
         <button
           onClick={() => selectEntity("all")}
@@ -989,7 +998,7 @@ export default function Home() {
     }
   }, [sessionChecked, user, view, pathname, locale, router]);
   useEffect(() => {
-    if (!user || view === "home" || view === "login") return;
+    if (!user || view === "home" || view === "login" || view === "ar-aging") return;
     const controller = new AbortController();
     setLoading(true);
     const query = new URLSearchParams(
@@ -1122,6 +1131,8 @@ export default function Home() {
           />
         ) : view === "admin" ? (
           <AdminPanel onClose={() => setView("overview")} />
+        ) : view === "ar-aging" ? (
+          hasReceivablesAccess(user) ? <ReceivablesApp /> : <p role="alert">{tr("common.noAccess")}</p>
         ) : view === "brand" ? (
           <section className="panel apac-workspace">
             <p className="panel-kicker">{tr("brand.title")}</p>

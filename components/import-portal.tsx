@@ -336,19 +336,28 @@ export function ImportPortal({
               status: display(review.status),
             })}
           </p>
+          {review.receivables?.length ? <p>{tr("ar.reviewRows", { count: review.receivables.length })} · {tr("ar.reviewCurrency")}</p> : null}
           <div className="table-wrap">
             <table className="bu-table">
               <thead>
-                <tr>
+                {review.receivables?.length ? <tr>
+                  <th>{tr("common.entity")}</th><th>{tr("ar.column.date")}</th><th>{tr("ar.customer")}</th>
+                  <th>{tr("team.label")}</th><th>{tr("ar.column.amount")}</th><th>{tr("common.source")}</th>
+                </tr> : <tr>
                   <th>{tr("common.entity")}</th>
                   <th>{tr("common.week")}</th>
                   <th>{tr("import.ytdExternalShort")}</th>
                   <th>{tr("import.ytdGroupShort")}</th>
                   <th>{tr("metric.prospect")}</th>
                   <th>{tr("common.source")}</th>
-                </tr>
+                </tr>}
               </thead>
               <tbody>
+                {review.receivables?.slice(0, 20).map(r => <tr key={r.id}>
+                  <td>{r.entityId === "dhk" ? "DEHK" : r.entityId === "ddc" ? "DDC" : "—"}</td>
+                  <td>{r.invoiceDate ?? r.receivedDate}</td><td>{r.customer}</td><td>{r.salesTeam || tr("team.unassigned")}</td>
+                  <td>{formatK(r.amount)} {r.currency}</td><td>{r.sourceSheet} · {r.sourceRow}</td>
+                </tr>)}
                 {review.snapshots.map((s) => (
                   <tr key={`${s.entityId}:${s.week}`}>
                     <td>{s.entityId.toUpperCase()}</td>

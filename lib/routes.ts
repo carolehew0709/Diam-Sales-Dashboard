@@ -2,6 +2,7 @@ import { isLocale, type Locale } from "./i18n";
 export const pages = [
   "home",
   "overview",
+  "ar-aging",
   "analysis",
   "business-units",
   "management-checks",

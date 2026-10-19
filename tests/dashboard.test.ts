@@ -793,7 +793,8 @@ test("final owner budgets reconcile External/Group/All by BU and year without ch
 
 
 test("W41 live seed preserves BU rules, approved budgets, owner DCP YTD and future OB", () => {
-  const latest: Store = { ...state, snapshots: source.snapshots as unknown as Snapshot[], lines: source.lines as OrderBookLine[] };
+  const fixtures = ["Dashboard 2026 - DDC(3).xlsx", "Dashboard 2026 - DEHK(3).xlsx", "W41-- Dashboard 2026 - DCP(1).xlsx"].map(file => parseDashboardWorkbook(fs.readFileSync(`Dashboard/${file}`), file));
+  const latest: Store = { ...state, snapshots: fixtures.flatMap(p => p.snapshots), lines: fixtures.flatMap(p => p.lines) };
   const before = JSON.stringify(latest);
   for (const scenario of ["Sales", "Sales + Prospect"] as const) {
     for (const salesType of ["all", "external", "group"] as const) {
@@ -818,7 +819,7 @@ test("W41 live seed preserves BU rules, approved budgets, owner DCP YTD and futu
   }
   const rawDcp = latest.snapshots.find(s => s.entityId === "dcp" && s.week === 41)!;
   close(rawDcp.turnover.external, 200.091);
-  close(entityMetric({ ...rawDcp, week: 42 }, defaultFilters).sales, 200.091); // W41 approval does not carry into unconfirmed weeks.
+  close(entityMetric({ ...rawDcp, week: 43 }, defaultFilters).sales, 200.091); // W42 approval does not carry into later unconfirmed weeks.
   const historical = latest.snapshots.find(s => s.entityId === "dcp" && s.week === 40)!;
   close(entityMetric(historical, defaultFilters).sales, 260.81449);
   assert.equal(JSON.stringify(latest), before);
@@ -826,7 +827,7 @@ test("W41 live seed preserves BU rules, approved budgets, owner DCP YTD and futu
 
 
 test("data update date uses seed/publication metadata and a stable APAC calendar date", () => {
-  close(source.snapshots.length, 163);
+  close(source.snapshots.length, 166);
   assert.ok(!Number.isNaN(Date.parse(source.meta.generatedAt)));
   const seeded = { ...state, dataUpdatedAt: source.meta.generatedAt };
   assert.equal(getDashboardSnapshot(seeded, admin, defaultFilters).latestDataUpdate, source.meta.generatedAt);
@@ -892,5 +893,5 @@ test("region briefing switches between India and China, retaining full permitted
  assert.deepEqual(india.regionRows.map(r=>r.entity.code),["DDI"]);close(india.regionTotal.base,9104.351584650532);
  close(chinaStripAmount(india.regionRows[0],{...defaultFilters,region:"India",scenario:"Sales"}),6195);
  const china=getDashboardSnapshot(live,admin,{...defaultFilters,region:"China",bu:"DDC"});
- assert.equal(china.regionRows.length,3);close(china.regionTotal.base,39973.10739);close(china.totals.base,7158.8329);
+ assert.equal(china.regionRows.length,3);close(china.regionTotal.base,40271.30039);close(china.totals.base,7260.3999);
 });

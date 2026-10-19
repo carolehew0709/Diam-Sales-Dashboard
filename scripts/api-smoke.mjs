@@ -80,7 +80,7 @@ const d = await (
 ).json();
 assert.equal(d.data.rows.length, 1);
 assert.equal(d.data.rows[0].entity.code, "DCP");
-assert.equal(d.data.rows[0].snapshot.week,41);
+assert.equal(d.data.rows[0].snapshot.week,42);
 assert.equal(d.data.rows[0].snapshot.month,10);
 assert.ok(Math.abs(d.data.totals.sales-260.81449)<0.000001);
 assert.ok(Math.abs(d.data.totals.orderbook-1.184)<0.000001);
@@ -119,16 +119,16 @@ const ddc = await (
     headers: { cookie: admin },
   })
 ).json();
-assert.ok(Math.abs(ddc.data.totals.base - 7158.8329) < 0.000001);
-assert.ok(Math.abs(ddc.data.totals.remaining - 818.3159) < 0.000001);
+assert.ok(Math.abs(ddc.data.totals.base - 7260.3999) < 0.000001);
+assert.ok(Math.abs(ddc.data.totals.remaining - 759.6049) < 0.000001);
 assert.ok(
   Math.abs(ddc.data.totals.cumulative[11].base - ddc.data.totals.base) <
     0.000001,
 );
 
-assert.equal(ddc.data.rows[0].snapshot.week, 41);
-assert.ok(Math.abs(ddc.data.totals.sales - 5136.274) < 0.000001);
-assert.ok(Math.abs(ddc.data.totals.orderbook - 2022.5589) < 0.000001);
+assert.equal(ddc.data.rows[0].snapshot.week, 42);
+assert.ok(Math.abs(ddc.data.totals.sales - 5247.068) < 0.000001);
+assert.ok(Math.abs(ddc.data.totals.orderbook - 2013.3319) < 0.000001);
 const ddcExport = await fetch(base + "/api/export?entity=ddc&scenario=Sales", {
   headers: { cookie: admin },
 });
@@ -137,9 +137,9 @@ const dw = XLSX.read(Buffer.from(await ddcExport.arrayBuffer()));
 const summary = XLSX.utils.sheet_to_json(dw.Sheets["Executive Summary"], {
   header: 1,
 });
-assert.ok(Math.abs(summary[4][4] - 7158.8329) < 0.000001);
-assert.ok(Math.abs(summary[4][2] - 5136.274) < 0.000001);
-assert.ok(Math.abs(summary[4][3] - 2022.5589) < 0.000001);
+assert.ok(Math.abs(summary[4][4] - 7260.3999) < 0.000001);
+assert.ok(Math.abs(summary[4][2] - 5247.068) < 0.000001);
+assert.ok(Math.abs(summary[4][3] - 2013.3319) < 0.000001);
 const excludedDDC = XLSX.utils.sheet_to_json(
   dw.Sheets["Intercompany Exclusions"],
   { header: 1 },
@@ -151,8 +151,8 @@ const next = await (
   })
 ).json();
 assert.equal(next.data.totals.budget, 29771);
-assert.ok(Math.abs(next.data.totals.orderbook - 3082.688) < 0.000001);
-assert.ok(Math.abs(next.data.totals.monthly.reduce((sum, m) => sum + m.orderbook, 0) - 3082.688) < 0.000001);
+assert.ok(Math.abs(next.data.totals.orderbook - 3411.526) < 0.000001);
+assert.ok(Math.abs(next.data.totals.monthly.reduce((sum, m) => sum + m.orderbook, 0) - 3411.526) < 0.000001);
 const nextExport = await fetch(
   base + "/api/export?entity=dhk&year=2027&scenario=Sales",
   { headers: { cookie: admin } },
@@ -162,7 +162,7 @@ const ns = XLSX.utils.sheet_to_json(nw.Sheets["Executive Summary"], {
   header: 1,
 });
 assert.equal(ns[4][1], 29771);
-assert.ok(Math.abs(ns[4][3] - 3082.688) < 0.000001);
+assert.ok(Math.abs(ns[4][3] - 3411.526) < 0.000001);
 
 for (const bu of ["DEHK", "DHK"]) {
   const res = await fetch(
@@ -186,7 +186,7 @@ assert.equal(ar.status,200);const aw=XLSX.read(Buffer.from(await ar.arrayBuffer(
 assert.equal(as.find(r=>r[0]==="Selected total")[1],35788);
 assert.ok(as.some(r=>String(r[0]).includes("pending FY2027 budgets counted as 0")));
 
-for(const [id,sales,ob,total] of [["dhk",18256.216,5307.382,23563.598],["ddc",5136.274,2022.5589,7158.8329],["dcp",260.81449,1.184,261.99849]]){
+for(const [id,sales,ob,total] of [["dhk",18921.838,4682.693,23604.531],["ddc",5247.068,2013.3319,7260.3999],["dcp",260.81449,1.184,261.99849]]){
  const q="?entity="+id+"&salesType=external&scenario=Sales";
  const x=await(await fetch(base+"/api/dashboard"+q,{headers:{cookie:admin}})).json();
  for(const [key,value] of [["sales",sales],["orderbook",ob],["base",total]])assert.ok(Math.abs(x.data.totals[key]-value)<0.000001);

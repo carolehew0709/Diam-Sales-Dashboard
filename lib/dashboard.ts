@@ -4,6 +4,7 @@ import { applyReportingOverrides } from "./reporting-overrides";
 import { entities, regions, matchesRegion } from "./entities";
 import { canView } from "./permissions";
 import { salesTeamState, teamName } from "./sales-teams";
+import { salesGraphicSeries } from "./sales-graphics";
 import type {
   Amount,
   Filters,
@@ -358,6 +359,14 @@ export function getDashboardSnapshot(
   }));
   return {
     filters,
+    graphics: {
+      series: salesGraphicSeries(state, selected.map(r => r.entity), filters),
+      teams: Object.entries(visibleLines.reduce<Record<string, number>>((a, l) => {
+        const name = teamName(l.salesTeam);
+        a[name] = (a[name] ?? 0) + (filters.year === 2027 ? l.total2027 : l.total2026);
+        return a;
+      }, {})).map(([name, value]) => ({ name, value })).sort((a, b) => b.value - a.value),
+    },
     salesTeams,
     entities: allowed,
     regions: regions.filter(region => allowed.some(entity => matchesRegion(entity, region))),

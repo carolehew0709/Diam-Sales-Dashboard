@@ -11,6 +11,8 @@ import { hasReceivablesAccess } from "@/lib/receivables";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
 import { PerformanceChart } from "@/components/performance-chart";
+import { SalesGraphics, BusinessUnitGraphics } from "@/components/sales-graphics";
+import { CustomerGraphics } from "@/components/customer-graphics";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import {
   defaultFilters,
@@ -247,6 +249,7 @@ function DashboardView({
   ].sort((a, b) => a - b);
   const knownMix = (data.external ?? 0) + (data.group ?? 0);
   const externalShare = knownMix ? ((data.external ?? 0) / knownMix) * 100 : 0;
+  const chartContext = `${filters.year} · ${display(filters.region)} · ${filters.bu === "all" ? tr("filters.allBU") : filters.bu} · ${filters.salesType === "all" ? tr("filters.allSales") : display(filters.salesType)} · ${display(filters.scenario)} · ${filters.salesTeam === "all" || !filters.salesTeam ? tr("team.all") : filters.salesTeam} · ${data.weeks.map(w => `W${w}`).join(" / ")} · kEUR · ${[...new Set(data.rows.flatMap(r => r.snapshot ? [r.snapshot.sourceFile] : []))].join("; ")}`;
   return (
     <>
       <section className="executive-head" id="overview">
@@ -606,7 +609,7 @@ function DashboardView({
               </p>
             </div>
           </div>
-          <PerformanceChart rows={t.cumulative} cumulative />
+          <PerformanceChart rows={t.cumulative} cumulative context={chartContext} />
           <div className="panel-foot">
             <span>
               {tr("notes.annualScenario", {
@@ -628,7 +631,7 @@ function DashboardView({
               {data.rows.map((r) => (
                 <section key={r.entity.id}>
                   <h3>{r.entity.code}</h3>
-                  <PerformanceChart rows={r.metrics.cumulative} cumulative />
+                  <PerformanceChart rows={r.metrics.cumulative} cumulative context={`${r.entity.code} · ${chartContext}`} />
                 </section>
               ))}
             </div>
@@ -713,7 +716,7 @@ function DashboardView({
               <p>{tr("chart.phasing")}</p>
             </div>
           </div>
-          <PerformanceChart rows={t.monthly} />
+          <PerformanceChart rows={t.monthly} context={chartContext} />
         </article>
         <article className="panel weekly-panel">
           <div className="panel-heading">
@@ -760,6 +763,7 @@ function DashboardView({
           </div>
         </article>
       </section>
+      <SalesGraphics data={data} />
       <section className="panel commercial-panel">
         <div className="panel-heading">
           <div>
@@ -805,6 +809,7 @@ function DashboardView({
         )}
         <div className="panel-foot">{tr("commercial.note")}</div>
       </section>
+      <CustomerGraphics filters={filters} revision={data.revision} />
       <section className="panel matrix-panel" id="time-matrix">
         <details open>
           <summary>
@@ -920,6 +925,7 @@ function DashboardView({
           />
         )}
       </section>
+      <BusinessUnitGraphics data={data} />
       <section className="quality-panel" id="management-checks">
         <details open>
           <summary>

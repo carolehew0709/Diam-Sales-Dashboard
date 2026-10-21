@@ -2,14 +2,19 @@
 import { useI18n } from "@/components/i18n-provider";
 import type { Amount } from "@/lib/types";
 import { formatK } from "@/lib/dashboard";
+import { useRef } from "react";
+import { ChartDownloads } from "./graphic-card";
 export function PerformanceChart({
   rows,
   cumulative = false,
+  context = "",
 }: {
   rows: { label: string; budget: Amount; base: Amount; scenario: Amount }[];
   cumulative?: boolean;
+  context?: string;
 }) {
   const { tr, display } = useI18n();
+  const svg = useRef<SVGSVGElement>(null);
   const values = rows
     .flatMap((r) => [r.budget, r.base, r.scenario])
     .filter((v): v is number => v !== null);
@@ -39,7 +44,9 @@ export function PerformanceChart({
   return (
     <div className="apac-chart">
       <svg
-        viewBox="0 0 720 260"
+        ref={svg}
+        fontFamily="Arial, 'Microsoft YaHei', sans-serif"
+        viewBox="0 0 720 293"
         role="img"
         aria-label={
           cumulative ? tr("chart.cumulativeA11y") : tr("chart.monthlyA11y")
@@ -118,6 +125,10 @@ export function PerformanceChart({
             {display(r.label)}
           </text>
         ))}
+        {series.map((s, i) => <g key={s.key} transform={`translate(${54 + i * 215},280)`}>
+          <line x1="0" x2="16" y1="-4" y2="-4" stroke={s.color} strokeWidth="3" strokeDasharray={s.dash} />
+          <text x="22" fontSize="10" fill="#706f67">{s.label}</text>
+        </g>)}
       </svg>
       {!values.length && (
         <div className="chart-empty">
@@ -127,14 +138,10 @@ export function PerformanceChart({
         </div>
       )}
       <div className="apac-legend">
-        {series.map((s) => (
-          <span key={s.key}>
-            <i style={{ background: s.color }} />
-            {s.label}
-          </span>
-        ))}
         <small className="chart-note">{tr("chart.gaps")}</small>
       </div>
+      <ChartDownloads svg={svg} title={cumulative ? tr("chart.cumulativeTitle") : tr("chart.monthlyTitle")} context={context}
+        note={`${tr("metric.budget")} · ${tr("metric.base")} · ${tr("metric.scenario")} · ${tr("chart.gaps")}`} />
     </div>
   );
 }

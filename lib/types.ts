@@ -1,4 +1,5 @@
 import type { ReceivableRecord } from "./receivables-types";
+import type { CustomerAnalysis } from "./graphics-types";
 export type Role =
   "superadmin" | "region_admin" | "editor" | "viewer" | "audit_viewer";
 export type Permission = "view" | "edit";
@@ -83,8 +84,9 @@ export type Snapshot = {
   sourceCheck: "Ready" | "Review";
   publishedAt?: string;
 };
-export type Finding = { severity: "error" | "review"; message: string };
+export type Finding = { severity: "error" | "review"; message: string; code?: string; params?: Record<string, string | number> };
 export type ImportBatch = {
+  customerAnalysis?: CustomerAnalysis;
   receivables?: ReceivableRecord[];
   receivablesKind?: "aging" | "payments";
   id: string;
@@ -110,6 +112,7 @@ export type AuditEvent = {
   subject: string;
 };
 export type Store = {
+  customerAnalyses?: CustomerAnalysis[];
   receivables?: ReceivableRecord[];
   receivablesUpdatedAt?: string;
   version: number;

@@ -10,6 +10,7 @@
     "test": "tsx --test tests/*.test.ts && node --test tests/*.test.mjs",
     "extract:source": "tsx scripts/extract-apac-source.ts",
     "extract:receivables": "tsx scripts/extract-receivables.ts",
+    "extract:graphics": "tsx scripts/extract-graphics.ts",
     "typecheck": "tsc --noEmit",
     "setup:local": "node scripts/setup-local.mjs"
   },

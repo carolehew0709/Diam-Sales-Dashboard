@@ -5339,3 +5339,54 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 
 .ar-detail .table-wrap { max-height: 600px; overflow: auto; }
 .ar-detail .bu-table thead th { position: sticky; top: 0; z-index: 1; background: #faf8f3; }
+
+/* Graphics extend the current dashboard; existing panels and anchors stay intact. */
+.graphics-section { margin: 28px 0; min-width: 0; }
+.graphics-section-heading { display: flex; align-items: center; justify-content: space-between; gap: 18px; margin: 0 0 18px; }
+.graphics-section-heading h2 { font-size: 22px; margin: 8px 0; font-weight: 600; letter-spacing: -.025em; }
+.graphics-period { padding: 9px 13px; border: 1px solid var(--line); border-radius: 6px; color: var(--gold-strong); background: var(--panel); font-size: 11px; white-space: nowrap; }
+.graphics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
+.graphic-card { min-width: 0; padding: 24px; overflow: hidden; }
+.graphic-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
+.graphic-heading h3 { font-size: 16px; font-weight: 600; margin: 0; line-height: 1.5; }
+.graphic-downloads { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 5px; flex-shrink: 0; }
+.graphic-downloads button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 5px; font: inherit; font-size: 10px; padding: 6px 8px; cursor: pointer; }
+.graphic-downloads button:hover { color: var(--gold-strong); border-color: var(--gold); background: var(--gold-soft); }
+.graphic-downloads button:focus-visible, .graphic-data summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.graphic-downloads button:disabled { opacity: .5; cursor: wait; }
+.graphic-downloads [role=alert] { color: #a34f3d; font-size: 11px; }
+.graphic-context { margin: 10px 0 16px; color: var(--muted); font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
+.graphic-plot { width: 100%; overflow-x: auto; }
+.graphic-plot > svg { display: block; width: 100%; height: auto; min-width: 430px; }
+.graphic-note { color: var(--muted); font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; margin: 14px 0 0; }
+.graphic-data { border-top: 1px solid var(--line-soft); margin-top: 16px; padding-top: 12px; }
+.graphic-data summary, .graphics-entity-details > summary { color: var(--gold-strong); cursor: pointer; font-size: 12px; line-height: 1.7; }
+.graphic-data .bu-table { margin-top: 12px; font-size: 11px; }
+.graphic-data .table-wrap { max-height: 380px; overflow: auto; }
+.graphic-data td:last-child { max-width: 320px; white-space: normal; overflow-wrap: anywhere; }
+.graphics-entity-details { margin-top: 18px; border: 1px solid var(--line); border-radius: 12px; background: var(--panel-soft); padding: 18px; }
+.graphics-entity-details[open] > summary { margin-bottom: 18px; }
+.graphics-limitation { background: var(--gold-soft); border-left: 3px solid var(--gold); border-radius: 4px; padding: 13px 16px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.graphics-month-select { display: flex; align-items: center; gap: 10px; color: var(--muted); font-size: 12px; }
+.graphics-month-select select { color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 6px; padding: 9px 12px; font: inherit; }
+.graphic-unavailable { padding: 24px; color: var(--muted); font-size: 12px; line-height: 1.8; }
+.graphic-wide { grid-column: 1 / -1; }
+.graphic-wide .graphic-plot { max-width: 1050px; margin: 0 auto; }
+.graphics-customer-kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 16px; margin: 18px 0; }
+.graphics-customer-kpis > div { background: var(--panel); border: 1px solid var(--line); border-radius: 10px; padding: 19px; display: grid; gap: 13px; }
+.graphics-customer-kpis span { font-size: 11px; color: var(--muted); line-height: 1.6; }
+.graphics-customer-kpis strong { font-size: 25px; font-weight: 600; }
+.graphics-customer-kpis small { font-size: 11px; color: var(--muted); }
+.graphics-customer-kpis .graphics-month-value { font-size: 18px; }
+.bu-graphics { margin: 20px 0; }
+.apac-chart > .graphic-downloads { margin-top: 12px; }
+.graphic-import-review { margin: 16px 0; padding: 16px; background: var(--panel-soft); border: 1px solid var(--line); border-radius: 8px; font-size: 12px; line-height: 1.8; overflow-x: auto; }
+@media (max-width: 1000px) { .graphics-grid { grid-template-columns: 1fr; } .graphic-wide { grid-column: auto; } }
+@media (max-width: 640px) {
+  .graphics-section-heading { align-items: flex-start; flex-wrap: wrap; }
+  .graphic-card { padding: 18px; }
+  .graphic-heading { flex-wrap: wrap; }
+  .graphics-customer-kpis { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .graphics-customer-kpis > div { padding: 14px; }
+  .graphics-entity-details { padding: 12px; }
+}

@@ -6,6 +6,7 @@ import { entities } from "@/lib/entities";
 import { canEdit, canPublish } from "@/lib/permissions";
 import { formatK, months } from "@/lib/dashboard";
 import type { ImportBatch, User } from "@/lib/types";
+import type { MessageKey } from "@/lib/i18n";
 const emptyLine = () => ({
   product: "",
   customer: "",
@@ -114,6 +115,7 @@ export function ImportPortal({
           <p className="panel-kicker">{tr("import.excelStep")}</p>
           <h2>{tr("import.upload")}</h2>
           <p className="muted">{tr("import.workbookNote")}</p>
+          <p className="muted">{tr("graphics.importNote")}</p>
           <label className="upload-zone">
             {tr("import.choose")}
             <input
@@ -329,15 +331,21 @@ export function ImportPortal({
         <section className="panel review-panel">
           <p className="panel-kicker">{tr("import.reviewStep")}</p>
           <h2>{review.fileName}</h2>
-          <p>
+          {!review.customerAnalysis && <p>
             {tr("import.summary", {
               snapshots: review.snapshots.length,
               lines: review.lines.length,
               status: display(review.status),
             })}
-          </p>
+          </p>}
           {review.receivables?.length ? <p>{tr("ar.reviewRows", { count: review.receivables.length })} · {tr("ar.reviewCurrency")}</p> : null}
-          <div className="table-wrap">
+          {review.customerAnalysis && <div className="graphic-import-review">
+            <p><strong>{tr("graphics.monthlySource", { month: review.customerAnalysis.month })}</strong> · {review.customerAnalysis.sourceLabel} · {tr("regions.China")} (DEHK + DCP + DDC) · kEUR</p>
+            <table className="bu-table"><thead><tr><th>{tr("common.customer")}</th><th className="numeric">{review.customerAnalysis.priorYear}</th><th className="numeric">{review.customerAnalysis.year}</th><th>{tr("common.source")}</th></tr></thead>
+              <tbody>{review.customerAnalysis.customers.map(c => <tr key={c.name}><td>{c.name}</td><td className="numeric">{formatK(c.prior)}</td><td className="numeric">{formatK(c.current)}</td><td>{review.customerAnalysis!.customerSheet} · {c.sourceRow}</td></tr>)}</tbody></table>
+            <p>{tr("graphics.customerRule")}</p>
+          </div>}
+          {!review.customerAnalysis && <div className="table-wrap">
             <table className="bu-table">
               <thead>
                 {review.receivables?.length ? <tr>
@@ -370,7 +378,7 @@ export function ImportPortal({
                 ))}
               </tbody>
             </table>
-          </div>
+          </div>}
           <ul className="findings-list">
             {review.findings.map((f, i) => (
               <li key={i}>
@@ -380,7 +388,7 @@ export function ImportPortal({
                     : tr("common.review")}
                   :
                 </b>{" "}
-                {display(f.message)}
+                {f.code ? tr(f.code as MessageKey, f.params) : display(f.message)}
               </li>
             ))}
           </ul>

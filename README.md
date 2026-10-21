@@ -37,6 +37,8 @@ Local development persists accounts, review batches, published records and audit
 
 See [architecture](docs/architecture.md), [source contract](docs/project-context.md), and [deployment](docs/deployment.md).
 
+Weekly sales graphics and the separate August 2026 customer analysis from the five-sheet Graphics workbook extend the current dashboard. Each chart supports local PNG/SVG downloads. See [graphics mapping, monthly update contract and source gaps](docs/graphics.md).
+
 ## Reporting Region and BU mapping
 
 Region options are APAC (Total), China, Singapore, India and Japan. APAC includes all six BUs. China includes DEHK, DCP and DDC; Singapore includes DSI; India includes DDI; Japan includes DDJ. The BU filter and Gap by BU use these entity codes. China remains the default reporting region and its permitted totals/detail remain visible across selections. Changing Region resets BU and Entity selection. The account authorization boundary remains APAC; reporting-country selection does not grant additional account access. Empty source values remain blank.

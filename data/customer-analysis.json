@@ -1,0 +1,121 @@
+{
+  "source": "Graphics.xlsx",
+  "analyses": [
+    {
+      "month": "2026-08",
+      "year": 2026,
+      "priorYear": 2025,
+      "entityIds": [
+        "dhk",
+        "dcp",
+        "ddc"
+      ],
+      "sourceFile": "Graphics.xlsx",
+      "sourceLabel": "Tiger Plan Aug data",
+      "customerSheet": "Customer Contribution & Focus",
+      "breakdownSheet": "Entity & Business Unit Breakdow",
+      "breakdown": [
+        {
+          "name": "Key Customer",
+          "sourceRow": 5,
+          "values": [
+            15898,
+            11873,
+            15267,
+            11923
+          ]
+        },
+        {
+          "name": "Other Customers",
+          "sourceRow": 6,
+          "values": [
+            4125,
+            3552,
+            4777,
+            3551
+          ]
+        },
+        {
+          "name": "Intergroup D3",
+          "sourceRow": 8,
+          "values": [
+            6327,
+            4037,
+            4316,
+            5356
+          ]
+        },
+        {
+          "name": "Intergroup FR",
+          "sourceRow": 9,
+          "values": [
+            9846,
+            5774,
+            7852,
+            5424
+          ]
+        },
+        {
+          "name": "Intergroup Other Customers",
+          "sourceRow": 10,
+          "values": [
+            5311,
+            4384,
+            995,
+            2928
+          ]
+        }
+      ],
+      "customers": [
+        {
+          "name": "Sephora",
+          "prior": 2329,
+          "current": 2875,
+          "sourceGrowth": 0.23443537999141262,
+          "status": "High Growth",
+          "sourceRow": 5
+        },
+        {
+          "name": "Estee Lauder",
+          "prior": 5121,
+          "current": 4117,
+          "sourceGrowth": -0.1960554579183753,
+          "status": "Under Review",
+          "sourceRow": 6
+        },
+        {
+          "name": "L'Oreal",
+          "prior": 1928,
+          "current": 1426,
+          "sourceGrowth": -0.2603734439834025,
+          "status": "Under Review",
+          "sourceRow": 7
+        },
+        {
+          "name": "LVMH",
+          "prior": 983,
+          "current": 943,
+          "sourceGrowth": -0.04069175991861648,
+          "status": "Stable",
+          "sourceRow": 8
+        },
+        {
+          "name": "Coty",
+          "prior": 878,
+          "current": 853,
+          "sourceGrowth": -0.02847380410022779,
+          "status": "Stable",
+          "sourceRow": 9
+        },
+        {
+          "name": "Fenty",
+          "prior": 634,
+          "current": 1709,
+          "sourceGrowth": 1.695583596214511,
+          "status": "Outperforming",
+          "sourceRow": 10
+        }
+      ]
+    }
+  ]
+}

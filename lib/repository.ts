@@ -4,8 +4,14 @@ import { entities } from "./entities";
 import { canEdit, canPublish } from "./permissions";
 import { ApiError } from "./auth";
 import type { ImportBatch, User } from "./types";
+import customerSeed from "@/data/customer-analysis.json";
+import type { CustomerAnalysis } from "./graphics-types";
+const customerAnalyses = customerSeed.analyses as CustomerAnalysis[];
 export const repository = {
-  read: () => storage.read(),
+  read: async () => {
+    const state = await storage.read();
+    return { ...state, customerAnalyses: state.customerAnalyses ?? customerAnalyses };
+  },
   createImportBatch: async (batch: ImportBatch, user: User) =>
     storage.transaction((state) => {
       if (
@@ -46,7 +52,7 @@ export const repository = {
       if (batch.status === "published") return batch;
       if (
         batch.status !== "review" ||
-        (!batch.snapshots.length && !batch.receivables?.length) ||
+        (!batch.snapshots.length && !batch.receivables?.length && !batch.customerAnalysis) ||
         batch.findings.some((f) => f.severity === "error")
       )
         throw new ApiError(409, "Resolve validation errors before publishing.");
@@ -59,6 +65,10 @@ export const repository = {
         batch.snapshots.map((s) => `${s.entityId}:${s.year}:${s.week}`),
       );
       const now = new Date().toISOString();
+      if (batch.customerAnalysis) {
+        state.customerAnalyses = (state.customerAnalyses ?? customerAnalyses).filter(r => r.month !== batch.customerAnalysis!.month)
+          .concat(batch.customerAnalysis);
+      }
       if (batch.receivables?.length) {
         const category = batch.receivablesKind === "aging" ? "aging" : "payments";
         state.receivables = (state.receivables ?? []).filter(r =>

@@ -169,6 +169,8 @@
   "matrix.frequency": "Frequency",
   "matrix.rows": "Rows",
   "matrix.fy": "FY selected",
+  "matrix.fyMetric": "FY {metric}",
+  "matrix.monthNote": "Uses the same monthly values as the monthly sales performance chart, including committed OB allocated to each month. The current month is partial. Annual totals retain YTD corrections without inventing a monthly allocation. Missing source values stay blank; weekly cumulative snapshots are never added together.",
   "matrix.note": "Blank cells mean unavailable source detail. Weekly snapshots are never added together.",
   "checks.controls": "Executive controls",
   "checks.items": "items to review",

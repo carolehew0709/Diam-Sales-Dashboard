@@ -15,6 +15,7 @@ import { SalesGraphics, BusinessUnitGraphics } from "@/components/sales-graphics
 import { CustomerGraphics } from "@/components/customer-graphics";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { performanceChartContext } from "@/lib/chart-workbook-context";
+import { performanceChartSeries } from "@/lib/performance-chart";
 import {
   defaultFilters,
   formatK,
@@ -245,6 +246,9 @@ function DashboardView({
     matrixLevel === "entity"
       ? data.rows.map((r) => ({ name: r.entity.code, metrics: r.metrics }))
       : data.buGroups;
+  const monthlyVisibility = performanceChartSeries(t.monthly);
+  const monthlyMatrixKey = monthlyVisibility.keys.includes("scenario") ? "scenario" : "base";
+  const monthlyMatrixLabel = tr(monthlyMatrixKey === "scenario" ? "chart.salesOBProspect" : "chart.salesOB");
   const weeks = [
     ...new Set(data.history.flatMap((h) => h.records.map((r) => r.week))),
   ].sort((a, b) => a - b);
@@ -357,7 +361,7 @@ function DashboardView({
           )}
         </div>
       </section>
-      <section className="filter-bar" ref={filterBar} aria-label={tr("filters.global")}>
+      <section className="filter-bar sales-filter-bar" ref={filterBar} aria-label={tr("filters.global")}>
         <div className="filter-field">
           <label htmlFor="region">{tr("filters.region")}</label>
           <select
@@ -842,7 +846,7 @@ function DashboardView({
                 onChange={setMatrixLevel}
               />
               <p>
-                {filters.year} · {display(filters.scenario)}
+                {filters.year} · {frequency === "month" ? monthlyMatrixLabel : display(filters.scenario)}
               </p>
             </div>
             <div className="matrix-scroll">
@@ -858,7 +862,7 @@ function DashboardView({
                         {display(m)}
                       </th>
                     ))}
-                    <th className="numeric">{tr("matrix.fy")}</th>
+                    <th className="numeric">{frequency === "month" ? tr("matrix.fyMetric", { metric: monthlyMatrixLabel }) : tr("matrix.fy")}</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -868,7 +872,7 @@ function DashboardView({
                       {frequency === "month"
                         ? r.metrics.monthly.map((m) => (
                             <td className="numeric" key={m.label}>
-                              {formatK(m.scenario)}
+                              {formatK(m[monthlyMatrixKey])}
                             </td>
                           ))
                         : weeks.map((w) => {
@@ -892,13 +896,18 @@ function DashboardView({
                               </td>
                             );
                           })}
-                      <td className="numeric">{formatK(r.metrics.scenario)}</td>
+                      <td className="numeric">{formatK(frequency === "month" ? r.metrics[monthlyMatrixKey] : r.metrics.scenario)}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
-            <p className="muted">{tr("matrix.note")}</p>
+            <p className="muted">
+              {frequency === "month" ? <>
+                {monthlyVisibility.scenario === "unavailable" && monthlyVisibility.keys.length > 0 && <>{tr("chart.scenarioUnavailable")} </>}
+                {tr("matrix.monthNote")}
+              </> : tr("matrix.note")}
+            </p>
           </div>
         </details>
       </section>

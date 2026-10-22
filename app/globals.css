@@ -5210,6 +5210,22 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
   .filter-bar .filter-field { flex: 0 0 180px; min-width: 180px; }
   .filter-bar .filter-field:has(.segmented) { flex-basis: 240px; min-width: 240px; }
 }
+.sales-filter-bar {
+  display: grid;
+  grid-template-columns: minmax(110px,.8fr) minmax(150px,1.1fr) minmax(130px,1fr) minmax(130px,.85fr) minmax(220px,1.35fr) minmax(195px,1.25fr);
+  overflow: visible;
+}
+.sales-filter-bar .filter-field,
+.sales-filter-bar .filter-field:has(.segmented) { min-width: 0; }
+.sales-filter-bar .segmented button { padding-inline: 6px; }
+@media (max-width: 1100px) {
+  .sales-filter-bar { grid-template-columns: repeat(3,minmax(0,1fr)); }
+}
+@media (max-width: 640px) {
+  .sales-filter-bar { position: static; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .sales-filter-bar .segmented { height: auto; min-height: 40px; }
+  .sales-filter-bar .segmented button { min-height: 32px; white-space: normal; overflow-wrap: anywhere; padding: 3px; font-size: 10px; }
+}
 .kpi-value-row { display: flex; flex-wrap: wrap; align-items: baseline; gap: 8px 12px; margin-top: 20px; }
 .kpi-value-row > strong { font-family: var(--font-display); font-size: 32px; font-weight: 600; letter-spacing: 0; overflow-wrap: anywhere; min-width: 0; }
 .kpi-period { font-size: 12px; line-height: 1.5; color: var(--muted); white-space: nowrap; }

@@ -27,25 +27,19 @@ export function PerformanceChart({
   const svg = useRef<SVGSVGElement>(null);
   const root = useRef<HTMLDivElement>(null);
   const tooltip = useChartTooltip(svg, `${locale}:${context}:${JSON.stringify(rows)}`);
-  const chartTable = useMemo(() => ({ columns: [{ label: tr("common.month") }, { label: `${tr("metric.budget")} (kEUR)` }, { label: `${tr("metric.base")} (kEUR)` }, { label: `${tr("metric.scenario")} (kEUR)` }], rows: rows.map(r => [display(r.label), r.budget, r.base, r.scenario]) }), [rows, locale, tr, display]);
+  const chartTable = useMemo(() => ({ columns: [{ label: tr("common.month") }, { label: `${tr("chart.salesOB")} (kEUR)` }, { label: `${tr("metric.scenario")} (kEUR)` }], rows: rows.map(r => [display(r.label), r.base, r.scenario]) }), [rows, locale, tr, display]);
   useWorkbookGroup(root, exportOnly ? null : () => <PerformanceChart rows={rows} cumulative={cumulative} context={context} name={name} workbookContext={workbookContext} exportOnly />);
   const values = rows
-    .flatMap((r) => [r.budget, r.base, r.scenario])
+    .flatMap((r) => [r.base, r.scenario])
     .filter((v): v is number => v !== null);
   const max = Math.max(...values, 1) * 1.12;
   const x = (i: number) => 54 + (i * 640) / Math.max(rows.length - 1, 1),
     y = (v: number) => 224 - (v / max) * 194;
   const series = [
     {
-      key: "budget" as const,
-      color: "#9d9a91",
-      label: tr("metric.budget"),
-      dash: "6 5",
-    },
-    {
       key: "base" as const,
       color: "#171813",
-      label: tr("metric.base"),
+      label: tr("chart.salesOB"),
       dash: "",
     },
     {
@@ -148,8 +142,6 @@ export function PerformanceChart({
       {!values.length && (
         <div className="chart-empty">
           {tr("chart.empty")}
-          <br />
-          {tr("chart.annualAvailable")}
         </div>
       )}
       <div className="apac-legend">
@@ -157,7 +149,7 @@ export function PerformanceChart({
       </div>
       <ChartDownloads svg={svg} title={cumulative ? tr("chart.cumulativeTitle") : tr("chart.monthlyTitle")} context={exportOnly && workbookContext ? workbookContext(locale) : context} sheetName={name ? `${name} · ${tr("chart.cumulativeTitle")}` : undefined}
         exportTable={chartTable}
-        note={`${tr("metric.budget")} · ${tr("metric.base")} · ${tr("metric.scenario")} · ${tr("chart.gaps")}`} />
+        note={`${tr("chart.salesOB")} · ${tr("metric.scenario")} · ${tr("chart.gaps")}`} />
     </div>
   );
 }

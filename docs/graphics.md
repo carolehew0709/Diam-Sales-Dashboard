@@ -57,7 +57,7 @@ The export-language selector supports English and Chinese independently of the p
 | Customer allocation by BU, sales type or sales team | Aggregate monthly customer graphics are unavailable under incompatible filters; no proportional allocation |
 | Singapore/Japan sales sources; India customer analysis | Existing missing values remain blank; China customers never masquerade as APAC-wide or India data |
 | Team invoiced revenue, approved team budgets and Prospect | Contribution explicitly reports source OB only |
-| Approved monthly budget allocations | Existing monthly budget series remain blank; annual budgets are not spread over months |
+| Approved monthly budget allocations | Monthly and cumulative performance charts omit budget from titles, legends, tooltips and chart exports; annual budgets remain in annual KPIs and budget graphics and are not spread over months |
 | DCP corrected YTD monthly allocation | No fabricated October monthly amount |
 
 Validation covers source reconciliation, period handling, filter/RBAC boundaries, weekly reporting regressions, local image downloads, bilingual rendering and production build. PostgreSQL retains its existing validation limitations; no new database provisioning is implied.

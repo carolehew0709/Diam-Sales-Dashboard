@@ -14,6 +14,7 @@ import { PerformanceChart } from "@/components/performance-chart";
 import { SalesGraphics, BusinessUnitGraphics } from "@/components/sales-graphics";
 import { CustomerGraphics } from "@/components/customer-graphics";
 import { LanguageSwitcher } from "@/components/language-switcher";
+import { performanceChartContext } from "@/lib/chart-workbook-context";
 import {
   defaultFilters,
   formatK,
@@ -249,7 +250,7 @@ function DashboardView({
   ].sort((a, b) => a - b);
   const knownMix = (data.external ?? 0) + (data.group ?? 0);
   const externalShare = knownMix ? ((data.external ?? 0) / knownMix) * 100 : 0;
-  const chartContext = `${filters.year} · ${display(filters.region)} · ${filters.bu === "all" ? tr("filters.allBU") : filters.bu} · ${filters.salesType === "all" ? tr("filters.allSales") : display(filters.salesType)} · ${display(filters.scenario)} · ${filters.salesTeam === "all" || !filters.salesTeam ? tr("team.all") : filters.salesTeam} · ${data.weeks.map(w => `W${w}`).join(" / ")} · kEUR · ${[...new Set(data.rows.flatMap(r => r.snapshot ? [r.snapshot.sourceFile] : []))].join("; ")}`;
+  const chartContext = performanceChartContext(data, locale);
   return (
     <>
       <section className="executive-head" id="overview">
@@ -609,7 +610,7 @@ function DashboardView({
               </p>
             </div>
           </div>
-          <PerformanceChart rows={t.cumulative} cumulative context={chartContext} />
+          <PerformanceChart rows={t.cumulative} cumulative context={chartContext} workbookContext={language => performanceChartContext(data, language)} />
           <div className="panel-foot">
             <span>
               {tr("notes.annualScenario", {
@@ -631,7 +632,7 @@ function DashboardView({
               {data.rows.map((r) => (
                 <section key={r.entity.id}>
                   <h3>{r.entity.code}</h3>
-                  <PerformanceChart rows={r.metrics.cumulative} cumulative context={`${r.entity.code} · ${chartContext}`} name={`${r.entity.code} · ${tr("chart.cumulativeTitle")}`} />
+                  <PerformanceChart rows={r.metrics.cumulative} cumulative context={`${r.entity.code} · ${chartContext}`} name={r.entity.code} workbookContext={language => `${r.entity.code} · ${performanceChartContext(data, language)}`} />
                 </section>
               ))}
             </div>
@@ -716,7 +717,7 @@ function DashboardView({
               <p>{tr("chart.phasing")}</p>
             </div>
           </div>
-          <PerformanceChart rows={t.monthly} context={chartContext} />
+          <PerformanceChart rows={t.monthly} context={chartContext} workbookContext={language => performanceChartContext(data, language)} />
         </article>
         <article className="panel weekly-panel">
           <div className="panel-heading">

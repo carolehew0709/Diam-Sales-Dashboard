@@ -3,6 +3,8 @@ import assert from "node:assert/strict";
 import ExcelJS from "exceljs";
 import { chartSheetName, createChartWorkbook } from "../lib/chart-workbook";
 import type { ChartWorkbookImage } from "../lib/chart-workbook-types";
+import { performanceChartContext } from "../lib/chart-workbook-context";
+import type { Dashboard } from "../lib/dashboard";
 
 const pixel =
   "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+aZFEAAAAASUVORK5CYII=";
@@ -82,6 +84,7 @@ test("Excel tab names stay unique after truncation and case folding", () => {
     a.length <= 31 && b.length <= 31 && a.toLowerCase() !== b.toLowerCase(),
   );
   assert.equal(chartSheetName("''", used), "Chart");
+  assert.equal(chartSheetName("a".repeat(30) + " tail", used), "a".repeat(30));
 });
 
 test("empty exports and nonfinite chart numbers fail explicitly", async () => {
@@ -91,4 +94,34 @@ test("empty exports and nonfinite chart numbers fail explicitly", async () => {
       { ...sample, table: { ...sample.table, rows: [["Bad", NaN, null]] } },
     ]),
   );
+});
+
+test("export context translates filters while preserving source evidence; workbook metadata follows chosen language", async () => {
+  const data = {
+    filters: {
+      year: 2026,
+      region: "China",
+      bu: "all",
+      salesType: "all",
+      salesTeam: "all",
+      scenario: "Sales + Prospect",
+    },
+    weeks: [42],
+    rows: [{ snapshot: { sourceFile: "原始来源.xlsx" } }],
+  } as Dashboard;
+  const english = performanceChartContext(data, "en"),
+    chinese = performanceChartContext(data, "zh-CN");
+  assert.ok(english.includes("China") && english.includes("All sales"));
+  assert.ok(chinese.includes("中国") && chinese.includes("全部销售"));
+  assert.ok(
+    english.includes("W42") &&
+      english.includes("原始来源.xlsx") &&
+      chinese.includes("原始来源.xlsx"),
+  );
+  const bytes = await createChartWorkbook([sample], "zh-CN");
+  const book = new ExcelJS.Workbook();
+  await book.xlsx.load(bytes);
+  assert.equal(book.title, "DIAM 亚太区图表与数据");
+  assert.ok(book.description.includes("数据表在上"));
+  assert.equal(book.worksheets[0].getCell("B7").value, 260.81449);
 });

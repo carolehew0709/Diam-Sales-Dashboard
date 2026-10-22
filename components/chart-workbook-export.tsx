@@ -5,9 +5,13 @@ import { useI18n } from "./i18n-provider";
 import { collectWorkbookCharts } from "@/lib/chart-workbook-registry";
 import { chartPng, saveChartFile } from "@/lib/chart-export";
 import type { ChartWorkbookImage } from "@/lib/chart-workbook-types";
+import { collectWorkbookGroups } from "@/lib/chart-workbook-groups";
+import { isLocale, type Locale } from "@/lib/i18n";
 
 export function ChartWorkbookExport() {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
+  const [chosenLanguage, setChosenLanguage] = useState<Locale>();
+  const language = chosenLanguage ?? locale;
   const button = useRef<HTMLButtonElement>(null);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState("");
@@ -26,15 +30,16 @@ export function ChartWorkbookExport() {
       setError(tr("graphics.workbookSourceError"));
       return;
     }
-    const charts = collectWorkbookCharts(root);
-    if (!charts.length) {
+    const sourceCharts = collectWorkbookCharts(root);
+    const groups = collectWorkbookGroups(root);
+    if (!sourceCharts.length || !groups.length) {
       setError(tr("graphics.workbookError"));
       return;
     }
     const wasCurrent = () =>
       root.isConnected &&
       root.getAttribute("aria-busy") !== "true" &&
-      charts.every(
+      sourceCharts.every(
         (c) =>
           c.svg.isConnected &&
           collectWorkbookCharts(root).some(
@@ -43,10 +48,20 @@ export function ChartWorkbookExport() {
       );
     setBusy(true);
     setError("");
-    setProgress({ done: 0, total: charts.length });
+    setProgress({ done: 0, total: sourceCharts.length });
+    let dispose: (() => void) | undefined;
     try {
       // Spreadsheet code is loaded only when requested; dashboard startup stays light.
-      const writer = await import("@/lib/chart-workbook");
+      const [writer, renderer] = await Promise.all([
+        import("@/lib/chart-workbook"),
+        import("./chart-workbook-stage"),
+      ]);
+      if (!wasCurrent()) throw new Error("Filters changed");
+      const prepared = await renderer.prepareWorkbookCharts(groups, language);
+      dispose = prepared.dispose;
+      const charts = prepared.charts;
+      if (charts.length !== sourceCharts.length)
+        throw new Error("Incomplete localized charts");
       const sheets: ChartWorkbookImage[] = [];
       for (const { svg, sheet } of charts) {
         if (!wasCurrent()) throw new Error("Filters changed");
@@ -70,22 +85,38 @@ export function ChartWorkbookExport() {
         });
         setProgress({ done: sheets.length, total: charts.length });
       }
-      const bytes = await writer.createChartWorkbook(sheets);
+      const bytes = await writer.createChartWorkbook(sheets, language);
       if (!wasCurrent()) throw new Error("Filters changed");
       saveChartFile(
         new Blob([new Uint8Array(bytes)], {
           type: "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
         }),
-        `DIAM-Charts-${new Date().toISOString().slice(0, 10)}.xlsx`,
+        `DIAM-Charts-${new Date().toISOString().slice(0, 10)}-${language}.xlsx`,
       );
     } catch {
       setError(tr("graphics.workbookError"));
     } finally {
+      dispose?.();
       setBusy(false);
     }
   };
   return (
     <div className="chart-workbook-export">
+      <label className="chart-workbook-language">
+        {tr("graphics.workbookLanguage")}
+        <select
+          aria-label={tr("graphics.workbookLanguage")}
+          value={language}
+          disabled={busy}
+          onChange={(event) => {
+            if (isLocale(event.target.value))
+              setChosenLanguage(event.target.value);
+          }}
+        >
+          <option value="en">{tr("graphics.workbookEnglish")}</option>
+          <option value="zh-CN">{tr("graphics.workbookChinese")}</option>
+        </select>
+      </label>
       <button
         ref={button}
         type="button"

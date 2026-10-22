@@ -12,9 +12,13 @@ import {
 import { formatK, months, percent, type Dashboard } from "@/lib/dashboard";
 import { ChartWorkbookExport } from "./chart-workbook-export";
 import type { ChartTable } from "@/lib/chart-workbook-types";
+import { useRef } from "react";
+import { useWorkbookGroup } from "./use-workbook-group";
 
-export function SalesGraphics({ data }: { data: Dashboard }) {
+export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; exportOnly?: boolean }) {
   const { tr, display } = useI18n();
+  const root = useRef<HTMLElement>(null);
+  useWorkbookGroup(root, exportOnly ? null : () => <SalesGraphics data={data} exportOnly />);
   const t = data.totals;
   const week =
     data.weeks.map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
@@ -163,19 +167,20 @@ export function SalesGraphics({ data }: { data: Dashboard }) {
   }));
   return (
     <section
+      ref={root}
       className="graphics-section"
-      aria-labelledby="sales-graphics-title"
+      aria-labelledby={exportOnly ? undefined : "sales-graphics-title"}
     >
       <div className="graphics-section-heading">
         <div>
           <p className="panel-kicker">{tr("graphics.weeklyKicker")}</p>
-          <h2 id="sales-graphics-title">{tr("graphics.salesTitle")}</h2>
+          <h2 id={exportOnly ? undefined : "sales-graphics-title"}>{tr("graphics.salesTitle")}</h2>
         </div>
         <span className="graphics-period">
           {tr("graphics.weekly", { week })}
         </span>
       </div>
-      <ChartWorkbookExport />
+      {!exportOnly && <ChartWorkbookExport />}
       <div className="graphics-grid">
         <GraphicCard
           title={tr("graphics.waterfall")}
@@ -354,7 +359,9 @@ export function SalesGraphics({ data }: { data: Dashboard }) {
   );
 }
 
-export function BusinessUnitGraphics({ data }: { data: Dashboard }) {
+export function BusinessUnitGraphics({ data, exportOnly = false }: { data: Dashboard; exportOnly?: boolean }) {
+  const root = useRef<HTMLDivElement>(null);
+  useWorkbookGroup(root, exportOnly ? null : () => <BusinessUnitGraphics data={data} exportOnly />);
   const { tr, display } = useI18n();
   const rows = data.rows;
   const context = `${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · ${data.weeks.map((w) => `W${w}`).join(" / ")} · kEUR`;
@@ -399,7 +406,7 @@ export function BusinessUnitGraphics({ data }: { data: Dashboard }) {
     rows: rows.map(r => [r.entity.code, r.metrics.budget, r.metrics.base, r.metrics.coverage, r.snapshot ? `W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}` : null]),
   };
   return (
-    <div className="graphics-grid bu-graphics">
+    <div className="graphics-grid bu-graphics" ref={root}>
       <GraphicCard
         title={tr("graphics.buContribution")}
         context={context}

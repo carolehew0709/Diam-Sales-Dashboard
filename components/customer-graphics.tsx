@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import { DonutPlot, Legend, graphicColors } from "./graphic-plots";
@@ -9,6 +9,7 @@ import { formatK } from "@/lib/dashboard";
 import type { MessageKey } from "@/lib/i18n";
 import { customerGrowth, customerMetrics } from "@/lib/customer-metrics";
 import type { ChartTable } from "@/lib/chart-workbook-types";
+import { useWorkbookGroup } from "./use-workbook-group";
 
 type View = ReturnType<typeof customerAnalysisView>;
 const groupKeys: Record<string, MessageKey> = {
@@ -32,7 +33,6 @@ export function CustomerGraphics({
   filters: Filters;
   revision: number;
 }) {
-  const { tr, locale } = useI18n();
   const [month, setMonth] = useState("");
   const selectedMonth = month.startsWith(`${filters.year}-`) ? month : "";
   const query = new URLSearchParams({
@@ -66,6 +66,18 @@ export function CustomerGraphics({
     response?.query === query && response.revision === revision
       ? response
       : undefined;
+  return <CustomerGraphicsView current={current} selectedMonth={selectedMonth} setMonth={setMonth} />;
+}
+
+function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = false }: {
+  current?: { data?: View; error?: boolean };
+  selectedMonth: string;
+  setMonth: (month: string) => void;
+  exportOnly?: boolean;
+}) {
+  const { tr, locale } = useI18n();
+  const root = useRef<HTMLElement>(null);
+  useWorkbookGroup(root, exportOnly ? null : () => <CustomerGraphicsView current={current} selectedMonth={selectedMonth} setMonth={() => {}} exportOnly />);
   const view = current?.data,
     analysis = view?.analysis;
   const monthLabel = (m: string) =>
@@ -164,14 +176,15 @@ export function CustomerGraphics({
   } : null;
   return (
     <section
+      ref={root}
       className="graphics-section customer-graphics"
       data-customer-status={!current ? "loading" : current.error ? "error" : "ready"}
-      aria-labelledby="customer-graphics-title"
+      aria-labelledby={exportOnly ? undefined : "customer-graphics-title"}
     >
       <div className="graphics-section-heading">
         <div>
           <p className="panel-kicker">{tr("graphics.monthlyKicker")}</p>
-          <h2 id="customer-graphics-title">{tr("graphics.customerTitle")}</h2>
+          <h2 id={exportOnly ? undefined : "customer-graphics-title"}>{tr("graphics.customerTitle")}</h2>
         </div>
         {!!view?.months.length && (
           <label className="graphics-month-select">

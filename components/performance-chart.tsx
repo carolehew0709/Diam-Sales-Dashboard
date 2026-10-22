@@ -4,19 +4,27 @@ import type { Amount } from "@/lib/types";
 import { formatK } from "@/lib/dashboard";
 import { useRef } from "react";
 import { ChartDownloads } from "./graphic-card";
+import { useWorkbookGroup } from "./use-workbook-group";
+import type { Locale } from "@/lib/i18n";
 export function PerformanceChart({
   rows,
   cumulative = false,
   context = "",
   name,
+  exportOnly = false,
+  workbookContext,
 }: {
   rows: { label: string; budget: Amount; base: Amount; scenario: Amount }[];
   cumulative?: boolean;
   context?: string;
   name?: string;
+  exportOnly?: boolean;
+  workbookContext?: (locale: Locale) => string;
 }) {
-  const { tr, display } = useI18n();
+  const { tr, display, locale } = useI18n();
   const svg = useRef<SVGSVGElement>(null);
+  const root = useRef<HTMLDivElement>(null);
+  useWorkbookGroup(root, exportOnly ? null : () => <PerformanceChart rows={rows} cumulative={cumulative} context={context} name={name} workbookContext={workbookContext} exportOnly />);
   const values = rows
     .flatMap((r) => [r.budget, r.base, r.scenario])
     .filter((v): v is number => v !== null);
@@ -44,7 +52,7 @@ export function PerformanceChart({
     },
   ];
   return (
-    <div className="apac-chart">
+    <div className="apac-chart" ref={root}>
       <svg
         ref={svg}
         fontFamily="Arial, 'Microsoft YaHei', sans-serif"
@@ -142,7 +150,7 @@ export function PerformanceChart({
       <div className="apac-legend">
         <small className="chart-note">{tr("chart.gaps")}</small>
       </div>
-      <ChartDownloads svg={svg} title={cumulative ? tr("chart.cumulativeTitle") : tr("chart.monthlyTitle")} context={context} sheetName={name}
+      <ChartDownloads svg={svg} title={cumulative ? tr("chart.cumulativeTitle") : tr("chart.monthlyTitle")} context={exportOnly && workbookContext ? workbookContext(locale) : context} sheetName={name ? `${name} · ${tr("chart.cumulativeTitle")}` : undefined}
         exportTable={{ columns: [{ label: tr("common.month") }, { label: `${tr("metric.budget")} (kEUR)` }, { label: `${tr("metric.base")} (kEUR)` }, { label: `${tr("metric.scenario")} (kEUR)` }], rows: rows.map(r => [display(r.label), r.budget, r.base, r.scenario]) }}
         note={`${tr("metric.budget")} · ${tr("metric.base")} · ${tr("metric.scenario")} · ${tr("chart.gaps")}`} />
     </div>

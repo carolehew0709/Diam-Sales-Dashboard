@@ -44,6 +44,8 @@ This export is a snapshot: images do not recalculate if spreadsheet cells are ed
 
 All chart worksheets share one visual template: centered table headers and all data cells (text, amounts, percentages and blanks), a gold title accent, dark headers, clear cell borders, alternating row shading and emphasized total/key-result rows. Metadata stays in a separate wrapped title/source block above the table. Column widths and row heights accommodate source labels without changing the data or the table-above-chart layout.
 
+The export-language selector supports English and Chinese independently of the page language, defaulting to the current page locale. The same authorized chart snapshot is rendered locally under the selected locale, translating sheet names, table headers, months, statuses, descriptions and chart text together. Original customer/team names and source evidence remain unchanged. No additional data request is made, selected filters and customer month are preserved, and changing the page language or data during export cancels the stale export. Filenames include `en` or `zh-CN`.
+
 ## Remaining source gaps
 
 | Missing source | Visible behavior |

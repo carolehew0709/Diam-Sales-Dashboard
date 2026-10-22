@@ -1,5 +1,6 @@
 import ExcelJS from "exceljs";
 import type { ChartWorkbookImage } from "./chart-workbook-types";
+import { translate, type Locale } from "./i18n";
 
 export function chartSheetName(title: string, used: Set<string>) {
   const clean =
@@ -7,11 +8,11 @@ export function chartSheetName(title: string, used: Set<string>) {
       .replace(/[\\/?*\[\]:\x00-\x1f]/g, " ")
       .replace(/^'+|'+$/g, "")
       .trim() || "Chart";
-  let name = clean.slice(0, 31),
+  let name = clean.slice(0, 31).trimEnd(),
     suffix = 1;
   while (used.has(name.toLowerCase())) {
     const tail = ` (${++suffix})`;
-    name = clean.slice(0, 31 - tail.length) + tail;
+    name = clean.slice(0, 31 - tail.length).trimEnd() + tail;
   }
   used.add(name.toLowerCase());
   return name;
@@ -20,13 +21,15 @@ const textLength = (value: string) =>
   Array.from(value).reduce((n, c) => n + (c.charCodeAt(0) > 255 ? 2 : 1), 0);
 
 /** Application download writer: one rendered chart and its exact source table per sheet. */
-export async function createChartWorkbook(sheets: ChartWorkbookImage[]) {
+export async function createChartWorkbook(
+  sheets: ChartWorkbookImage[],
+  locale: Locale = "en",
+) {
   if (!sheets.length) throw new Error("No registered charts");
   const workbook = new ExcelJS.Workbook();
   workbook.creator = "DIAM APAC";
-  workbook.title = "DIAM APAC chart data and graphics";
-  workbook.description =
-    "Filtered chart snapshots. Tables above images; missing data remains blank. Images do not recalculate when cells are edited.";
+  workbook.title = translate(locale, "graphics.workbookTitle");
+  workbook.description = translate(locale, "graphics.workbookSnapshot");
   const used = new Set<string>();
   for (const source of sheets) {
     const sheet = workbook.addWorksheet(chartSheetName(source.name, used), {

@@ -60,3 +60,8 @@ export function useI18n() {
   if (!context) throw new Error("I18nProvider is required");
   return context;
 }
+
+/** A local render locale for downloads; never changes the page, cookie or preferences. */
+export function ExportI18nProvider({ locale, children }: { locale: Locale; children: React.ReactNode }) {
+  return <Context.Provider value={{ locale, setLocale: () => {}, tr: (key, params) => translate(locale, key, params), display: value => displayText(locale, value) }}>{children}</Context.Provider>;
+}

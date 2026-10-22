@@ -505,5 +505,10 @@
   "graphics.workbookWait": "来源数据正在更新，请加载完成后再次导出。",
   "graphics.workbookSourceError": "月度客户数据读取失败，请刷新后导出，以免遗漏图表。",
   "graphics.workbookError": "导出失败或筛选已改变，请保持当前筛选后重试。",
-  "graphics.workbookStep": "指标／步骤"
+  "graphics.workbookStep": "指标／步骤",
+  "graphics.workbookLanguage": "导出语言",
+  "graphics.workbookEnglish": "English",
+  "graphics.workbookChinese": "中文",
+  "graphics.workbookTitle": "DIAM 亚太区图表与数据",
+  "graphics.workbookSnapshot": "当前筛选的图表快照。数据表在上、图在下；缺失数值保留空白。修改单元格后，图表图片不会自动重算。"
 }

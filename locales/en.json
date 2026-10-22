@@ -505,5 +505,10 @@
   "graphics.workbookWait": "Source data is updating. Please wait, then export again.",
   "graphics.workbookSourceError": "Monthly customer data could not be loaded. Refresh before exporting to avoid an incomplete workbook.",
   "graphics.workbookError": "Export failed or filters changed. Keep the filters unchanged and retry.",
-  "graphics.workbookStep": "Metric / step"
+  "graphics.workbookStep": "Metric / step",
+  "graphics.workbookLanguage": "Export language",
+  "graphics.workbookEnglish": "English",
+  "graphics.workbookChinese": "中文",
+  "graphics.workbookTitle": "DIAM APAC chart data and graphics",
+  "graphics.workbookSnapshot": "Filtered chart snapshots. Tables above images; missing data remains blank. Images do not recalculate when cells are edited."
 }

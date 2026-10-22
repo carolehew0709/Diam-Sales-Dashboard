@@ -14,9 +14,11 @@ import { ChartWorkbookExport } from "./chart-workbook-export";
 import type { ChartTable } from "@/lib/chart-workbook-types";
 import { useRef } from "react";
 import { useWorkbookGroup } from "./use-workbook-group";
+import { ChartMark } from "./chart-interaction";
+import { chartAmount } from "@/lib/chart-tooltip";
 
 export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; exportOnly?: boolean }) {
-  const { tr, display } = useI18n();
+  const { tr, display, locale } = useI18n();
   const root = useRef<HTMLElement>(null);
   useWorkbookGroup(root, exportOnly ? null : () => <SalesGraphics data={data} exportOnly />);
   const t = data.totals;
@@ -205,7 +207,7 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
                 const x = 94 + i * (650 / bars.length),
                   end = b.start + b.value!;
                 return (
-                  <g key={i}>
+                  <ChartMark key={i} color={b.color} data={{title:b.name,subtitle:week,rows:[{label:tr("graphics.amount"),value:chartAmount(b.value,locale)}]}}>
                     <rect
                       x={x}
                       y={Math.min(wy(end), wy(b.start))}
@@ -213,11 +215,7 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
                       height={Math.max(1, Math.abs(wy(b.start) - wy(end)))}
                       fill={b.color}
                       rx="2"
-                    >
-                      <title>
-                        {b.name}: {exact(b.value)} kEUR
-                      </title>
-                    </rect>
+                    />
                     <text
                       x={x + Math.min(100, 510 / bars.length) / 2}
                       y={Math.min(wy(end), wy(b.start)) - 10}
@@ -235,7 +233,7 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
                     >
                       {b.name}
                     </text>
-                  </g>
+                  </ChartMark>
                 );
               })}
               <Legend
@@ -258,7 +256,12 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
           {coverage === null ? (
             <PlotEmpty text={tr("graphics.incompleteAnnual")} />
           ) : (
-            <>
+            <ChartMark hit={<rect x="175" y="15" width="450" height="320" fill="white" />} data={{title:tr("graphics.gauge"),subtitle:week,rows:[
+              {label:tr("graphics.annualBudget"),value:chartAmount(t.budget,locale)},
+              {label:tr("graphics.annualBase"),value:chartAmount(t.base,locale)},
+              {label:tr("metric.coverage"),value:`${(coverage*100).toFixed(1)}%`},
+              {label:tr("metric.gap"),value:chartAmount(t.gap,locale)},
+            ]}}>
               <path
                 d="M 220 240 A 180 180 0 0 1 580 240"
                 fill="none"
@@ -306,7 +309,7 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
                 {tr("graphics.annualBudget")}: {formatK(t.budget)} ·{" "}
                 {tr("graphics.annualBase")}: {formatK(t.base)}
               </text>
-            </>
+            </ChartMark>
           )}
         </GraphicCard>
         {seriesCard(0)}
@@ -362,7 +365,7 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
 export function BusinessUnitGraphics({ data, exportOnly = false }: { data: Dashboard; exportOnly?: boolean }) {
   const root = useRef<HTMLDivElement>(null);
   useWorkbookGroup(root, exportOnly ? null : () => <BusinessUnitGraphics data={data} exportOnly />);
-  const { tr, display } = useI18n();
+  const { tr, display, locale } = useI18n();
   const rows = data.rows;
   const context = `${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · ${data.weeks.map((w) => `W${w}`).join(" / ")} · kEUR`;
   const sourceNote = tr("graphics.source", {
@@ -417,6 +420,11 @@ export function BusinessUnitGraphics({ data, exportOnly = false }: { data: Dashb
       >
         {rows.map((r, i) => (
           <g key={r.entity.id} transform={`translate(0,${35 + i * 50})`}>
+            <ChartMark color={graphicColors[i]} lift={[3,0]} data={{title:r.entity.code,rows:[
+              {label:tr("graphics.annualBase"),value:chartAmount(r.metrics.base,locale)},
+              {label:tr("graphics.annualBudget"),value:chartAmount(r.metrics.budget,locale)},
+              {label:tr("metric.coverage"),value:percent(r.metrics.coverage)},
+            ]}} hit={<rect x="20" y="-8" width="760" height="44" fill="white" />}>
             <text x="28" y="19">
               {r.entity.code}
             </text>
@@ -433,6 +441,7 @@ export function BusinessUnitGraphics({ data, exportOnly = false }: { data: Dashb
             <text x="770" y="19" textAnchor="end">
               {formatK(r.metrics.base)} kEUR
             </text>
+            </ChartMark>
           </g>
         ))}
       </GraphicCard>
@@ -453,7 +462,11 @@ export function BusinessUnitGraphics({ data, exportOnly = false }: { data: Dashb
                 x = offset;
               offset += width;
               return (
-                <g key={r.entity.id}>
+                <ChartMark key={r.entity.id} color={graphicColors[i]} data={{title:r.entity.code,rows:[
+                  {label:tr("graphics.annualBudget"),value:chartAmount(r.metrics.budget,locale)},
+                  {label:tr("graphics.annualBase"),value:chartAmount(r.metrics.base,locale)},
+                  {label:tr("metric.coverage"),value:percent(r.metrics.coverage)},
+                ]}}>
                   <rect
                     x={x}
                     y="35"
@@ -483,13 +496,7 @@ export function BusinessUnitGraphics({ data, exportOnly = false }: { data: Dashb
                       ? "—"
                       : `${(r.metrics.coverage * 100).toFixed(0)}%`}
                   </text>
-                  <title>
-                    {r.entity.code} · {tr("graphics.annualBudget")}:{" "}
-                    {r.metrics.budget} · {tr("graphics.annualBase")}:{" "}
-                    {r.metrics.base} · {tr("metric.coverage")}:{" "}
-                    {percent(r.metrics.coverage)}
-                  </title>
-                </g>
+                </ChartMark>
               );
             })
         )}

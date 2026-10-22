@@ -2,10 +2,12 @@
 import { useI18n } from "@/components/i18n-provider";
 import type { Amount } from "@/lib/types";
 import { formatK } from "@/lib/dashboard";
-import { useRef } from "react";
+import { useMemo, useRef } from "react";
 import { ChartDownloads } from "./graphic-card";
 import { useWorkbookGroup } from "./use-workbook-group";
 import type { Locale } from "@/lib/i18n";
+import { ChartMark, useChartTooltip } from "./chart-interaction";
+import { chartAmount } from "@/lib/chart-tooltip";
 export function PerformanceChart({
   rows,
   cumulative = false,
@@ -24,6 +26,8 @@ export function PerformanceChart({
   const { tr, display, locale } = useI18n();
   const svg = useRef<SVGSVGElement>(null);
   const root = useRef<HTMLDivElement>(null);
+  const tooltip = useChartTooltip(svg, `${locale}:${context}:${JSON.stringify(rows)}`);
+  const chartTable = useMemo(() => ({ columns: [{ label: tr("common.month") }, { label: `${tr("metric.budget")} (kEUR)` }, { label: `${tr("metric.base")} (kEUR)` }, { label: `${tr("metric.scenario")} (kEUR)` }], rows: rows.map(r => [display(r.label), r.budget, r.base, r.scenario]) }), [rows, locale, tr, display]);
   useWorkbookGroup(root, exportOnly ? null : () => <PerformanceChart rows={rows} cumulative={cumulative} context={context} name={name} workbookContext={workbookContext} exportOnly />);
   const values = rows
     .flatMap((r) => [r.budget, r.base, r.scenario])
@@ -57,7 +61,7 @@ export function PerformanceChart({
         ref={svg}
         fontFamily="Arial, 'Microsoft YaHei', sans-serif"
         viewBox="0 0 720 293"
-        role="img"
+        role="group"
         aria-label={
           cumulative ? tr("chart.cumulativeA11y") : tr("chart.monthlyA11y")
         }
@@ -106,6 +110,9 @@ export function PerformanceChart({
               />
               {rows.map((r, i) =>
                 r[s.key] === null ? null : (
+                  <ChartMark key={i} group={`month-${i}`} color={s.color}
+                    data={{title:display(r.label),rows:series.map(item=>({label:item.label,value:chartAmount(r[item.key],locale)}))}}
+                    hit={<circle cx={x(i)} cy={y(r[s.key]!)} r="10" fill="white" />}>
                   <circle
                     key={i}
                     cx={x(i)}
@@ -113,11 +120,8 @@ export function PerformanceChart({
                     r="3.5"
                     fill="white"
                     stroke={s.color}
-                  >
-                    <title>
-                      {display(r.label)} · {s.label}: {formatK(r[s.key])} kEUR
-                    </title>
-                  </circle>
+                  />
+                  </ChartMark>
                 ),
               )}
             </g>
@@ -140,6 +144,7 @@ export function PerformanceChart({
           <text x="22" fontSize="10" fill="#706f67">{s.label}</text>
         </g>)}
       </svg>
+      {tooltip}
       {!values.length && (
         <div className="chart-empty">
           {tr("chart.empty")}
@@ -151,7 +156,7 @@ export function PerformanceChart({
         <small className="chart-note">{tr("chart.gaps")}</small>
       </div>
       <ChartDownloads svg={svg} title={cumulative ? tr("chart.cumulativeTitle") : tr("chart.monthlyTitle")} context={exportOnly && workbookContext ? workbookContext(locale) : context} sheetName={name ? `${name} · ${tr("chart.cumulativeTitle")}` : undefined}
-        exportTable={{ columns: [{ label: tr("common.month") }, { label: `${tr("metric.budget")} (kEUR)` }, { label: `${tr("metric.base")} (kEUR)` }, { label: `${tr("metric.scenario")} (kEUR)` }], rows: rows.map(r => [display(r.label), r.budget, r.base, r.scenario]) }}
+        exportTable={chartTable}
         note={`${tr("metric.budget")} · ${tr("metric.base")} · ${tr("metric.scenario")} · ${tr("chart.gaps")}`} />
     </div>
   );

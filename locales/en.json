@@ -506,6 +506,8 @@
   "graphics.workbookSourceError": "Monthly customer data could not be loaded. Refresh before exporting to avoid an incomplete workbook.",
   "graphics.workbookError": "Export failed or filters changed. Keep the filters unchanged and retry.",
   "graphics.workbookStep": "Metric / step",
+  "graphics.amount": "Amount",
+  "graphics.share": "Share of chart total",
   "graphics.workbookLanguage": "Export language",
   "graphics.workbookEnglish": "English",
   "graphics.workbookChinese": "中文",

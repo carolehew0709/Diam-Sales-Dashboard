@@ -506,6 +506,8 @@
   "graphics.workbookSourceError": "月度客户数据读取失败，请刷新后导出，以免遗漏图表。",
   "graphics.workbookError": "导出失败或筛选已改变，请保持当前筛选后重试。",
   "graphics.workbookStep": "指标／步骤",
+  "graphics.amount": "金额",
+  "graphics.share": "占图中合计",
   "graphics.workbookLanguage": "导出语言",
   "graphics.workbookEnglish": "English",
   "graphics.workbookChinese": "中文",

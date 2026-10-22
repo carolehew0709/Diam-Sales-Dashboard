@@ -1,6 +1,9 @@
 "use client";
 import { formatK } from "@/lib/dashboard";
 import type { Amount } from "@/lib/types";
+import { ChartMark } from "./chart-interaction";
+import { useI18n } from "./i18n-provider";
+import { chartAmount } from "@/lib/chart-tooltip";
 
 export const graphicColors = [
   "#a77a35",
@@ -101,6 +104,7 @@ export function ComboPlot({
   ytdLabel: string;
   empty: string;
 }) {
+  const { locale } = useI18n();
   const values = points
     .flatMap((p) => [p.monthly, p.ytd])
     .filter((v): v is number => v !== null);
@@ -122,21 +126,53 @@ export function ComboPlot({
   return (
     <>
       <PlotGrid max={max} min={min} />
+      <path d={path} stroke="#a77a35" strokeWidth="3" fill="none" />
       {points.map((p, i) => (
         <g key={i}>
-          {p.monthly !== null && (
-            <rect
-              x={x(i) - 15}
-              y={Math.min(y(p.monthly), y(0))}
-              width="30"
-              height={Math.max(1, Math.abs(y(0) - y(p.monthly)))}
-              rx="3"
-              fill="#d0bd93"
+          {(p.monthly !== null || p.ytd !== null) && (
+            <ChartMark
+              color="#a77a35"
+              data={{
+                title: p.label,
+                rows: [
+                  {
+                    label: monthlyLabel,
+                    value: chartAmount(p.monthly, locale),
+                  },
+                  { label: ytdLabel, value: chartAmount(p.ytd, locale) },
+                ],
+              }}
+              hit={
+                <rect
+                  x={x(i) - 24}
+                  y="28"
+                  width="48"
+                  height="266"
+                  fill="white"
+                />
+              }
             >
-              <title>
-                {p.label} · {monthlyLabel}: {p.monthly.toFixed(2)} kEUR
-              </title>
-            </rect>
+              {p.monthly !== null && (
+                <rect
+                  x={x(i) - 15}
+                  y={Math.min(y(p.monthly), y(0))}
+                  width="30"
+                  height={Math.max(1, Math.abs(y(0) - y(p.monthly)))}
+                  rx="3"
+                  fill="#d0bd93"
+                />
+              )}
+              {p.ytd !== null && (
+                <circle
+                  cx={x(i)}
+                  cy={y(p.ytd)}
+                  r="4"
+                  fill="#fffefa"
+                  stroke="#a77a35"
+                  strokeWidth="2"
+                />
+              )}
+            </ChartMark>
           )}
           <text
             x={x(i)}
@@ -149,25 +185,6 @@ export function ComboPlot({
           </text>
         </g>
       ))}
-      <path d={path} stroke="#a77a35" strokeWidth="3" fill="none" />
-      {points.map(
-        (p, i) =>
-          p.ytd !== null && (
-            <circle
-              key={i}
-              cx={x(i)}
-              cy={y(p.ytd)}
-              r="4"
-              fill="#fffefa"
-              stroke="#a77a35"
-              strokeWidth="2"
-            >
-              <title>
-                {p.label} · {ytdLabel}: {p.ytd.toFixed(2)} kEUR
-              </title>
-            </circle>
-          ),
-      )}
       <Legend
         labels={[
           { name: monthlyLabel, color: "#d0bd93" },
@@ -188,6 +205,7 @@ export function DonutPlot({
   totalLabel: string;
   otherLabel: string;
 }) {
+  const { tr, locale } = useI18n();
   // Keep the entire population in the denominator; the tail is explicitly grouped.
   const positive = rows.filter((r) => r.value > 0),
     shown =
@@ -217,25 +235,42 @@ export function DonutPlot({
       {shown.map((r, i) => {
         const start = offset;
         offset += (r.value / total) * 100;
+        const angle = ((start + offset) / 2 / 100) * Math.PI * 2 - Math.PI / 2;
+        const data = {
+          title: r.name,
+          rows: [
+            {
+              label: tr("graphics.amount"),
+              value: chartAmount(r.value, locale),
+            },
+            {
+              label: tr("graphics.share"),
+              value: `${((r.value / total) * 100).toFixed(1)}%`,
+            },
+          ],
+        };
         return (
-          <circle
+          <ChartMark
             key={r.name}
-            cx="205"
-            cy="167"
-            r="102"
-            fill="none"
-            stroke={graphicColors[i % graphicColors.length]}
-            strokeWidth="46"
-            pathLength="100"
-            strokeDasharray={`${(r.value / total) * 100} ${100 - (r.value / total) * 100}`}
-            strokeDashoffset={-start}
-            transform="rotate(-90 205 167)"
+            group={`slice-${i}`}
+            data={data}
+            color={graphicColors[i % graphicColors.length]}
+            lift={[Math.cos(angle) * 5, Math.sin(angle) * 5]}
           >
-            <title>
-              {r.name}: {r.value.toFixed(2)} kEUR ·{" "}
-              {((r.value / total) * 100).toFixed(1)}%
-            </title>
-          </circle>
+            <circle
+              key={r.name}
+              cx="205"
+              cy="167"
+              r="102"
+              fill="none"
+              stroke={graphicColors[i % graphicColors.length]}
+              strokeWidth="46"
+              pathLength="100"
+              strokeDasharray={`${(r.value / total) * 100} ${100 - (r.value / total) * 100}`}
+              strokeDashoffset={-start}
+              transform="rotate(-90 205 167)"
+            />
+          </ChartMark>
         );
       })}
       <text x="205" y="160" textAnchor="middle" fontSize="28" fontWeight="600">
@@ -246,13 +281,33 @@ export function DonutPlot({
       </text>
       {shown.map((r, i) => (
         <g key={r.name} transform={`translate(380,${52 + i * 39})`}>
-          <rect width="10" height="10" rx="2" fill={graphicColors[i]} />
-          <text x="20" y="10" fontSize="13">
-            {r.name.length > 30 ? r.name.slice(0, 29) + "…" : r.name}
-          </text>
-          <text x="374" y="10" textAnchor="end" fontSize="13">
-            {formatK(r.value)} · {((r.value / total) * 100).toFixed(1)}%
-          </text>
+          <ChartMark
+            group={`slice-${i}`}
+            color={graphicColors[i]}
+            lift={[2, 0]}
+            data={{
+              title: r.name,
+              rows: [
+                {
+                  label: tr("graphics.amount"),
+                  value: chartAmount(r.value, locale),
+                },
+                {
+                  label: tr("graphics.share"),
+                  value: `${((r.value / total) * 100).toFixed(1)}%`,
+                },
+              ],
+            }}
+            hit={<rect x="-6" y="-8" width="390" height="32" fill="white" />}
+          >
+            <rect width="10" height="10" rx="2" fill={graphicColors[i]} />
+            <text x="20" y="10" fontSize="13">
+              {r.name.length > 30 ? r.name.slice(0, 29) + "…" : r.name}
+            </text>
+            <text x="374" y="10" textAnchor="end" fontSize="13">
+              {formatK(r.value)} · {((r.value / total) * 100).toFixed(1)}%
+            </text>
+          </ChartMark>
         </g>
       ))}
     </>

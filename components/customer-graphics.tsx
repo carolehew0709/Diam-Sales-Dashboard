@@ -10,6 +10,8 @@ import type { MessageKey } from "@/lib/i18n";
 import { customerGrowth, customerMetrics } from "@/lib/customer-metrics";
 import type { ChartTable } from "@/lib/chart-workbook-types";
 import { useWorkbookGroup } from "./use-workbook-group";
+import { ChartMark } from "./chart-interaction";
+import { chartAmount } from "@/lib/chart-tooltip";
 
 type View = ReturnType<typeof customerAnalysisView>;
 const groupKeys: Record<string, MessageKey> = {
@@ -335,18 +337,16 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
                         y = 290 - ((offset + value) / max) * 250;
                       offset += value;
                       return (
+                        <ChartMark key={r.name} group={`category-${j}`} color={graphicColors[j]}
+                          data={{title:groupLabel(r.name),subtitle:monthLabel(analysis.month),rows:[{label,value:chartAmount(value,locale)},{label:tr("graphics.share"),value:columnTotal>0?`${((value/columnTotal)*100).toFixed(1)}%`:"—"}]}}>
                         <rect
-                          key={r.name}
                           x={x}
                           y={y}
                           width="95"
                           height={(value / max) * 250}
                           fill={graphicColors[j]}
-                        >
-                          <title>
-                            {groupLabel(r.name)} · {label}: {value} kEUR
-                          </title>
-                        </rect>
+                        />
+                        </ChartMark>
                       );
                     })}
                     <text
@@ -402,6 +402,11 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
             >
               {analysis.customers.map((c, i) => (
                 <g key={c.name} transform={`translate(0,${24 + i * 52})`}>
+                  <ChartMark color="#a77a35" lift={[3,0]} data={{title:c.name,subtitle:monthLabel(analysis.month),rows:[
+                    {label:priorLabel,value:chartAmount(c.prior,locale)},
+                    {label:currentLabel,value:chartAmount(c.current,locale)},
+                    {label:tr("graphics.yoy"),value:yoy(c.prior,c.current)},
+                  ]}} hit={<rect x="15" y="-2" width="770" height="42" fill="white" />}>
                   <text x="132" y="23" textAnchor="end" fontSize="13">
                     {c.name}
                   </text>
@@ -410,22 +415,14 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
                     width={(c.prior / maxCustomer) * 490}
                     height="16"
                     fill="#bebbb2"
-                  >
-                    <title>
-                      {priorLabel}: {c.prior} kEUR
-                    </title>
-                  </rect>
+                  />
                   <rect
                     x="148"
                     y="20"
                     width={(c.current / maxCustomer) * 490}
                     height="16"
                     fill="#a77a35"
-                  >
-                    <title>
-                      {currentLabel}: {c.current} kEUR
-                    </title>
-                  </rect>
+                  />
                   <text
                     x="770"
                     y="23"
@@ -435,6 +432,7 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
                   >
                     {yoy(c.prior, c.current)}
                   </text>
+                  </ChartMark>
                 </g>
               ))}
               <Legend

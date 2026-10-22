@@ -35,6 +35,12 @@ export function chartExportSvg(
 ): string {
   const ns = "http://www.w3.org/2000/svg";
   const original = svg.cloneNode(true) as SVGSVGElement;
+  // Interaction layers are UI-only; downloads always retain the clean chart.
+  original.querySelectorAll("[data-chart-hit]").forEach(node => node.remove());
+  original.removeAttribute("data-chart-hover");
+  original.querySelectorAll("[data-chart-mark]").forEach(node => {
+    ["data-chart-mark", "data-chart-color", "data-chart-group", "data-chart-active", "aria-describedby", "tabindex", "style"].forEach(name => node.removeAttribute(name));
+  });
   const box = svg.viewBox.baseVal;
   const width = box.width || 800,
     height = box.height || 360;

@@ -11,6 +11,7 @@ import { useI18n } from "./i18n-provider";
 import { downloadChart } from "@/lib/chart-export";
 import { registerWorkbookChart } from "@/lib/chart-workbook-registry";
 import type { ChartTable } from "@/lib/chart-workbook-types";
+import { useChartTooltip } from "./chart-interaction";
 
 export function ChartDownloads({
   svg,
@@ -96,6 +97,7 @@ export function GraphicCard({
   exportTable: ChartTable;
 }) {
   const svg = useRef<SVGSVGElement>(null);
+  const tooltip = useChartTooltip(svg, exportTable);
   const { tr } = useI18n();
   return (
     <article className={`panel graphic-card ${className}`}>
@@ -114,16 +116,16 @@ export function GraphicCard({
         <svg
           ref={svg}
           viewBox={`0 0 800 ${height}`}
-          role="img"
+          role="group"
           aria-label={title}
           fontFamily="Arial, 'Microsoft YaHei', sans-serif"
           fontSize="13"
           fill="#171813"
         >
-          <title>{title}</title>
           {children}
         </svg>
       </div>
+      {tooltip}
       <p className="graphic-note">{note}</p>
       {table && (
         <details className="graphic-data">

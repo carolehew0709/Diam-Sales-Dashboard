@@ -5352,6 +5352,22 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 .graphics-period { padding: 9px 13px; border: 1px solid var(--line); border-radius: 6px; color: var(--gold-strong); background: var(--panel); font-size: 11px; white-space: nowrap; }
 .graphics-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 20px; }
 .graphic-card { min-width: 0; padding: 24px; overflow: hidden; }
+.graphic-card:has([data-chart-hover]) { border-color: #d7c29d; box-shadow: 0 10px 30px rgba(72,55,24,.08); }
+.chart-mark { outline: none; transition: opacity 140ms ease; }
+.chart-mark-visual { transition: transform 160ms ease, filter 160ms ease; }
+[data-chart-hover] .chart-mark:not([data-chart-active]) { opacity: .48; }
+.chart-mark[data-chart-active] > .chart-mark-visual { transform: translate(var(--chart-lift-x,0px),var(--chart-lift-y,-3px)); filter: drop-shadow(0 4px 5px rgba(86,61,24,.25)) brightness(1.04); }
+.chart-mark:focus-visible { outline: 2px solid #a77a35; outline-offset: 4px; }
+.chart-tooltip { position: fixed; top: 0; left: 0; z-index: 1000; width: max-content; max-width: min(330px,calc(100vw - 24px)); padding: 16px 18px; border: 1px solid #dfcfb1; border-top: 3px solid #bb9554; border-radius: 12px; background: #fffdf7; box-shadow: 0 12px 36px rgba(51,40,20,.15),0 2px 6px rgba(51,40,20,.04); color: #262b29; pointer-events: none; font-size: 12px; line-height: 1.5; box-sizing: border-box; }
+.chart-tooltip-heading { display: flex; align-items: center; gap: 9px; }
+.chart-tooltip-heading i { flex-shrink: 0; width: 8px; height: 8px; border-radius: 3px; background: var(--tooltip-color,#a77a35); }
+.chart-tooltip-heading strong { font-size: 13px; font-weight: 650; overflow-wrap: anywhere; }
+.chart-tooltip > p { color: #777468; font-size: 11px; margin: 3px 0 0 17px; }
+.chart-tooltip dl { display: grid; gap: 8px; margin: 12px 0 0; padding-top: 10px; border-top: 1px solid #ede4d3; }
+.chart-tooltip dl > div { display: grid; grid-template-columns: minmax(0,1fr) auto; align-items: baseline; gap: 22px; }
+.chart-tooltip dt { color: #777468; overflow-wrap: anywhere; }
+.chart-tooltip dd { margin: 0; font-weight: 600; text-align: right; white-space: nowrap; font-variant-numeric: tabular-nums; }
+@media(prefers-reduced-motion:reduce) { .chart-mark, .chart-mark-visual { transition: none; } .chart-mark[data-chart-active] > .chart-mark-visual { transform: none; } }
 .graphic-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .graphic-heading h3 { font-size: 16px; font-weight: 600; margin: 0; line-height: 1.5; }
 .graphic-downloads { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 5px; flex-shrink: 0; }

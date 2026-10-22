@@ -5383,8 +5383,8 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 .chart-workbook-export .apac-button { display: inline-flex; align-items: center; gap: 8px; border-color: var(--gold); color: var(--gold-strong); }
 .chart-workbook-export small { color: var(--muted); font-size: 11px; line-height: 1.8; }
 .chart-workbook-export [role=alert] { width: 100%; color: #a34f3d; font-size: 12px; }
-.chart-workbook-language { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; }
-.chart-workbook-language select { min-height: 36px; padding: 6px 28px 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font: inherit; }
+.chart-workbook-language { display: inline-flex; align-items: center; gap: 8px; color: var(--muted); font-size: 12px; white-space: nowrap; }
+.chart-workbook-language select { width: auto; min-height: 36px; padding: 6px 28px 6px 10px; border: 1px solid var(--line); border-radius: 6px; background: var(--panel); color: var(--ink); font: inherit; }
 .apac-chart > .graphic-downloads { margin-top: 12px; }
 .graphic-import-review { margin: 16px 0; padding: 16px; background: var(--panel-soft); border: 1px solid var(--line); border-radius: 8px; font-size: 12px; line-height: 1.8; overflow-x: auto; }
 @media (max-width: 1000px) { .graphics-grid { grid-template-columns: 1fr; } .graphic-wide { grid-column: auto; } }

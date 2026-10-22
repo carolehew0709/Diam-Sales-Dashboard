@@ -10,6 +10,7 @@ import { customerAnalysisView } from "../lib/customer-analysis";
 import { parseCustomerAnalysisWorkbook } from "../lib/customer-analysis-parser";
 import { getDashboardSnapshot, defaultFilters } from "../lib/dashboard";
 import { wrapChartText } from "../lib/chart-export";
+import { businessUnitShares } from "../lib/sales-graphics";
 import type { CustomerAnalysis } from "../lib/graphics-types";
 import type { Store, User, ImportBatch } from "../lib/types";
 
@@ -38,6 +39,40 @@ const close = (value: number | null, expected: number) =>
     value !== null && Math.abs(value - expected) < 1e-6,
     `${value} != ${expected}`,
   );
+
+test("BU shares use the complete filtered annual Sales + OB scope", () => {
+  for (const filters of [
+    defaultFilters,
+    { ...defaultFilters, bu: "DCP" },
+    { ...defaultFilters, salesType: "external" as const },
+  ]) {
+    const data = getDashboardSnapshot(state, admin, filters);
+    const values = data.rows.map((r) => r.metrics.base);
+    const shares = businessUnitShares(values);
+    close(
+      shares.reduce<number>((sum, share) => sum + share!, 0),
+      1,
+    );
+    shares.forEach((share, i) => close(share, values[i]! / data.totals.base!));
+    if (values.length === 1) assert.deepEqual(shares, [1]);
+  }
+});
+
+test("BU shares preserve genuine zero and do not invent shares for incomplete or non-compositional totals", () => {
+  assert.deepEqual(businessUnitShares([0, 20]), [0, 1]);
+  for (const values of [
+    [null, 20],
+    [0, 0],
+    [-10, 20],
+    [NaN, 20],
+    [Infinity, 20],
+  ])
+    assert.deepEqual(
+      businessUnitShares(values),
+      values.map(() => null),
+    );
+  assert.deepEqual(businessUnitShares([]), []);
+});
 
 test("monthly customer source preserves August totals without double-counting intergroup subtotal", () => {
   const view = customerAnalysisView(state, admin, defaultFilters);

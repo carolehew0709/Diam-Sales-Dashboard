@@ -16,6 +16,7 @@ import { useWorkbookGroup } from "./use-workbook-group";
 import { ChartMark } from "./chart-interaction";
 import { chartAmount } from "@/lib/chart-tooltip";
 import { SalesMonthlyGraphic } from "./sales-monthly-graphic";
+import { businessUnitShares } from "@/lib/sales-graphics";
 
 export function SalesGraphics({
   data,
@@ -385,6 +386,15 @@ export function BusinessUnitGraphics({
       ].join("; ") || tr("common.review"),
   });
   const max = Math.max(1, ...rows.map((r) => Math.abs(r.metrics.base ?? 0)));
+  const shares = businessUnitShares(rows.map((r) => r.metrics.base));
+  const shareLabel = (value: number | null) =>
+    value === null
+      ? "—"
+      : new Intl.NumberFormat(locale, {
+          style: "percent",
+          minimumFractionDigits: 1,
+          maximumFractionDigits: 1,
+        }).format(value);
   const table = (
     <table className="bu-table">
       <thead>
@@ -394,18 +404,20 @@ export function BusinessUnitGraphics({
           <th className="numeric">{tr("graphics.invoiced")}</th>
           <th className="numeric">{tr("metric.ob")}</th>
           <th className="numeric">{tr("graphics.annualBase")}</th>
+          <th className="numeric">{tr("graphics.buShare")}</th>
           <th className="numeric">{tr("metric.coverage")}</th>
           <th className="numeric">{tr("metric.gap")}</th>
         </tr>
       </thead>
       <tbody>
-        {rows.map((r) => (
+        {rows.map((r, i) => (
           <tr key={r.entity.id}>
             <td>{r.entity.code}</td>
             <td className="numeric">{formatK(r.metrics.budget)}</td>
             <td className="numeric">{formatK(r.metrics.sales)}</td>
             <td className="numeric">{formatK(r.metrics.orderbook)}</td>
             <td className="numeric">{formatK(r.metrics.base)}</td>
+            <td className="numeric">{shareLabel(shares[i])}</td>
             <td className="numeric">{display(percent(r.metrics.coverage))}</td>
             <td className="numeric">{formatK(r.metrics.gap)}</td>
           </tr>
@@ -420,16 +432,18 @@ export function BusinessUnitGraphics({
       { label: `${tr("graphics.invoiced")} (kEUR)` },
       { label: `${tr("metric.ob")} (kEUR)` },
       { label: `${tr("graphics.annualBase")} (kEUR)` },
+      { label: tr("graphics.buShare"), format: "0.0%" },
       { label: tr("metric.coverage"), format: "0.0%" },
       { label: `${tr("metric.gap")} (kEUR)` },
       { label: tr("common.source") },
     ],
-    rows: rows.map((r) => [
+    rows: rows.map((r, i) => [
       r.entity.code,
       r.metrics.budget,
       r.metrics.sales,
       r.metrics.orderbook,
       r.metrics.base,
+      shares[i],
       r.metrics.coverage,
       r.metrics.gap,
       r.snapshot
@@ -460,6 +474,10 @@ export function BusinessUnitGraphics({
                     value: chartAmount(r.metrics.base, locale),
                   },
                   {
+                    label: tr("graphics.buShare"),
+                    value: shareLabel(shares[i]),
+                  },
+                  {
                     label: tr("graphics.annualBudget"),
                     value: chartAmount(r.metrics.budget, locale),
                   },
@@ -478,18 +496,27 @@ export function BusinessUnitGraphics({
               <text x="28" y="19">
                 {r.entity.code}
               </text>
-              <rect x="100" width="510" height="28" rx="4" fill="#f0ece4" />
+              <rect x="100" width="470" height="28" rx="4" fill="#f0ece4" />
               {r.metrics.base !== null && r.metrics.base >= 0 && (
                 <rect
                   x="100"
-                  width={(r.metrics.base / max) * 510}
+                  width={(r.metrics.base / max) * 470}
                   height="28"
                   rx="4"
                   fill={graphicColors[i]}
                 />
               )}
-              <text x="770" y="19" textAnchor="end">
+              <text x="690" y="19" textAnchor="end">
                 {formatK(r.metrics.base)} kEUR
+              </text>
+              <text
+                x="770"
+                y="19"
+                textAnchor="end"
+                fontWeight="600"
+                fill="#a77a35"
+              >
+                {shareLabel(shares[i])}
               </text>
             </ChartMark>
           </g>

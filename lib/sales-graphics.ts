@@ -6,6 +6,18 @@ const complete = (values: Amount[]): Amount =>
     ? values.reduce<number>((a, v) => a + v!, 0)
     : null;
 
+/** Composition requires the complete selected scope and a positive total. */
+export function businessUnitShares(values: Amount[]): Amount[] {
+  const total = complete(values);
+  if (
+    total === null ||
+    total <= 0 ||
+    values.some((v) => !Number.isFinite(v) || v! < 0)
+  )
+    return values.map(() => null);
+  return values.map((value) => value! / total);
+}
+
 /** Input is the same scoped reporting projection used for dashboard KPIs. */
 export function salesGraphicSeries(
   state: Store,

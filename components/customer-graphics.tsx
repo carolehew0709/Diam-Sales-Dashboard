@@ -2,7 +2,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
-import { Legend, graphicColors } from "./graphic-plots";
+import { DonutPlot, Legend, graphicColors } from "./graphic-plots";
 import type { Filters } from "@/lib/types";
 import type { customerAnalysisView } from "@/lib/customer-analysis";
 import { formatK } from "@/lib/dashboard";
@@ -104,6 +104,29 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
       ? "—"
       : `${growth >= 0 ? "+" : ""}${(growth * 100).toFixed(1)}%`;
   };
+  const metrics = analysis ? customerMetrics(analysis) : null;
+  const metricsShare = (amount: number) => metrics && metrics.keyTotal > 0
+    ? `${(amount / metrics.keyTotal * 100).toFixed(1)}%` : "—";
+  const contributionTable = analysis && (
+    <table className="bu-table">
+      <thead>
+        <tr>
+          <th>{tr("common.customer")}</th>
+          <th className="numeric">{currentLabel} (kEUR)</th>
+          <th className="numeric">{tr("graphics.share")}</th>
+        </tr>
+      </thead>
+      <tbody>
+        {analysis.customers.map((c) => (
+          <tr key={c.name}>
+            <td>{c.name}</td>
+            <td className="numeric">{formatK(c.current)}</td>
+            <td className="numeric">{metricsShare(c.current)}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
   const customerTable = analysis && (
     <table className="bu-table">
       <thead>
@@ -156,7 +179,6 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
         currentLabel,
       ]
     : [];
-  const metrics = analysis ? customerMetrics(analysis) : null;
   const max =
     Math.max(
       1,
@@ -248,6 +270,7 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
           <div className="graphics-grid">
             <GraphicCard
               title={tr("graphics.customerBreakdown")}
+              className="graphic-wide"
               context={context}
               note={`${tr("graphics.forecastRule")} ${sourceNote}`}
               height={410}
@@ -371,6 +394,35 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
               ))}
             </GraphicCard>
 
+            <GraphicCard
+              title={tr("graphics.customerPie")}
+              context={context}
+              note={`${tr("graphics.pieRule")} ${sourceNote}`}
+              height={410}
+              table={contributionTable}
+              exportTable={{
+                columns: [
+                  { label: tr("common.customer") },
+                  { label: `${currentLabel} (kEUR)` },
+                  { label: "%", format: "0.0%" },
+                ],
+                rows: analysis.customers.map((c) => [
+                  c.name,
+                  c.current,
+                  metrics!.keyTotal > 0 ? c.current / metrics!.keyTotal : null,
+                ]),
+              }}
+            >
+              <DonutPlot
+                rows={analysis.customers.map((c) => ({
+                  name: c.name,
+                  value: c.current,
+                }))}
+                empty={tr("graphics.customerMissing")}
+                totalLabel={tr("graphics.keyTotal")}
+                otherLabel={tr("graphics.other")}
+              />
+            </GraphicCard>
             <GraphicCard
               title={tr("graphics.customerYoY")}
               context={context}

@@ -165,25 +165,31 @@ export function ReceivablesApp() {
           <section className="ar-kpi-grid">
             {(["ar", "due", "overdue", "unknown"] as const).map((key, i) => (
               <article
-                className={`kpi-card ${i === 2 ? "kpi-accent" : ""}`}
+                className={`kpi-card ar-kpi-card ${i === 2 ? "kpi-accent" : ""}`}
                 key={key}
               >
                 <div className="kpi-topline">
                   <span>{tr(`ar.metric.${key}`)}</span>
-                  <small>{tr("ar.currency")}</small>
                 </div>
-                <div className="ar-kpi-values">
+                <dl className="ar-kpi-values">
                   {data.totals.length ? (
                     data.totals.map((t) => (
                       <div key={t.currency}>
-                        <strong>{amount(t[key])}</strong>
-                        <span>{t.currency}</span>
+                        <dt>{t.currency}</dt>
+                        <dd
+                          className={t[key] === null ? "ar-kpi-missing" : undefined}
+                        >
+                          <strong>{amount(t[key])}</strong>
+                        </dd>
                       </div>
                     ))
                   ) : (
-                    <strong>—</strong>
+                    <div>
+                      <dt>{tr("ar.currency")}</dt>
+                      <dd className="ar-kpi-missing"><strong>—</strong></dd>
+                    </div>
                   )}
-                </div>
+                </dl>
                 <p>{tr(`ar.note.${key}`)}</p>
               </article>
             ))}

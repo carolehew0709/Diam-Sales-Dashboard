@@ -5317,11 +5317,16 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 .ar-filter-bar .filter-field { min-width: 0; }
 .ar-context { margin: -10px 0 0; font-size: 12px; }
 .ar-kpi-grid { display: grid; grid-template-columns: repeat(4,minmax(0,1fr)); gap: 18px; }
-.ar-kpi-grid .kpi-card { min-height: 220px; padding: 24px; }
-.ar-kpi-values { display: grid; gap: 12px; margin: 28px 0 18px; }
-.ar-kpi-values > div { display: flex; align-items: baseline; gap: 9px; flex-wrap: wrap; }
-.ar-kpi-values strong { font-size: clamp(25px,2.7vw,42px); letter-spacing: -.04em; font-weight: 600; }
-.ar-kpi-values span { color: var(--muted); font-size: 12px; }
+.ar-kpi-grid .ar-kpi-card { display: flex; flex-direction: column; min-height: 218px; padding: 20px 22px; container-type: inline-size; }
+.ar-kpi-card .kpi-topline { color: #5e625a; font-size: 12px; font-weight: 600; letter-spacing: .01em; line-height: 1.5; }
+.ar-kpi-values { display: grid; margin: 16px 0 14px; }
+.ar-kpi-values > div { display: grid; grid-template-columns: 42px minmax(0,1fr); align-items: center; gap: 14px; padding: 8px 0; }
+.ar-kpi-values > div + div { border-top: 1px solid rgba(113,108,96,.12); }
+.ar-kpi-values dt { padding: 4px 5px; border: 1px solid rgba(113,108,96,.14); border-radius: 5px; background: rgba(113,108,96,.035); color: #6e7268; font-size: 10px; font-weight: 600; line-height: 1.4; letter-spacing: .04em; text-align: center; }
+.ar-kpi-values dd { min-width: 0; margin: 0; text-align: right; }
+.ar-kpi-values strong { font-size: 26px; font-size: clamp(22px,9cqi,28px); line-height: 1.2; letter-spacing: -.025em; font-variant-numeric: tabular-nums lining-nums; font-weight: 600; white-space: nowrap; }
+.ar-kpi-values .ar-kpi-missing strong { color: #aaa79e; font-size: 23px; font-weight: 400; }
+.ar-kpi-card > p { margin: auto 0 0; min-height: 34px; color: var(--muted); font-size: 11px; line-height: 1.55; }
 .ar-chart-grid { display: grid; grid-template-columns: repeat(auto-fit,minmax(320px,1fr)); gap: 20px; }
 .ar-chart-grid .panel, .ar-detail { padding: 28px; }
 .ar-bars { display: grid; gap: 17px; margin-top: 22px; }

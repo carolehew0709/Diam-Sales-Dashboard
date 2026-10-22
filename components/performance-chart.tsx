@@ -8,6 +8,7 @@ import { useWorkbookGroup } from "./use-workbook-group";
 import type { Locale } from "@/lib/i18n";
 import { ChartMark, useChartTooltip } from "./chart-interaction";
 import { chartAmount } from "@/lib/chart-tooltip";
+import { performanceChartSeries } from "@/lib/performance-chart";
 export function PerformanceChart({
   rows,
   cumulative = false,
@@ -26,29 +27,68 @@ export function PerformanceChart({
   const { tr, display, locale } = useI18n();
   const svg = useRef<SVGSVGElement>(null);
   const root = useRef<HTMLDivElement>(null);
-  const tooltip = useChartTooltip(svg, `${locale}:${context}:${JSON.stringify(rows)}`);
-  const chartTable = useMemo(() => ({ columns: [{ label: tr("common.month") }, { label: `${tr("chart.salesOB")} (kEUR)` }, { label: `${tr("metric.scenario")} (kEUR)` }], rows: rows.map(r => [display(r.label), r.base, r.scenario]) }), [rows, locale, tr, display]);
-  useWorkbookGroup(root, exportOnly ? null : () => <PerformanceChart rows={rows} cumulative={cumulative} context={context} name={name} workbookContext={workbookContext} exportOnly />);
+  const tooltip = useChartTooltip(
+    svg,
+    `${locale}:${context}:${JSON.stringify(rows)}`,
+  );
+  const visibility = useMemo(() => performanceChartSeries(rows), [rows]);
+  const chartTable = useMemo(
+    () => ({
+      columns: [
+        { label: tr("common.month") },
+        ...visibility.keys.map((key) => ({
+          label: `${tr(key === "base" ? "chart.salesOB" : "chart.salesOBProspect")} (kEUR)`,
+        })),
+      ],
+      rows: rows.map((r) => [
+        display(r.label),
+        ...visibility.keys.map((key) => r[key]),
+      ]),
+    }),
+    [rows, visibility, locale, tr, display],
+  );
+  const scenarioNote =
+    visibility.scenario === "same"
+      ? tr("chart.scenarioMerged")
+      : visibility.scenario === "unavailable" && visibility.keys.length
+        ? tr("chart.scenarioUnavailable")
+        : "";
+  useWorkbookGroup(
+    root,
+    exportOnly
+      ? null
+      : () => (
+          <PerformanceChart
+            rows={rows}
+            cumulative={cumulative}
+            context={context}
+            name={name}
+            workbookContext={workbookContext}
+            exportOnly
+          />
+        ),
+  );
   const values = rows
-    .flatMap((r) => [r.base, r.scenario])
+    .flatMap((r) => visibility.keys.map((key) => r[key]))
     .filter((v): v is number => v !== null);
   const max = Math.max(...values, 1) * 1.12;
   const x = (i: number) => 54 + (i * 640) / Math.max(rows.length - 1, 1),
     y = (v: number) => 224 - (v / max) * 194;
-  const series = [
-    {
+  const definitions = {
+    base: {
       key: "base" as const,
       color: "#171813",
       label: tr("chart.salesOB"),
       dash: "",
     },
-    {
+    scenario: {
       key: "scenario" as const,
       color: "#a77a35",
-      label: tr("metric.scenario"),
+      label: tr("chart.salesOBProspect"),
       dash: "",
     },
-  ];
+  };
+  const series = visibility.keys.map((key) => definitions[key]);
   return (
     <div className="apac-chart" ref={root}>
       <svg
@@ -104,17 +144,29 @@ export function PerformanceChart({
               />
               {rows.map((r, i) =>
                 r[s.key] === null ? null : (
-                  <ChartMark key={i} group={`month-${i}`} color={s.color}
-                    data={{title:display(r.label),rows:series.map(item=>({label:item.label,value:chartAmount(r[item.key],locale)}))}}
-                    hit={<circle cx={x(i)} cy={y(r[s.key]!)} r="10" fill="white" />}>
-                  <circle
+                  <ChartMark
                     key={i}
-                    cx={x(i)}
-                    cy={y(r[s.key]!)}
-                    r="3.5"
-                    fill="white"
-                    stroke={s.color}
-                  />
+                    group={`month-${i}`}
+                    color={s.color}
+                    data={{
+                      title: display(r.label),
+                      rows: series.map((item) => ({
+                        label: item.label,
+                        value: chartAmount(r[item.key], locale),
+                      })),
+                    }}
+                    hit={
+                      <circle cx={x(i)} cy={y(r[s.key]!)} r="10" fill="white" />
+                    }
+                  >
+                    <circle
+                      key={i}
+                      cx={x(i)}
+                      cy={y(r[s.key]!)}
+                      r="3.5"
+                      fill="white"
+                      stroke={s.color}
+                    />
                   </ChartMark>
                 ),
               )}
@@ -133,23 +185,45 @@ export function PerformanceChart({
             {display(r.label)}
           </text>
         ))}
-        {series.map((s, i) => <g key={s.key} transform={`translate(${54 + i * 215},280)`}>
-          <line x1="0" x2="16" y1="-4" y2="-4" stroke={s.color} strokeWidth="3" strokeDasharray={s.dash} />
-          <text x="22" fontSize="10" fill="#706f67">{s.label}</text>
-        </g>)}
+        {series.map((s, i) => (
+          <g key={s.key} transform={`translate(${54 + i * 215},280)`}>
+            <line
+              x1="0"
+              x2="16"
+              y1="-4"
+              y2="-4"
+              stroke={s.color}
+              strokeWidth="3"
+              strokeDasharray={s.dash}
+            />
+            <text x="22" fontSize="10" fill="#706f67">
+              {s.label}
+            </text>
+          </g>
+        ))}
       </svg>
       {tooltip}
-      {!values.length && (
-        <div className="chart-empty">
-          {tr("chart.empty")}
-        </div>
-      )}
+      {!values.length && <div className="chart-empty">{tr("chart.empty")}</div>}
       <div className="apac-legend">
-        <small className="chart-note">{tr("chart.gaps")}</small>
+        <small className="chart-note">
+          {scenarioNote && <>{scenarioNote} </>}
+          {tr("chart.gaps")}
+        </small>
       </div>
-      <ChartDownloads svg={svg} title={cumulative ? tr("chart.cumulativeTitle") : tr("chart.monthlyTitle")} context={exportOnly && workbookContext ? workbookContext(locale) : context} sheetName={name ? `${name} · ${tr("chart.cumulativeTitle")}` : undefined}
+      <ChartDownloads
+        svg={svg}
+        title={
+          cumulative ? tr("chart.cumulativeTitle") : tr("chart.monthlyTitle")
+        }
+        context={
+          exportOnly && workbookContext ? workbookContext(locale) : context
+        }
+        sheetName={
+          name ? `${name} · ${tr("chart.cumulativeTitle")}` : undefined
+        }
         exportTable={chartTable}
-        note={`${tr("chart.salesOB")} · ${tr("metric.scenario")} · ${tr("chart.gaps")}`} />
+        note={`${series.map((s) => s.label).join(" · ")} · ${scenarioNote} ${tr("chart.gaps")}`}
+      />
     </div>
   );
 }

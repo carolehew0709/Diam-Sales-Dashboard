@@ -60,4 +60,6 @@ The export-language selector supports English and Chinese independently of the p
 | Approved monthly budget allocations | Monthly and cumulative performance charts omit budget from titles, legends, tooltips and chart exports; annual budgets remain in annual KPIs and budget graphics and are not spread over months |
 | DCP corrected YTD monthly allocation | No fabricated October monthly amount |
 
+Monthly and cumulative performance charts show only available series. A scenario with no numeric monthly observations has no line, legend, tooltip row or chart-workbook column. If every amount and missing-month position matches Sales + OB exactly, the scenario is merged into that line with an explanatory note. Genuine value or coverage differences keep both series, labelled Sales + OB and Sales + OB + Prospect. The same selection drives the plotted values, scale, hover data, images and workbook tables; underlying metrics and source missingness remain unchanged.
+
 Validation covers source reconciliation, period handling, filter/RBAC boundaries, weekly reporting regressions, local image downloads, bilingual rendering and production build. PostgreSQL retains its existing validation limitations; no new database provisioning is implied.

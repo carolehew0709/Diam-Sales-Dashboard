@@ -1,6 +1,11 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
-import { loginDestination, pagePath, parsePagePath, type Page } from "@/lib/routes";
+import {
+  loginDestination,
+  pagePath,
+  parsePagePath,
+  type Page,
+} from "@/lib/routes";
 import { useI18n } from "@/components/i18n-provider";
 import { matchesRegion } from "@/lib/entities";
 import { useEffect, useRef, useState, type CSSProperties } from "react";
@@ -11,10 +16,18 @@ import { hasReceivablesAccess } from "@/lib/receivables";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
 import { SalesMonthlyGraphic } from "@/components/sales-monthly-graphic";
-import { SalesGraphics, BusinessUnitGraphics } from "@/components/sales-graphics";
+import {
+  SalesGraphics,
+  BusinessUnitGraphics,
+  TeamContributionGraphic,
+} from "@/components/sales-graphics";
 import { CustomerGraphics } from "@/components/customer-graphics";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { performanceChartSeries } from "@/lib/performance-chart";
+import { monthlyPerformanceSeries } from "@/lib/performance-chart";
+import {
+  dashboardFilterKey,
+  showProspectForecast,
+} from "@/lib/dashboard-presentation";
 import {
   defaultFilters,
   formatK,
@@ -88,7 +101,12 @@ function MetricCard({
       </div>
       <div className="kpi-value-row">
         <strong>{value}</strong>
-        {period && <span className="kpi-period">{period}<small>{periodDetail}</small></span>}
+        {period && (
+          <span className="kpi-period">
+            {period}
+            <small>{periodDetail}</small>
+          </span>
+        )}
       </div>
       {children}
       <p>{note}</p>
@@ -168,10 +186,12 @@ function DashboardView({
   data,
   filters,
   setFilters,
+  filterError,
 }: {
   data: Dashboard;
   filters: Filters;
   setFilters: (f: Filters) => void;
+  filterError: string;
 }) {
   const { tr, display, locale } = useI18n();
   const [readiness, setReadiness] = useState(false),
@@ -184,25 +204,34 @@ function DashboardView({
     const element = filterBar.current;
     if (!element) return;
     const measure = () => {
-      if (element.isConnected) document.documentElement.style.setProperty("--dashboard-filter-height", `${element.getBoundingClientRect().height}px`);
+      if (element.isConnected)
+        document.documentElement.style.setProperty(
+          "--dashboard-filter-height",
+          `${element.getBoundingClientRect().height}px`,
+        );
     };
     measure();
     const observer = new ResizeObserver(measure);
     observer.observe(element);
     return () => {
       observer.disconnect();
-      document.documentElement.style.removeProperty("--dashboard-filter-height");
+      document.documentElement.style.removeProperty(
+        "--dashboard-filter-height",
+      );
     };
   }, []);
   useEffect(() => {
     if (!readiness) return;
     const outside = (event: PointerEvent) => {
-      if (!snapshotWrapper.current?.contains(event.target as Node)) setReadiness(false);
+      if (!snapshotWrapper.current?.contains(event.target as Node))
+        setReadiness(false);
     };
     const escape = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         setReadiness(false);
-        snapshotWrapper.current?.querySelector<HTMLButtonElement>(".snapshot-cluster")?.focus();
+        snapshotWrapper.current
+          ?.querySelector<HTMLButtonElement>(".snapshot-cluster")
+          ?.focus();
       }
     };
     document.addEventListener("pointerdown", outside);
@@ -213,14 +242,22 @@ function DashboardView({
     };
   }, [readiness]);
   const t = data.totals;
-  const hasLegacySplit = filters.year === 2026 && data.rows.some((r) => r.snapshot?.baseOverride != null);
+  const isCurrent =
+    dashboardFilterKey(data.filters) === dashboardFilterKey(filters);
+  const showForecast = showProspectForecast(filters, t);
+  const hasLegacySplit =
+    filters.year === 2026 &&
+    data.rows.some((r) => r.snapshot?.baseOverride != null);
   const partial = (key: Dashboard["partialKeys"][number]) =>
     data.partialKeys.includes(key) ? tr("metric.partialSource") : "";
   const selectEntity = (id: string) =>
     setFilters({
       ...filters,
       region: filters.region,
-      bu: id === "all" ? "all" : (data.entities.find((e) => e.id === id)?.businessUnit ?? "all"),
+      bu:
+        id === "all"
+          ? "all"
+          : (data.entities.find((e) => e.id === id)?.businessUnit ?? "all"),
       entity: "all",
     });
   const totalRows = [
@@ -241,18 +278,21 @@ function DashboardView({
       week: r.snapshot?.week,
     })),
   ];
+  const selectedCustomer = data.commercial.some((c) => c.customer === customer)
+    ? customer
+    : "all";
   const matrixRows =
     matrixLevel === "entity"
       ? data.rows.map((r) => ({ name: r.entity.code, metrics: r.metrics }))
       : data.buGroups;
-  const monthlyVisibility = performanceChartSeries(t.monthly);
-  const monthlyMatrixKey = monthlyVisibility.keys.includes("scenario") ? "scenario" : "base";
-  const monthlyMatrixLabel = tr(monthlyMatrixKey === "scenario" ? "chart.salesOBProspect" : "chart.salesOB");
+  const monthlyView = monthlyPerformanceSeries(t, filters.scenario);
+  const monthlyMatrixKey = monthlyView.key;
+  const monthlyMatrixLabel = tr(
+    monthlyMatrixKey === "scenario" ? "chart.salesOBProspect" : "chart.salesOB",
+  );
   const weeks = [
     ...new Set(data.history.flatMap((h) => h.records.map((r) => r.week))),
   ].sort((a, b) => a - b);
-  const knownMix = (data.external ?? 0) + (data.group ?? 0);
-  const externalShare = knownMix ? ((data.external ?? 0) / knownMix) * 100 : 0;
   return (
     <>
       <section className="executive-head" id="overview">
@@ -263,7 +303,11 @@ function DashboardView({
           <h1>{tr("overview.salesYear", { year: filters.year })}</h1>
           <p className="executive-subtitle">{tr("overview.subtitle")}</p>
         </div>
-        <div className="snapshot-wrapper" ref={snapshotWrapper}>
+        <div
+          className="snapshot-wrapper"
+          ref={snapshotWrapper}
+          hidden={!isCurrent}
+        >
           <button
             className="snapshot-cluster"
             onClick={() => setReadiness(!readiness)}
@@ -311,9 +355,15 @@ function DashboardView({
             <span>⌄</span>
           </button>
           {readiness && (
-            <section className="snapshot-readiness-panel" id="snapshot-readiness" aria-labelledby="snapshot-readiness-title">
+            <section
+              className="snapshot-readiness-panel"
+              id="snapshot-readiness"
+              aria-labelledby="snapshot-readiness-title"
+            >
               <div className="readiness-panel-head">
-                <h2 id="snapshot-readiness-title">{tr("snapshot.readiness")}</h2>
+                <h2 id="snapshot-readiness-title">
+                  {tr("snapshot.readiness")}
+                </h2>
                 <button
                   className="readiness-close"
                   aria-label={tr("snapshot.close")}
@@ -359,7 +409,11 @@ function DashboardView({
           )}
         </div>
       </section>
-      <section className="filter-bar sales-filter-bar" ref={filterBar} aria-label={tr("filters.global")}>
+      <section
+        className="filter-bar sales-filter-bar"
+        ref={filterBar}
+        aria-label={tr("filters.global")}
+      >
         <div className="filter-field">
           <label htmlFor="region">{tr("filters.region")}</label>
           <select
@@ -388,7 +442,12 @@ function DashboardView({
             id="bu"
             value={filters.bu}
             onChange={(e) =>
-              setFilters({ ...filters, bu: e.target.value, entity: "all", salesTeam: "all" })
+              setFilters({
+                ...filters,
+                bu: e.target.value,
+                entity: "all",
+                salesTeam: "all",
+              })
             }
           >
             <option value="all">{tr("filters.allBU")}</option>
@@ -403,11 +462,23 @@ function DashboardView({
             ))}
           </select>
         </div>
-        <div className="filter-field"><label htmlFor="sales-team">{tr("team.label")}</label>
-          <select id="sales-team" value={filters.salesTeam ?? "all"} onChange={e => setFilters({ ...filters, salesTeam: e.target.value })}>
+        <div className="filter-field">
+          <label htmlFor="sales-team">{tr("team.label")}</label>
+          <select
+            id="sales-team"
+            value={filters.salesTeam ?? "all"}
+            onChange={(e) =>
+              setFilters({ ...filters, salesTeam: e.target.value })
+            }
+          >
             <option value="all">{tr("team.all")}</option>
-            {data.salesTeams.map(team => <option key={team} value={team}>{team === "__unassigned__" ? tr("team.unassigned") : team}</option>)}
-          </select></div>
+            {data.salesTeams.map((team) => (
+              <option key={team} value={team}>
+                {team === "__unassigned__" ? tr("team.unassigned") : team}
+              </option>
+            ))}
+          </select>
+        </div>
         <Segmented
           label={tr("filters.years")}
           value={String(filters.year)}
@@ -441,443 +512,540 @@ function DashboardView({
           }
         />
       </section>
-      {filters.salesTeam && filters.salesTeam !== "all" && <p className="apac-notice">{tr("team.limitation")}</p>}
-      {data.regionRows.length > 0 && <section className="china-strip" style={{ "--summary-columns": data.regionRows.length + 1 } as CSSProperties} aria-label={tr("strip.details", { region: display(filters.region) })}>
-        <button
-          onClick={() => selectEntity("all")}
-          className={
-            filters.bu === "all" &&
-            filters.entity === "all"
-              ? "selected"
-              : ""
-          }
-        >
-          <small>
-            {tr("strip.total", { region: display(filters.region) })}
-            {filters.year}
-          </small>
-          <strong>
-            {formatK(filters.year === 2026 && filters.scenario === "Sales" ? sumKnown(data.regionRows.map(r => chinaStripAmount(r, filters))) : data.regionTotal.base)} <em>kEUR</em>
-          </strong>
-          <span>{filters.year === 2026 && filters.scenario === "Sales" ? tr("metric.salesDate") : tr("china.known")}</span>
-        </button>
-        {[...data.regionRows].sort((a,b) => ["dhk","ddc","dcp"].indexOf(a.entity.id) - ["dhk","ddc","dcp"].indexOf(b.entity.id)).map((r) => (
-          <button
-            key={r.entity.id}
-            className={filters.bu === r.entity.businessUnit ? "selected" : ""}
-            onClick={() => selectEntity(r.entity.id)}
-          >
-            <small>
-              {r.entity.code} · {display(r.entity.description)}
-            </small>
-            <strong>
-              {formatK(chinaStripAmount(r, filters))} <em>kEUR</em>
-            </strong>
-            <span>
-              {filters.year === 2026 && filters.scenario === "Sales" ? `${tr("metric.salesDate")} · ` : <>
-                {r.entity.id === "ddc" && filters.year === 2026 && `${tr("metric.baseOB")} · `}
-                {r.entity.id === "dcp" && filters.year === 2026 && r.snapshot?.sourceCells.dcpReporting && `${tr(filters.salesType === "external" ? "metric.baseOB" : "metric.salesDate")} · `}
-              </>}
-              {r.snapshot
-                ? `W${r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`
-                : tr("china.pending")}
-            </span>
-          </button>
-        ))}
-      </section>}
-      {!data.rows.length && (
-        <p className="apac-notice">{tr("overview.noData")}</p>
-      )}
-      <section className="kpi-grid" id="analysis">
-        <MetricCard
-          label={tr("metric.budget")}
-          value={formatK(t.budget)}
-          period={t.budget !== null && !t.budgetComplete ? tr(t.budget === 0 ? "metric.budgetPending" : "metric.knownSubtotal") : undefined}
-          note={t.budget === 0 && !t.budgetComplete ? tr("notes.pendingBudget") : tr("notes.budget", {
-            year: filters.year,
-            note: t.budget === null ? tr("notes.missingBudget")
-              : !t.budgetComplete && t.budget === 0 ? tr("notes.pendingBudget")
-              : !t.budgetComplete ? tr("notes.partialBudget", {
-                entities: data.rows.filter(r => r.metrics.budgetComplete).map(r => r.entity.code).join(" + "),
-              }) : "",
-          })}
-        />
-        <MetricCard
-          label={tr("metric.baseOB")}
-          value={formatK(t.base)}
-          note={tr("notes.base", { note: partial("base") })}
-        >
-          <div className="kpi-sales-split">
-            <div>
-              <span>{tr("metric.salesDate")}</span>
-              <strong>{formatK(t.sales)}</strong>
-            </div>
-            <div>
-              <span>{tr("metric.ob")}</span>
-              <strong>{formatK(t.orderbook)}</strong>
-            </div>
-          </div>
-          {hasLegacySplit &&
-            <small>{tr("metric.unsplit")}</small>}
-        </MetricCard>
-        <MetricCard
-          label={tr("metric.salesProspect")}
-          value={formatK(t.scenario)}
-          accent
-          period={!t.scenarioComplete ? tr("metric.knownSubtotal") : undefined}
-          note={`${filters.scenario === "Sales" ? tr("metric.salesSelected") : tr("metric.expected")}${partial("scenario")}`}
-        >
-          <div className="kpi-sales-split">
-            <div>
-              <span>{tr("metric.knownProspect")}</span>
-              <strong>{formatK(t.prospect)}</strong>
-            </div>
-          </div>
-        </MetricCard>
-        <MetricCard
-          label={tr("metric.coverage")}
-          period={tr("metric.byYear")}
-          periodDetail={String(filters.year)}
-          unit="FY"
-          value={display(percent(t.coverage))}
-          note={tr("notes.coverage", { year: filters.year }) + (t.coverage !== null && !t.budgetComplete ? tr("notes.provisionalBudgetCalculation") : "")}
-        >
-          <div className="kpi-meter">
-            <span
-              style={{ width: `${Math.min(100, (t.coverage ?? 0) * 100)}%` }}
-            />
-          </div>
-        </MetricCard>
-        <MetricCard
-          label={tr("metric.gapTitle")}
-          period={tr("metric.byYear")}
-          periodDetail={String(filters.year)}
-          value={formatK(t.gap)}
-          note={tr("notes.gap", {
-            year: filters.year,
-            note: t.gap === null ? tr("notes.reviewSuffix") : !t.budgetComplete ? tr("notes.provisionalBudgetCalculation") : "",
-          })}
-        />
-        <MetricCard
-          label={tr("metric.remaining")}
-          period={tr("metric.byMonth")}
-          periodDetail={Array.from(new Set(data.rows.flatMap(r => r.snapshot && r.metrics.remaining !== null ? [`${display(months[r.snapshot.month - 1])} ${r.snapshot.year}`] : []))).join(" / ")}
-          value={formatK(t.remaining)}
-          note={tr("notes.remaining", {
-            note: partial("remaining"),
-            future: filters.year === 2027 ? tr("notes.future") : "",
-          })}
-        />
-      </section>
-      <section className="briefing-strip">
-        <div className="briefing-title">
-          <span className="briefing-mark">↗</span>
-          <div>
-            <p>{tr("overview.summary")}</p>
-            <h2>{tr("overview.attention")}</h2>
-          </div>
-        </div>
-        <div className="briefing-points">
-          <span>
-            <b>{data.rows.filter((r) => r.metrics.budget === null).length}</b>{" "}
-            {tr("overview.budgetsMissing")}
-          </span>
-          <span>
-            <b>{data.rows.filter((r) => r.metrics.prospect === null).length}</b>{" "}
-            {tr("overview.prospectPending")}
-          </span>
-          <span>
-            {data.partialKeys.length
-              ? tr("overview.partial")
-              : tr("overview.available")}{" "}
-            ·{" "}
-            {data.weeks.length > 1
-              ? tr("overview.mixed")
-              : tr("overview.weekly")}
-          </span>
-        </div>
-      </section>
-      <section className="dashboard-grid dashboard-grid-main sales-overview-grid">
-        <SalesMonthlyGraphic data={data} standalone />
-        <article className="panel gap-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="panel-kicker">{tr("chart.contribution")}</p>
-              <h2>{tr("chart.gapBU")}</h2>
-            </div>
-          </div>
-          <div className="gap-list">
-            {data.buGroups.map((b) => (
-              <div className="apac-gap-row" key={b.name}>
-                <strong>{b.name}</strong>
-                <div>
-                  <i
-                    style={{
-                      width:
-                        b.metrics.gap === null
-                          ? "0%"
-                          : `${Math.min(100, (Math.abs(b.metrics.gap) / Math.max(b.metrics.budget ?? 1, 1)) * 100)}%`,
-                    }}
-                  />
-                </div>
-                <b>
-                  {b.metrics.gap === null
-                    ? tr("common.review")
-                    : formatK(b.metrics.gap)}
-                </b>
-              </div>
-            ))}
-          </div>
-          <div className="gap-callout">
-            <span>{tr("chart.annualGap")}</span>
-            <strong>{formatK(t.gap)}</strong>
-          </div>
-          <div className="sales-mix-block">
-            <div className="sales-mix-heading">
-              <div>
-                <span>{tr("chart.mix")}</span>
-                <strong>{tr("chart.externalGroup")}</strong>
-              </div>
-              <small>{tr("chart.classified")}</small>
-            </div>
-            <div className="apac-mix">
-              <div
-                className="apac-donut"
-                style={{
-                  background: knownMix
-                    ? `conic-gradient(#a77a35 0 ${externalShare}%, #386b65 ${externalShare}% 100%)`
-                    : "#ded9ce",
-                }}
-              >
-                <span>
-                  {knownMix ? `${externalShare.toFixed(0)}%` : "—"}
-                  <small>{tr("common.external")}</small>
-                </span>
-              </div>
-              <div>
-                <p>
-                  {tr("common.external")}
-                  <b>{formatK(data.external)}</b>
-                </p>
-                <p>
-                  {tr("common.group")}
-                  <b>{formatK(data.group)}</b>
-                </p>
-                {hasLegacySplit && <small>{tr("chart.dcpSplit")}</small>}
-              </div>
-            </div>
-          </div>
-        </article>
-      </section>
-      <SalesGraphics data={data} />
-      <section className="panel commercial-panel">
-        <div className="panel-heading">
-          <div>
-            <p className="panel-kicker">{tr("commercial.exposure")}</p>
-            <h2>{tr("commercial.title")}</h2>
-            <p>{tr("commercial.largest")}</p>
-          </div>
-          <label className="commercial-filter">
-            <span>{tr("common.customer")}</span>
-            <select
-              value={customer}
-              onChange={(e) => setCustomer(e.target.value)}
+      {isCurrent ? (
+        <>
+          {filters.salesTeam && filters.salesTeam !== "all" && (
+            <p className="apac-notice">{tr("team.limitation")}</p>
+          )}
+          {data.regionRows.length > 0 && (
+            <section
+              className="china-strip"
+              style={
+                {
+                  "--summary-columns": data.regionRows.length + 1,
+                } as CSSProperties
+              }
+              aria-label={tr("strip.details", {
+                region: display(filters.region),
+              })}
             >
-              <option value="all">{tr("filters.allAvailable")}</option>
-              {data.commercial.map((c) => (
-                <option key={c.customer}>{c.customer}</option>
-              ))}
-            </select>
-          </label>
-        </div>
-        <div className="commercial-grid">
-          {data.commercial
-            .filter((c) => customer === "all" || c.customer === customer)
-            .slice(0, 8)
-            .map((c) => (
-              <div className="apac-commercial" key={c.customer}>
-                <span>{c.customer}</span>
+              <button
+                onClick={() => selectEntity("all")}
+                className={
+                  filters.bu === "all" && filters.entity === "all"
+                    ? "selected"
+                    : ""
+                }
+              >
+                <small>
+                  {tr("strip.total", { region: display(filters.region) })}
+                  {filters.year}
+                </small>
                 <strong>
-                  {formatK(c.value)} <small>kEUR</small>
+                  {formatK(
+                    filters.year === 2026 && filters.scenario === "Sales"
+                      ? sumKnown(
+                          data.regionRows.map((r) =>
+                            chinaStripAmount(r, filters),
+                          ),
+                        )
+                      : data.regionTotal.base,
+                  )}{" "}
+                  <em>kEUR</em>
                 </strong>
+                <span>
+                  {filters.year === 2026 && filters.scenario === "Sales"
+                    ? tr("metric.salesDate")
+                    : tr("china.known")}
+                </span>
+              </button>
+              {[...data.regionRows]
+                .sort(
+                  (a, b) =>
+                    ["dhk", "ddc", "dcp"].indexOf(a.entity.id) -
+                    ["dhk", "ddc", "dcp"].indexOf(b.entity.id),
+                )
+                .map((r) => (
+                  <button
+                    key={r.entity.id}
+                    className={
+                      filters.bu === r.entity.businessUnit ? "selected" : ""
+                    }
+                    onClick={() => selectEntity(r.entity.id)}
+                  >
+                    <small>
+                      {r.entity.code} · {display(r.entity.description)}
+                    </small>
+                    <strong>
+                      {formatK(chinaStripAmount(r, filters))} <em>kEUR</em>
+                    </strong>
+                    <span>
+                      {filters.year === 2026 && filters.scenario === "Sales" ? (
+                        `${tr("metric.salesDate")} · `
+                      ) : (
+                        <>
+                          {r.entity.id === "ddc" &&
+                            filters.year === 2026 &&
+                            `${tr("metric.baseOB")} · `}
+                          {r.entity.id === "dcp" &&
+                            filters.year === 2026 &&
+                            r.snapshot?.sourceCells.dcpReporting &&
+                            `${tr(filters.salesType === "external" ? "metric.baseOB" : "metric.salesDate")} · `}
+                        </>
+                      )}
+                      {r.snapshot
+                        ? `W${r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`
+                        : tr("china.pending")}
+                    </span>
+                  </button>
+                ))}
+            </section>
+          )}
+          {!data.rows.length && (
+            <p className="apac-notice">{tr("overview.noData")}</p>
+          )}
+          <section
+            className={`kpi-grid${showForecast ? "" : " kpi-grid-merged"}`}
+            style={{ "--kpi-columns": showForecast ? 6 : 5 } as CSSProperties}
+            id="analysis"
+          >
+            <MetricCard
+              label={tr("metric.budget")}
+              value={formatK(t.budget)}
+              period={
+                t.budget !== null && !t.budgetComplete
+                  ? tr(
+                      t.budget === 0
+                        ? "metric.budgetPending"
+                        : "metric.knownSubtotal",
+                    )
+                  : undefined
+              }
+              note={
+                t.budget === 0 && !t.budgetComplete
+                  ? tr("notes.pendingBudget")
+                  : tr("notes.budget", {
+                      year: filters.year,
+                      note:
+                        t.budget === null
+                          ? tr("notes.missingBudget")
+                          : !t.budgetComplete && t.budget === 0
+                            ? tr("notes.pendingBudget")
+                            : !t.budgetComplete
+                              ? tr("notes.partialBudget", {
+                                  entities: data.rows
+                                    .filter((r) => r.metrics.budgetComplete)
+                                    .map((r) => r.entity.code)
+                                    .join(" + "),
+                                })
+                              : "",
+                    })
+              }
+            />
+            <MetricCard
+              label={tr("metric.baseOB")}
+              value={formatK(t.base)}
+              note={tr("notes.base", { note: partial("base") })}
+            >
+              <div className="kpi-sales-split">
                 <div>
-                  <i
-                    style={{
-                      width: `${Math.max(0, (c.value / Math.max(data.commercial[0]?.value ?? 1, 1)) * 100)}%`,
-                    }}
-                  />
+                  <span>{tr("metric.salesDate")}</span>
+                  <strong>{formatK(t.sales)}</strong>
+                </div>
+                <div>
+                  <span>{tr("metric.ob")}</span>
+                  <strong>{formatK(t.orderbook)}</strong>
                 </div>
               </div>
-            ))}
-        </div>
-        {!data.commercial.length && (
-          <p className="muted">{tr("commercial.empty")}</p>
-        )}
-        <div className="panel-foot">{tr("commercial.note")}</div>
-      </section>
-      <CustomerGraphics filters={filters} revision={data.revision} />
-      <section className="panel matrix-panel" id="time-matrix">
-        <details open>
-          <summary>
-            <span>
-              <p className="panel-kicker">{tr("matrix.period")}</p>
-              <h2>{tr("matrix.title")}</h2>
-              <small>{tr("matrix.subtitle")}</small>
-            </span>
-            <span className="disclosure-action">{tr("matrix.explore")}</span>
-          </summary>
-          <div className="matrix-body">
-            <div className="analysis-toolbar matrix-toolbar">
-              <Segmented
-                label={tr("matrix.frequency")}
-                value={frequency}
-                options={[
-                  { value: "month", label: tr("common.month") },
-                  { value: "week", label: tr("common.week") },
-                ]}
-                onChange={setFrequency}
-              />
-              <Segmented
-                label={tr("matrix.rows")}
-                value={matrixLevel}
-                options={[
-                  { value: "entity", label: tr("common.entities") },
-                  { value: "bu", label: tr("common.bus") },
-                ]}
-                onChange={setMatrixLevel}
-              />
-              <p>
-                {filters.year} · {frequency === "month" ? monthlyMatrixLabel : display(filters.scenario)}
-              </p>
+              {hasLegacySplit && <small>{tr("metric.unsplit")}</small>}
+              {!showForecast && (
+                <div className="kpi-prospect-status">
+                  <span>{tr("metric.knownProspect")}</span>
+                  <strong>{formatK(t.prospect)}</strong>
+                  <small>
+                    {tr(
+                      t.prospect === null
+                        ? "notes.prospectPending"
+                        : filters.scenario === "Sales"
+                          ? "notes.prospectExcluded"
+                          : "notes.prospectMerged",
+                    )}
+                  </small>
+                </div>
+              )}
+            </MetricCard>
+            {showForecast && (
+              <MetricCard
+                label={tr("metric.salesProspect")}
+                value={formatK(t.scenario)}
+                accent
+                period={
+                  !t.scenarioComplete ? tr("metric.knownSubtotal") : undefined
+                }
+                note={`${filters.scenario === "Sales" ? tr("metric.salesSelected") : tr("metric.expected")}${partial("scenario")}`}
+              >
+                <div className="kpi-sales-split">
+                  <div>
+                    <span>{tr("metric.knownProspect")}</span>
+                    <strong>{formatK(t.prospect)}</strong>
+                  </div>
+                </div>
+              </MetricCard>
+            )}
+            <MetricCard
+              label={tr("metric.coverage")}
+              period={tr("metric.byYear")}
+              periodDetail={String(filters.year)}
+              unit="FY"
+              value={display(percent(t.coverage))}
+              note={
+                tr("notes.coverage", { year: filters.year }) +
+                (t.coverage !== null && !t.budgetComplete
+                  ? tr("notes.provisionalBudgetCalculation")
+                  : "")
+              }
+            >
+              <div className="kpi-meter">
+                <span
+                  style={{
+                    width: `${Math.min(100, (t.coverage ?? 0) * 100)}%`,
+                  }}
+                />
+              </div>
+            </MetricCard>
+            <MetricCard
+              label={tr("metric.gapTitle")}
+              period={tr("metric.byYear")}
+              periodDetail={String(filters.year)}
+              value={formatK(t.gap)}
+              note={tr("notes.gap", {
+                year: filters.year,
+                note:
+                  t.gap === null
+                    ? tr("notes.reviewSuffix")
+                    : !t.budgetComplete
+                      ? tr("notes.provisionalBudgetCalculation")
+                      : "",
+              })}
+            />
+            <MetricCard
+              label={tr("metric.remaining")}
+              period={tr("metric.byMonth")}
+              periodDetail={Array.from(
+                new Set(
+                  data.rows.flatMap((r) =>
+                    r.snapshot && r.metrics.remaining !== null
+                      ? [
+                          `${display(months[r.snapshot.month - 1])} ${r.snapshot.year}`,
+                        ]
+                      : [],
+                  ),
+                ),
+              ).join(" / ")}
+              value={formatK(t.remaining)}
+              note={tr("notes.remaining", {
+                note: partial("remaining"),
+                future: filters.year === 2027 ? tr("notes.future") : "",
+              })}
+            />
+          </section>
+          <section className="briefing-strip">
+            <div className="briefing-title">
+              <span className="briefing-mark">↗</span>
+              <div>
+                <p>{tr("overview.summary")}</p>
+                <h2>{tr("overview.attention")}</h2>
+              </div>
             </div>
-            <div className="matrix-scroll">
-              <table className="time-matrix">
-                <thead>
-                  <tr>
-                    <th>{tr("common.buEntity")}</th>
-                    {(frequency === "month"
-                      ? months
-                      : weeks.map((w) => `W${w}`)
-                    ).map((m) => (
-                      <th className="numeric" key={m}>
-                        {display(m)}
-                      </th>
+            <div className="briefing-points">
+              <span>
+                <b>
+                  {data.rows.filter((r) => r.metrics.budget === null).length}
+                </b>{" "}
+                {tr("overview.budgetsMissing")}
+              </span>
+              <span>
+                <b>
+                  {data.rows.filter((r) => r.metrics.prospect === null).length}
+                </b>{" "}
+                {tr("overview.prospectPending")}
+              </span>
+              <span>
+                {data.partialKeys.length
+                  ? tr("overview.partial")
+                  : tr("overview.available")}{" "}
+                ·{" "}
+                {data.weeks.length > 1
+                  ? tr("overview.mixed")
+                  : tr("overview.weekly")}
+              </span>
+            </div>
+          </section>
+          <section className="dashboard-grid dashboard-grid-main sales-overview-grid">
+            <SalesMonthlyGraphic data={data} standalone />
+          </section>
+          <SalesGraphics data={data} />
+          <section
+            className="graphics-section"
+            id="business-units"
+            aria-labelledby="bu-performance-title"
+          >
+            <div className="graphics-section-heading">
+              <div>
+                <p className="panel-kicker">{tr("graphics.buKicker")}</p>
+                <h2 id="bu-performance-title">{tr("graphics.buTitle")}</h2>
+              </div>
+            </div>
+            <BusinessUnitGraphics data={data} />
+            <details className="graphics-entity-details">
+              <summary>{tr("graphics.annualDetails")}</summary>
+              <MetricsTable
+                rows={totalRows}
+                onSelect={(id) => selectEntity(id === "china" ? "all" : id)}
+              />
+            </details>
+          </section>
+          <section
+            className="graphics-section"
+            aria-labelledby="orderbook-graphics-title"
+          >
+            <div className="graphics-section-heading">
+              <div>
+                <p className="panel-kicker">{tr("graphics.obKicker")}</p>
+                <h2 id="orderbook-graphics-title">{tr("graphics.obTitle")}</h2>
+              </div>
+            </div>
+            <div className="graphics-grid orderbook-grid">
+              <TeamContributionGraphic data={data} />
+              <section className="panel commercial-panel">
+                <div className="panel-heading">
+                  <div>
+                    <p className="panel-kicker">{tr("commercial.exposure")}</p>
+                    <h2>{tr("commercial.title")}</h2>
+                    <p>{tr("commercial.largest")}</p>
+                  </div>
+                  <label className="commercial-filter">
+                    <span>{tr("common.customer")}</span>
+                    <select
+                      value={selectedCustomer}
+                      onChange={(e) => setCustomer(e.target.value)}
+                    >
+                      <option value="all">{tr("filters.allAvailable")}</option>
+                      {data.commercial.map((c) => (
+                        <option key={c.customer}>{c.customer}</option>
+                      ))}
+                    </select>
+                  </label>
+                </div>
+                <div className="commercial-grid">
+                  {data.commercial
+                    .filter(
+                      (c) =>
+                        selectedCustomer === "all" ||
+                        c.customer === selectedCustomer,
+                    )
+                    .slice(0, 8)
+                    .map((c) => (
+                      <div className="apac-commercial" key={c.customer}>
+                        <span>{c.customer}</span>
+                        <strong>
+                          {formatK(c.value)} <small>kEUR</small>
+                        </strong>
+                        <div>
+                          <i
+                            style={{
+                              width: `${Math.max(0, (c.value / Math.max(data.commercial[0]?.value ?? 1, 1)) * 100)}%`,
+                            }}
+                          />
+                        </div>
+                      </div>
                     ))}
-                    <th className="numeric">{frequency === "month" ? tr("matrix.fyMetric", { metric: monthlyMatrixLabel }) : tr("matrix.fy")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {matrixRows.map((r) => (
-                    <tr key={r.name}>
-                      <td>{r.name}</td>
-                      {frequency === "month"
-                        ? r.metrics.monthly.map((m) => (
-                            <td className="numeric" key={m.label}>
-                              {formatK(m[monthlyMatrixKey])}
-                            </td>
-                          ))
-                        : weeks.map((w) => {
-                            const history = data.history.filter((h) =>
-                              matrixLevel === "entity"
-                                ? h.entity.code === r.name
-                                : h.entity.businessUnit === r.name,
-                            );
-                            const vals = history.map(
-                              (h) =>
-                                h.records.find((x) => x.week === w)?.value ??
-                                null,
-                            );
-                            return (
-                              <td className="numeric" key={w}>
-                                {formatK(
-                                  vals.length && vals.every((v) => v !== null)
-                                    ? vals.reduce<number>((a, v) => a + v!, 0)
-                                    : null,
-                                )}
-                              </td>
-                            );
-                          })}
-                      <td className="numeric">{formatK(frequency === "month" ? r.metrics[monthlyMatrixKey] : r.metrics.scenario)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
+                </div>
+                {!data.commercial.length && (
+                  <p className="muted">{tr("commercial.empty")}</p>
+                )}
+                <div className="panel-foot">{tr("commercial.note")}</div>
+              </section>
             </div>
-            <p className="muted">
-              {frequency === "month" ? <>
-                {monthlyVisibility.scenario === "unavailable" && monthlyVisibility.keys.length > 0 && <>{tr("chart.scenarioUnavailable")} </>}
-                {tr("matrix.monthNote")}
-              </> : tr("matrix.note")}
-            </p>
-          </div>
-        </details>
-      </section>
-      <section className="panel bu-panel" id="business-units">
-        <div className="panel-heading">
-          <div>
-            <p className="panel-kicker">{tr("china.entityDetail")}</p>
-            <h2>{tr("china.details")}</h2>
-            <p>{tr("china.note")}</p>
-          </div>
-        </div>
-        <MetricsTable
-          rows={totalRows}
-          onSelect={(id) => selectEntity(id === "china" ? "all" : id)}
-        />
-        {data.rows.some((r) => r.entity.reportingRegion !== "China") && (
-          <MetricsTable
-            rows={data.rows
-              .filter((r) => r.entity.reportingRegion !== "China")
-              .map((r) => ({
-                id: r.entity.id,
-                name: r.entity.code,
-                metrics: r.metrics,
-              }))}
-          />
-        )}
-      </section>
-      <BusinessUnitGraphics data={data} />
-      <section className="quality-panel" id="management-checks">
-        <details open>
-          <summary>
-            <div>
-              <p className="panel-kicker">{tr("checks.controls")}</p>
-              <h2>{tr("nav.checks")}</h2>
-            </div>
-            <span>{tr("checks.count", { count: data.checks.length })}</span>
-          </summary>
-          <p className="quality-intro">{tr("checks.note")}</p>
-          <div className="quality-grid">
-            {data.rows.map((r) => (
-              <article className="apac-check" key={r.entity.id}>
-                <strong>
-                  {r.entity.code} ·{" "}
-                  {r.snapshot ? tr("common.review") : tr("snapshot.missing")}
-                </strong>
-                <ul>
-                  {(
-                    r.snapshot?.findings ?? [tr("snapshot.workbookMissing")]
-                  ).map((f, i) => (
-                    <li key={i}>{display(f)}</li>
-                  ))}
-                </ul>
-              </article>
-            ))}
-          </div>
-        </details>
-      </section>
-      <footer className="apac-footer">
-        <span>{tr("footer.title")}</span>
-        <span>{tr("footer.latestUpdate", { date: formatUpdateDate(data.latestDataUpdate, locale) })}</span>
-        <span>
-          {data.latestPublish
-            ? tr("notes.lastPublish", {
-                date: new Date(data.latestPublish).toLocaleString(locale),
-              })
-            : tr("snapshot.baseline")}{" "}
-          · kEUR
-        </span>
-      </footer>
+          </section>
+          <CustomerGraphics filters={filters} revision={data.revision} />
+          <section className="panel matrix-panel" id="time-matrix">
+            <details open>
+              <summary>
+                <span>
+                  <p className="panel-kicker">{tr("matrix.period")}</p>
+                  <h2>{tr("matrix.title")}</h2>
+                  <small>{tr("matrix.subtitle")}</small>
+                </span>
+                <span className="disclosure-action">
+                  {tr("matrix.explore")}
+                </span>
+              </summary>
+              <div className="matrix-body">
+                <div className="analysis-toolbar matrix-toolbar">
+                  <Segmented
+                    label={tr("matrix.frequency")}
+                    value={frequency}
+                    options={[
+                      { value: "month", label: tr("common.month") },
+                      { value: "week", label: tr("common.week") },
+                    ]}
+                    onChange={setFrequency}
+                  />
+                  <Segmented
+                    label={tr("matrix.rows")}
+                    value={matrixLevel}
+                    options={[
+                      { value: "entity", label: tr("common.entities") },
+                      { value: "bu", label: tr("common.bus") },
+                    ]}
+                    onChange={setMatrixLevel}
+                  />
+                  <p>
+                    {filters.year} ·{" "}
+                    {frequency === "month"
+                      ? monthlyMatrixLabel
+                      : display(filters.scenario)}
+                  </p>
+                </div>
+                <div className="matrix-scroll">
+                  <table className="time-matrix">
+                    <thead>
+                      <tr>
+                        <th>{tr("common.buEntity")}</th>
+                        {(frequency === "month"
+                          ? months
+                          : weeks.map((w) => `W${w}`)
+                        ).map((m) => (
+                          <th className="numeric" key={m}>
+                            {display(m)}
+                          </th>
+                        ))}
+                        <th className="numeric">
+                          {frequency === "month"
+                            ? tr("matrix.fyMetric", {
+                                metric: monthlyMatrixLabel,
+                              })
+                            : tr("matrix.fy")}
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {matrixRows.map((r) => (
+                        <tr key={r.name}>
+                          <td>{r.name}</td>
+                          {frequency === "month"
+                            ? r.metrics.monthly.map((m) => (
+                                <td className="numeric" key={m.label}>
+                                  {formatK(m[monthlyMatrixKey])}
+                                </td>
+                              ))
+                            : weeks.map((w) => {
+                                const history = data.history.filter((h) =>
+                                  matrixLevel === "entity"
+                                    ? h.entity.code === r.name
+                                    : h.entity.businessUnit === r.name,
+                                );
+                                const vals = history.map(
+                                  (h) =>
+                                    h.records.find((x) => x.week === w)
+                                      ?.value ?? null,
+                                );
+                                return (
+                                  <td className="numeric" key={w}>
+                                    {formatK(
+                                      vals.length &&
+                                        vals.every((v) => v !== null)
+                                        ? vals.reduce<number>(
+                                            (a, v) => a + v!,
+                                            0,
+                                          )
+                                        : null,
+                                    )}
+                                  </td>
+                                );
+                              })}
+                          <td className="numeric">
+                            {formatK(
+                              frequency === "month"
+                                ? r.metrics[monthlyMatrixKey]
+                                : r.metrics.scenario,
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <p className="muted">
+                  {frequency === "month" ? (
+                    <>
+                      {monthlyView.partial && monthlyMatrixKey === "base" && (
+                        <>{tr("chart.scenarioUnavailable")} </>
+                      )}
+                      {tr("matrix.monthNote")}
+                    </>
+                  ) : (
+                    tr("matrix.note")
+                  )}
+                </p>
+              </div>
+            </details>
+          </section>
+
+          <section className="quality-panel" id="management-checks">
+            <details open>
+              <summary>
+                <div>
+                  <p className="panel-kicker">{tr("checks.controls")}</p>
+                  <h2>{tr("nav.checks")}</h2>
+                </div>
+                <span>{tr("checks.count", { count: data.checks.length })}</span>
+              </summary>
+              <p className="quality-intro">{tr("checks.note")}</p>
+              <div className="quality-grid">
+                {data.rows.map((r) => (
+                  <article className="apac-check" key={r.entity.id}>
+                    <strong>
+                      {r.entity.code} ·{" "}
+                      {r.snapshot
+                        ? tr("common.review")
+                        : tr("snapshot.missing")}
+                    </strong>
+                    <ul>
+                      {(
+                        r.snapshot?.findings ?? [tr("snapshot.workbookMissing")]
+                      ).map((f, i) => (
+                        <li key={i}>{display(f)}</li>
+                      ))}
+                    </ul>
+                  </article>
+                ))}
+              </div>
+            </details>
+          </section>
+          <footer className="apac-footer">
+            <span>{tr("footer.title")}</span>
+            <span>
+              {tr("footer.latestUpdate", {
+                date: formatUpdateDate(data.latestDataUpdate, locale),
+              })}
+            </span>
+            <span>
+              {data.latestPublish
+                ? tr("notes.lastPublish", {
+                    date: new Date(data.latestPublish).toLocaleString(locale),
+                  })
+                : tr("snapshot.baseline")}{" "}
+              · kEUR
+            </span>
+          </footer>
+        </>
+      ) : (
+        <p className="apac-notice" role="status">
+          {tr(filterError ? "filters.unavailable" : "auth.updating")}
+        </p>
+      )}
     </>
   );
 }
@@ -915,7 +1083,8 @@ export default function Home() {
     }
   }, [sessionChecked, user, view, pathname, locale, router]);
   useEffect(() => {
-    if (!user || view === "home" || view === "login" || view === "ar-aging") return;
+    if (!user || view === "home" || view === "login" || view === "ar-aging")
+      return;
     const controller = new AbortController();
     setLoading(true);
     const query = new URLSearchParams(
@@ -923,16 +1092,25 @@ export default function Home() {
     );
     void fetch(`/api/dashboard?${query}`, { signal: controller.signal })
       .then((r) => {
-        if (r.status === 401) {
+        if (!controller.signal.aborted && r.status === 401) {
           setUser(null);
           setData(null);
         }
         return r.json();
       })
       .then((j) => {
+        if (controller.signal.aborted) return;
         if (!j.ok) throw new Error(j.error);
-        if (j.data.entities.length && !j.data.entities.some((e: Entity) => matchesRegion(e, filters.region))) {
-          setFilters({ ...filters, region: j.data.entities[0].reportingRegion, bu: "all", entity: "all" });
+        if (
+          j.data.entities.length &&
+          !j.data.entities.some((e: Entity) => matchesRegion(e, filters.region))
+        ) {
+          setFilters({
+            ...filters,
+            region: j.data.entities[0].reportingRegion,
+            bu: "all",
+            entity: "all",
+          });
           return;
         }
         setData(j.data);
@@ -940,7 +1118,8 @@ export default function Home() {
         setError("");
       })
       .catch((e) => {
-        if (e.name !== "AbortError") setError(e.message);
+        if (!controller.signal.aborted && e.name !== "AbortError")
+          setError(e.message);
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -1068,6 +1247,7 @@ export default function Home() {
               data={data}
               filters={filters}
               setFilters={setFilters}
+              filterError={error}
             />
           </div>
         ) : (

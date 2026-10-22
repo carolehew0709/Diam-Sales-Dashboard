@@ -86,6 +86,8 @@ export function GraphicCard({
   height = 360,
   table,
   exportTable,
+  notice,
+  exportNote,
 }: {
   title: string;
   context: string;
@@ -95,6 +97,8 @@ export function GraphicCard({
   height?: number;
   table?: ReactNode;
   exportTable: ChartTable;
+  notice?: string;
+  exportNote?: string;
 }) {
   const svg = useRef<SVGSVGElement>(null);
   const tooltip = useChartTooltip(svg, exportTable);
@@ -107,11 +111,12 @@ export function GraphicCard({
           svg={svg}
           title={title}
           context={context}
-          note={note}
+          note={exportNote ?? note}
           exportTable={exportTable}
         />
       </div>
       <p className="graphic-context">{context}</p>
+      {notice && <p className="graphic-filter-note">{notice}</p>}
       <div className="graphic-plot">
         <svg
           ref={svg}

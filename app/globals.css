@@ -1151,7 +1151,7 @@ select:focus-visible,
 
 .kpi-grid {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(var(--kpi-columns, 6), minmax(0, 1fr));
   gap: 12px;
   margin-top: 14px;
 }
@@ -5389,8 +5389,14 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 .monthly-sales-graphic { min-width: 0; }
 .sales-overview-grid .monthly-sales-graphic > .graphic-card { height: 100%; }
 .primary-sales-graphic .graphic-heading h3 { font-size: 22px; letter-spacing: -.02em; }
-.sales-overview-grid > .gap-panel { display: flex; flex-direction: column; }
-.sales-overview-grid > .gap-panel .sales-mix-block { margin-top: auto; }
+.dashboard-grid-main.sales-overview-grid { grid-template-columns: minmax(0,1fr); }
+.primary-sales-graphic .graphic-plot { max-width: 1100px; margin-inline: auto; }
+.graphics-section > .graphics-entity-details:first-child { margin: 0 0 28px; }
+.team-contribution-graphic { min-width: 0; }
+.team-contribution-graphic > .graphic-card { height: 100%; }
+.orderbook-grid > .commercial-panel { margin-top: 0; }
+.orderbook-grid .panel-heading { flex-wrap: wrap; }
+.orderbook-grid .commercial-filter { min-width: 180px; max-width: 100%; }
 .invoice-progress-card { display: flex; flex-direction: column; }
 .invoice-progress-card .apac-delivery { flex: 1; align-content: center; }
 .graphic-downloads { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 5px; flex-shrink: 0; }
@@ -5400,6 +5406,16 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 .graphic-downloads button:disabled { opacity: .5; cursor: wait; }
 .graphic-downloads [role=alert] { color: #a34f3d; font-size: 11px; }
 .graphic-context { margin: 10px 0 16px; color: var(--muted); font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; }
+.graphic-filter-note { margin: 0 0 14px; padding: 9px 12px; background: var(--gold-soft); border-left: 2px solid var(--gold); border-radius: 4px; color: var(--gold-strong); font-size: 11px; line-height: 1.6; }
+.kpi-prospect-status { display: grid; grid-template-columns: 1fr auto; gap: 4px 8px; margin-top: 10px; color: var(--muted); font-size: 11px; }
+.kpi-prospect-status strong { color: var(--ink); font-variant-numeric: tabular-nums; }
+.kpi-prospect-status small { grid-column: 1 / -1; line-height: 1.5; }
+@media (min-width: 641px) and (max-width: 1280px) {
+  .kpi-grid-merged { grid-template-columns: repeat(6,minmax(0,1fr)); }
+  .kpi-grid-merged > .kpi-card { grid-column: span 2; }
+  .kpi-grid-merged > .kpi-card:nth-last-child(-n+2) { grid-column: span 3; }
+}
+@media (min-width: 481px) and (max-width: 640px) { .kpi-grid-merged > .kpi-card:last-child { grid-column: 1 / -1; } }
 .graphic-plot { width: 100%; overflow-x: auto; }
 .graphic-plot > svg { display: block; width: 100%; height: auto; min-width: 430px; }
 .graphic-note { color: var(--muted); font-size: 11px; line-height: 1.8; overflow-wrap: anywhere; margin: 14px 0 0; }

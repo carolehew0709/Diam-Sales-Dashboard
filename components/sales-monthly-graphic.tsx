@@ -5,6 +5,7 @@ import { GraphicCard } from "./graphic-card";
 import { ComboPlot } from "./graphic-plots";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { months, type Dashboard } from "@/lib/dashboard";
+import { monthlyPerformanceSeries } from "@/lib/performance-chart";
 
 export function SalesMonthlyGraphic({
   data,
@@ -33,33 +34,61 @@ export function SalesMonthlyGraphic({
       : null,
   );
   const series = data.graphics.series[index];
+  const selectedRows =
+    index === 0
+      ? data.rows
+      : data.rows.filter((r) => r.entity.id === series.id);
+  const metrics = index === 0 ? data.totals : selectedRows[0].metrics;
+  const view = monthlyPerformanceSeries(
+    metrics,
+    data.filters.scenario,
+    data.filters.salesTeam,
+  );
+  const monthlyLabel = tr(
+    view.key === "scenario"
+      ? "graphics.monthlyScenario"
+      : "graphics.monthlyConfirmed",
+  );
+  const cumulativeLabel = tr(
+    view.key === "scenario"
+      ? "graphics.cumulativeScenario"
+      : "graphics.cumulativeConfirmed",
+  );
   const week =
     data.weeks.map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
   const filters = data.filters;
-  const context = `${tr("graphics.weekly", { week })} · ${filters.year} · ${display(filters.region)} · ${filters.bu === "all" ? tr("filters.allBU") : filters.bu} · ${filters.salesType === "all" ? tr("filters.allSales") : display(filters.salesType)} · ${filters.salesTeam === "all" || !filters.salesTeam ? tr("team.all") : filters.salesTeam} · kEUR`;
+  const context = `${tr("graphics.weekly", { week })} · ${filters.year} · ${display(filters.region)} · ${filters.bu === "all" ? tr("filters.allBU") : filters.bu} · ${filters.salesType === "all" ? tr("filters.allSales") : display(filters.salesType)} · ${display(filters.scenario)} · ${filters.salesTeam === "all" || !filters.salesTeam ? tr("team.all") : filters.salesTeam} · kEUR`;
   const sources = [
     ...new Set(
-      data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
+      selectedRows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
     ),
   ].join("; ");
-  const sourceFor = (i: number) => {
-    const point = series.points[i];
-    return index === 0
-      ? data.graphics.series
-          .slice(1)
-          .map((s) => {
-            const p = s.points[i];
-            return `${s.name}: ${p.week ? `W${p.week} · ${p.sourceFile} · ${p.sourceSheet}` : "—"}`;
-          })
-          .join("; ")
-      : point.week
-        ? `W${point.week} · ${point.sourceFile} · ${point.sourceSheet}`
-        : null;
-  };
+  const sourceFor = () =>
+    selectedRows
+      .map(
+        (r) =>
+          `${r.entity.code}: ${r.snapshot ? `W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}` : "—"}`,
+      )
+      .join("; ");
+  const scopeName =
+    filters.entity !== "all"
+      ? (selectedRows[0]?.entity.code ?? filters.entity)
+      : filters.bu !== "all"
+        ? filters.bu
+        : display(filters.region);
   const title = tr("graphics.performanceFor", {
-    name: index === 0 ? display(series.name) : series.name,
+    name: index === 0 ? scopeName : series.name,
   });
-  const note = `${tr("graphics.monthEndRule")} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
+  const teamScoped = filters.salesTeam && filters.salesTeam !== "all";
+  const notice =
+    !teamScoped && view.partial
+      ? tr(
+          view.key === "base"
+            ? "graphics.knownPlanning"
+            : "graphics.partialPlanning",
+        )
+      : "";
+  const note = `${teamScoped ? "" : tr("graphics.planningRule")} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
   const exact = (v: number | null) =>
     v === null
       ? "—"
@@ -77,18 +106,20 @@ export function SalesMonthlyGraphic({
         title={title}
         context={context}
         note={note}
+        exportNote={`${teamScoped ? tr("graphics.noTeamPerformance") : notice} ${note}`}
+        notice={notice}
         exportTable={{
           columns: [
             { label: tr("common.month") },
-            { label: `${tr("graphics.monthlySales")} (kEUR)` },
-            { label: `${tr("graphics.ytdSales")} (kEUR)` },
+            { label: `${monthlyLabel} (kEUR)` },
+            { label: `${cumulativeLabel} (kEUR)` },
             { label: tr("common.source") },
           ],
-          rows: series.points.map((p, i) => [
+          rows: view.points.map((p, i) => [
             display(months[i]),
             p.monthly,
             p.ytd,
-            sourceFor(i),
+            sourceFor(),
           ]),
         }}
         table={
@@ -96,18 +127,18 @@ export function SalesMonthlyGraphic({
             <thead>
               <tr>
                 <th>{tr("common.month")}</th>
-                <th className="numeric">{tr("graphics.monthlySales")}</th>
-                <th className="numeric">{tr("graphics.ytdSales")}</th>
+                <th className="numeric">{monthlyLabel}</th>
+                <th className="numeric">{cumulativeLabel}</th>
                 <th>{tr("common.source")}</th>
               </tr>
             </thead>
             <tbody>
-              {series.points.map((p, i) => (
+              {view.points.map((p, i) => (
                 <tr key={i}>
                   <td>{display(months[i])}</td>
                   <td className="numeric">{exact(p.monthly)}</td>
                   <td className="numeric">{exact(p.ytd)}</td>
-                  <td>{sourceFor(i) ?? "—"}</td>
+                  <td>{sourceFor()}</td>
                 </tr>
               ))}
             </tbody>
@@ -115,13 +146,17 @@ export function SalesMonthlyGraphic({
         }
       >
         <ComboPlot
-          points={series.points.map((p, i) => ({
+          points={view.points.map((p, i) => ({
             ...p,
             label: display(months[i]),
           }))}
-          monthlyLabel={tr("graphics.monthlySales")}
-          ytdLabel={tr("graphics.ytdSales")}
-          empty={tr("graphics.noActuals")}
+          monthlyLabel={monthlyLabel}
+          ytdLabel={cumulativeLabel}
+          empty={tr(
+            filters.salesTeam && filters.salesTeam !== "all"
+              ? "graphics.noTeamPerformance"
+              : "graphics.noPlanning",
+          )}
         />
       </GraphicCard>
     </div>

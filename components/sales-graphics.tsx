@@ -17,10 +17,19 @@ import { ChartMark } from "./chart-interaction";
 import { chartAmount } from "@/lib/chart-tooltip";
 import { SalesMonthlyGraphic } from "./sales-monthly-graphic";
 
-export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; exportOnly?: boolean }) {
+export function SalesGraphics({
+  data,
+  exportOnly = false,
+}: {
+  data: Dashboard;
+  exportOnly?: boolean;
+}) {
   const { tr, display, locale } = useI18n();
   const root = useRef<HTMLElement>(null);
-  useWorkbookGroup(root, exportOnly ? null : () => <SalesGraphics data={data} exportOnly />);
+  useWorkbookGroup(
+    root,
+    exportOnly ? null : () => <SalesGraphics data={data} exportOnly />,
+  );
   const t = data.totals;
   const week =
     data.weeks.map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
@@ -97,23 +106,26 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
     ) * 1.18;
   const wy = (v: number) =>
     280 - ((v - waterfallMin) / (waterfallMax - waterfallMin)) * 245;
-  const coverage = t.coverage;
-  const teams = data.graphics.teams;
-  const teamTotal = teams.reduce((n, r) => n + r.value, 0);
-  const teamRows = teams.map((r) => ({
-    ...r,
-    name: r.name === "__unassigned__" ? tr("team.unassigned") : r.name,
-  }));
   return (
     <section
       ref={root}
       className="graphics-section"
       aria-labelledby={exportOnly ? undefined : "sales-graphics-title"}
     >
+      <details className="graphics-entity-details">
+        <summary>{tr("graphics.entityCharts")}</summary>
+        <div className="graphics-grid">
+          {data.graphics.series.slice(1).map((series, i) => (
+            <SalesMonthlyGraphic key={series.id} data={data} index={i + 1} />
+          ))}
+        </div>
+      </details>
       <div className="graphics-section-heading">
         <div>
           <p className="panel-kicker">{tr("graphics.weeklyKicker")}</p>
-          <h2 id={exportOnly ? undefined : "sales-graphics-title"}>{tr("graphics.salesTitle")}</h2>
+          <h2 id={exportOnly ? undefined : "sales-graphics-title"}>
+            {tr("graphics.salesTitle")}
+          </h2>
         </div>
         <span className="graphics-period">
           {tr("graphics.weekly", { week })}
@@ -125,7 +137,14 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
           title={tr("graphics.waterfall")}
           context={context}
           note={`${tr("graphics.noProspect")} ${provisional} ${note}`}
-          exportTable={{ columns: [{ label: tr("graphics.workbookStep") }, { label: "kEUR" }], rows: bars.map(b => [b.name, b.value]), summaryRows: [bars.length - 1] }}
+          exportTable={{
+            columns: [
+              { label: tr("graphics.workbookStep") },
+              { label: "kEUR" },
+            ],
+            rows: bars.map((b) => [b.name, b.value]),
+            summaryRows: [bars.length - 1],
+          }}
         >
           {!budgetReady ? (
             <PlotEmpty text={tr("graphics.incompleteAnnual")} />
@@ -144,7 +163,20 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
                 const x = 94 + i * (650 / bars.length),
                   end = b.start + b.value!;
                 return (
-                  <ChartMark key={i} color={b.color} data={{title:b.name,subtitle:week,rows:[{label:tr("graphics.amount"),value:chartAmount(b.value,locale)}]}}>
+                  <ChartMark
+                    key={i}
+                    color={b.color}
+                    data={{
+                      title: b.name,
+                      subtitle: week,
+                      rows: [
+                        {
+                          label: tr("graphics.amount"),
+                          value: chartAmount(b.value, locale),
+                        },
+                      ],
+                    }}
+                  >
                     <rect
                       x={x}
                       y={Math.min(wy(end), wy(b.start))}
@@ -181,121 +213,100 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
             </>
           )}
         </GraphicCard>
-        <GraphicCard
-          title={tr("graphics.gauge")}
-          context={context}
-          note={`${tr("graphics.noProspect")} ${provisional} ${note}`}
-          exportTable={{ columns: [{ label: tr("graphics.workbookStep") }, { label: "kEUR" }, { label: tr("metric.coverage"), format: "0.0%" }], rows: [
-            [tr("graphics.annualBudget"), t.budget, null], [tr("graphics.invoiced"), t.sales, null], [tr("metric.ob"), t.orderbook, null],
-            [tr("graphics.annualBase"), t.base, t.coverage], [tr("metric.gap"), t.gap, null],
-          ], summaryRows: [3] }}
-        >
-          {coverage === null ? (
-            <PlotEmpty text={tr("graphics.incompleteAnnual")} />
-          ) : (
-            <ChartMark hit={<rect x="175" y="15" width="450" height="320" fill="white" />} data={{title:tr("graphics.gauge"),subtitle:week,rows:[
-              {label:tr("graphics.annualBudget"),value:chartAmount(t.budget,locale)},
-              {label:tr("graphics.annualBase"),value:chartAmount(t.base,locale)},
-              {label:tr("metric.coverage"),value:`${(coverage*100).toFixed(1)}%`},
-              {label:tr("metric.gap"),value:chartAmount(t.gap,locale)},
-            ]}}>
-              <path
-                d="M 220 240 A 180 180 0 0 1 580 240"
-                fill="none"
-                stroke="#ebe7de"
-                strokeWidth="36"
-              />
-              <path
-                d="M 220 240 A 180 180 0 0 1 580 240"
-                fill="none"
-                stroke="#a77a35"
-                strokeWidth="36"
-                pathLength="100"
-                strokeDasharray={`${Math.min(100, Math.max(0, (coverage / 1.5) * 100))} 100`}
-              />
-              {[0, 0.5, 1, 1.5].map((v) => {
-                const angle = Math.PI - (v / 1.5) * Math.PI;
-                return (
-                  <text
-                    key={v}
-                    x={400 + 224 * Math.cos(angle)}
-                    y={240 - 224 * Math.sin(angle)}
-                    textAnchor="middle"
-                    fill="#706f67"
-                  >
-                    {Math.round(v * 100)}%
-                  </text>
-                );
-              })}
-              <text
-                x="400"
-                y="188"
-                textAnchor="middle"
-                fontSize="46"
-                fontWeight="600"
-              >
-                {(coverage * 100).toFixed(1)}%
-              </text>
-              <text x="400" y="219" textAnchor="middle" fill="#706f67">
-                {tr("graphics.annualBase")}
-              </text>
-              <text x="400" y="285" textAnchor="middle" fontSize="15">
-                {tr("metric.gap")}: {formatK(t.gap)} kEUR
-              </text>
-              <text x="400" y="319" textAnchor="middle" fill="#706f67">
-                {tr("graphics.annualBudget")}: {formatK(t.budget)} ·{" "}
-                {tr("graphics.annualBase")}: {formatK(t.base)}
-              </text>
-            </ChartMark>
-          )}
-        </GraphicCard>
+
         <InvoiceProgress data={data} />
-        <GraphicCard
-          title={tr("graphics.teamContribution")}
-          context={context}
-          note={`${tr("graphics.teamRule")} ${note}`}
-          exportTable={{ columns: [{ label: tr("team.label") }, { label: "kEUR" }, { label: "%", format: "0.0%" }], rows: teamRows.map(r => [r.name, r.value, teamTotal > 0 ? r.value / teamTotal : null]) }}
-          table={
-            <table className="bu-table">
-              <thead>
-                <tr>
-                  <th>{tr("team.label")}</th>
-                  <th className="numeric">kEUR</th>
-                  <th className="numeric">%</th>
-                </tr>
-              </thead>
-              <tbody>
-                {teamRows.map((r) => (
-                  <tr key={r.name}>
-                    <td>{r.name}</td>
-                    <td className="numeric">{exact(r.value)}</td>
-                    <td className="numeric">
-                      {teamTotal > 0
-                        ? ((r.value / teamTotal) * 100).toFixed(1)
-                        : "—"}
-                    </td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          }
-        >
-          <DonutPlot
-            rows={teamRows}
-            empty={tr("graphics.noTeam")}
-            totalLabel={tr("metric.ob")}
-            otherLabel={tr("graphics.other")}
-          />
-        </GraphicCard>
       </div>
-      <details className="graphics-entity-details">
-        <summary>{tr("graphics.entityCharts")}</summary>
-        <div className="graphics-grid">
-          {data.graphics.series.slice(1).map((series, i) => <SalesMonthlyGraphic key={series.id} data={data} index={i + 1} />)}
-        </div>
-      </details>
+
       <p className="graphics-limitation">{tr("graphics.missingYoY")}</p>
     </section>
+  );
+}
+
+export function TeamContributionGraphic({
+  data,
+  exportOnly = false,
+}: {
+  data: Dashboard;
+  exportOnly?: boolean;
+}) {
+  const { tr, display, locale } = useI18n();
+  const root = useRef<HTMLDivElement>(null);
+  useWorkbookGroup(
+    root,
+    exportOnly
+      ? null
+      : () => <TeamContributionGraphic data={data} exportOnly />,
+  );
+  const week =
+    data.weeks.map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
+  const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · kEUR`;
+  const sources = [
+    ...new Set(
+      data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
+    ),
+  ].join("; ");
+  const note = `${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
+  const exact = (v: number | null) =>
+    v === null
+      ? "—"
+      : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  const teams = data.graphics.teams;
+  const teamTotal = teams.reduce((n, r) => n + r.value, 0);
+  const teamRows = teams.map((r) => ({
+    ...r,
+    name: r.name === "__unassigned__" ? tr("team.unassigned") : r.name,
+  }));
+  return (
+    <div ref={root} className="team-contribution-graphic">
+      <GraphicCard
+        title={tr("graphics.teamContribution")}
+        context={context}
+        note={`${tr("graphics.teamRule")} ${note}`}
+        exportTable={{
+          columns: [
+            { label: tr("team.label") },
+            { label: "kEUR" },
+            { label: "%", format: "0.0%" },
+          ],
+          rows: teamRows.map((r) => [
+            r.name,
+            r.value,
+            teamTotal > 0 ? r.value / teamTotal : null,
+          ]),
+        }}
+        table={
+          <table className="bu-table">
+            <thead>
+              <tr>
+                <th>{tr("team.label")}</th>
+                <th className="numeric">kEUR</th>
+                <th className="numeric">%</th>
+              </tr>
+            </thead>
+            <tbody>
+              {teamRows.map((r) => (
+                <tr key={r.name}>
+                  <td>{r.name}</td>
+                  <td className="numeric">{exact(r.value)}</td>
+                  <td className="numeric">
+                    {teamTotal > 0
+                      ? ((r.value / teamTotal) * 100).toFixed(1)
+                      : "—"}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        }
+      >
+        <DonutPlot
+          rows={teamRows}
+          empty={tr("graphics.noTeam")}
+          totalLabel={tr("metric.ob")}
+          otherLabel={tr("graphics.other")}
+        />
+      </GraphicCard>
+    </div>
   );
 }
 
@@ -303,56 +314,65 @@ function InvoiceProgress({ data }: { data: Dashboard }) {
   const { tr, display } = useI18n();
   const t = data.totals;
   return (
-        <article className="panel invoice-progress-card">
-          <div className="panel-heading">
-            <div>
-              <p className="panel-kicker">{tr("chart.control")}</p>
-              <h2>{tr("chart.invoice")}</h2>
-              <p>
-                {[
-                  ...new Set(
-                    data.rows.flatMap((r) =>
-                      r.snapshot && r.metrics.monthEstimate !== null
-                        ? [display(months[r.snapshot.month - 1])]
-                        : [],
-                    ),
-                  ),
-                ].join(" / ")}{" "}
-                {tr("chart.sourceMonth")}
-              </p>
-            </div>
-          </div>
-          <div className="apac-delivery">
-            <strong>
-              {formatK(t.monthSales)}
-              <small>{tr("chart.mtd")}</small>
-            </strong>
-            <span>
-              {tr("notes.estimate", { amount: formatK(t.monthEstimate) })}
-            </span>
-            <div className="delivery-track">
-              <i
-                style={{
-                  width: `${t.monthEstimate ? Math.min(100, ((t.monthSales ?? 0) / t.monthEstimate) * 100) : 0}%`,
-                }}
-              />
-            </div>
-            <p>
-              {tr("chart.stillInvoice")}
-              <b>{formatK(t.remaining)} kEUR</b>
-            </p>
-          </div>
-          <div className="panel-foot">
-            <span>{tr("chart.monthNote")}</span>
-            <span className="source-note">{tr("chart.partialMonth")}</span>
-          </div>
-        </article>
+    <article className="panel invoice-progress-card">
+      <div className="panel-heading">
+        <div>
+          <p className="panel-kicker">{tr("chart.control")}</p>
+          <h2>{tr("chart.invoice")}</h2>
+          <p>
+            {[
+              ...new Set(
+                data.rows.flatMap((r) =>
+                  r.snapshot && r.metrics.monthEstimate !== null
+                    ? [display(months[r.snapshot.month - 1])]
+                    : [],
+                ),
+              ),
+            ].join(" / ")}{" "}
+            {tr("chart.sourceMonth")}
+          </p>
+        </div>
+      </div>
+      <div className="apac-delivery">
+        <strong>
+          {formatK(t.monthSales)}
+          <small>{tr("chart.mtd")}</small>
+        </strong>
+        <span>
+          {tr("notes.estimate", { amount: formatK(t.monthEstimate) })}
+        </span>
+        <div className="delivery-track">
+          <i
+            style={{
+              width: `${t.monthEstimate ? Math.min(100, ((t.monthSales ?? 0) / t.monthEstimate) * 100) : 0}%`,
+            }}
+          />
+        </div>
+        <p>
+          {tr("chart.stillInvoice")}
+          <b>{formatK(t.remaining)} kEUR</b>
+        </p>
+      </div>
+      <div className="panel-foot">
+        <span>{tr("chart.monthNote")}</span>
+        <span className="source-note">{tr("chart.partialMonth")}</span>
+      </div>
+    </article>
   );
 }
 
-export function BusinessUnitGraphics({ data, exportOnly = false }: { data: Dashboard; exportOnly?: boolean }) {
+export function BusinessUnitGraphics({
+  data,
+  exportOnly = false,
+}: {
+  data: Dashboard;
+  exportOnly?: boolean;
+}) {
   const root = useRef<HTMLDivElement>(null);
-  useWorkbookGroup(root, exportOnly ? null : () => <BusinessUnitGraphics data={data} exportOnly />);
+  useWorkbookGroup(
+    root,
+    exportOnly ? null : () => <BusinessUnitGraphics data={data} exportOnly />,
+  );
   const { tr, display, locale } = useI18n();
   const rows = data.rows;
   const context = `${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · ${data.weeks.map((w) => `W${w}`).join(" / ")} · kEUR`;
@@ -365,19 +385,17 @@ export function BusinessUnitGraphics({ data, exportOnly = false }: { data: Dashb
       ].join("; ") || tr("common.review"),
   });
   const max = Math.max(1, ...rows.map((r) => Math.abs(r.metrics.base ?? 0)));
-  const budgetTotal = rows.reduce(
-    (n, r) => n + Math.max(0, r.metrics.budget ?? 0),
-    0,
-  );
-  let offset = 40;
   const table = (
     <table className="bu-table">
       <thead>
         <tr>
           <th>{tr("common.buEntity")}</th>
           <th className="numeric">{tr("graphics.annualBudget")}</th>
+          <th className="numeric">{tr("graphics.invoiced")}</th>
+          <th className="numeric">{tr("metric.ob")}</th>
           <th className="numeric">{tr("graphics.annualBase")}</th>
           <th className="numeric">{tr("metric.coverage")}</th>
+          <th className="numeric">{tr("metric.gap")}</th>
         </tr>
       </thead>
       <tbody>
@@ -385,16 +403,39 @@ export function BusinessUnitGraphics({ data, exportOnly = false }: { data: Dashb
           <tr key={r.entity.id}>
             <td>{r.entity.code}</td>
             <td className="numeric">{formatK(r.metrics.budget)}</td>
+            <td className="numeric">{formatK(r.metrics.sales)}</td>
+            <td className="numeric">{formatK(r.metrics.orderbook)}</td>
             <td className="numeric">{formatK(r.metrics.base)}</td>
             <td className="numeric">{display(percent(r.metrics.coverage))}</td>
+            <td className="numeric">{formatK(r.metrics.gap)}</td>
           </tr>
         ))}
       </tbody>
     </table>
   );
   const exportTable: ChartTable = {
-    columns: [{ label: tr("common.buEntity") }, { label: `${tr("graphics.annualBudget")} (kEUR)` }, { label: `${tr("graphics.annualBase")} (kEUR)` }, { label: tr("metric.coverage"), format: "0.0%" }, { label: tr("common.source") }],
-    rows: rows.map(r => [r.entity.code, r.metrics.budget, r.metrics.base, r.metrics.coverage, r.snapshot ? `W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}` : null]),
+    columns: [
+      { label: tr("common.buEntity") },
+      { label: `${tr("graphics.annualBudget")} (kEUR)` },
+      { label: `${tr("graphics.invoiced")} (kEUR)` },
+      { label: `${tr("metric.ob")} (kEUR)` },
+      { label: `${tr("graphics.annualBase")} (kEUR)` },
+      { label: tr("metric.coverage"), format: "0.0%" },
+      { label: `${tr("metric.gap")} (kEUR)` },
+      { label: tr("common.source") },
+    ],
+    rows: rows.map((r) => [
+      r.entity.code,
+      r.metrics.budget,
+      r.metrics.sales,
+      r.metrics.orderbook,
+      r.metrics.base,
+      r.metrics.coverage,
+      r.metrics.gap,
+      r.snapshot
+        ? `W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}`
+        : null,
+    ]),
   };
   return (
     <div className="graphics-grid bu-graphics" ref={root}>
@@ -408,96 +449,93 @@ export function BusinessUnitGraphics({ data, exportOnly = false }: { data: Dashb
       >
         {rows.map((r, i) => (
           <g key={r.entity.id} transform={`translate(0,${35 + i * 50})`}>
-            <ChartMark color={graphicColors[i]} lift={[3,0]} data={{title:r.entity.code,rows:[
-              {label:tr("graphics.annualBase"),value:chartAmount(r.metrics.base,locale)},
-              {label:tr("graphics.annualBudget"),value:chartAmount(r.metrics.budget,locale)},
-              {label:tr("metric.coverage"),value:percent(r.metrics.coverage)},
-            ]}} hit={<rect x="20" y="-8" width="760" height="44" fill="white" />}>
-            <text x="28" y="19">
-              {r.entity.code}
-            </text>
-            <rect x="100" width="510" height="28" rx="4" fill="#f0ece4" />
-            {r.metrics.base !== null && r.metrics.base >= 0 && (
-              <rect
-                x="100"
-                width={(r.metrics.base / max) * 510}
-                height="28"
-                rx="4"
-                fill={graphicColors[i]}
-              />
-            )}
-            <text x="770" y="19" textAnchor="end">
-              {formatK(r.metrics.base)} kEUR
-            </text>
+            <ChartMark
+              color={graphicColors[i]}
+              lift={[3, 0]}
+              data={{
+                title: r.entity.code,
+                rows: [
+                  {
+                    label: tr("graphics.annualBase"),
+                    value: chartAmount(r.metrics.base, locale),
+                  },
+                  {
+                    label: tr("graphics.annualBudget"),
+                    value: chartAmount(r.metrics.budget, locale),
+                  },
+                  {
+                    label: tr("metric.coverage"),
+                    value: percent(r.metrics.coverage),
+                  },
+                  {
+                    label: tr("metric.gap"),
+                    value: chartAmount(r.metrics.gap, locale),
+                  },
+                ],
+              }}
+              hit={<rect x="20" y="-8" width="760" height="44" fill="white" />}
+            >
+              <text x="28" y="19">
+                {r.entity.code}
+              </text>
+              <rect x="100" width="510" height="28" rx="4" fill="#f0ece4" />
+              {r.metrics.base !== null && r.metrics.base >= 0 && (
+                <rect
+                  x="100"
+                  width={(r.metrics.base / max) * 510}
+                  height="28"
+                  rx="4"
+                  fill={graphicColors[i]}
+                />
+              )}
+              <text x="770" y="19" textAnchor="end">
+                {formatK(r.metrics.base)} kEUR
+              </text>
             </ChartMark>
           </g>
         ))}
       </GraphicCard>
-      <GraphicCard
-        title={tr("graphics.treemap")}
-        context={context}
-        note={`${tr("graphics.treemapRule")} ${sourceNote}`}
-        table={table}
-        exportTable={exportTable}
-      >
-        {budgetTotal <= 0 ? (
-          <PlotEmpty text={tr("graphics.incompleteAnnual")} />
-        ) : (
-          rows
-            .filter((r) => (r.metrics.budget ?? 0) > 0)
-            .map((r, i) => {
-              const width = (r.metrics.budget! / budgetTotal) * 720,
-                x = offset;
-              offset += width;
-              return (
-                <ChartMark key={r.entity.id} color={graphicColors[i]} data={{title:r.entity.code,rows:[
-                  {label:tr("graphics.annualBudget"),value:chartAmount(r.metrics.budget,locale)},
-                  {label:tr("graphics.annualBase"),value:chartAmount(r.metrics.base,locale)},
-                  {label:tr("metric.coverage"),value:percent(r.metrics.coverage)},
-                ]}}>
-                  <rect
-                    x={x}
-                    y="35"
-                    width={Math.max(0, width - 3)}
-                    height="210"
-                    rx="5"
-                    fill={graphicColors[i]}
-                  />
-                  <text
-                    x={x + width / 2}
-                    y="110"
-                    fill="white"
-                    textAnchor="middle"
-                    fontSize={width < 85 ? 12 : 21}
-                    fontWeight="600"
-                  >
-                    {r.entity.code}
-                  </text>
-                  <text
-                    x={x + width / 2}
-                    y="145"
-                    fill="white"
-                    textAnchor="middle"
-                    fontSize={width < 85 ? 11 : 25}
-                  >
-                    {r.metrics.coverage === null
-                      ? "—"
-                      : `${(r.metrics.coverage * 100).toFixed(0)}%`}
-                  </text>
-                </ChartMark>
-              );
-            })
-        )}
-        <text x="40" y="291" fill="#706f67" fontSize="12">
-          {tr("graphics.excludedTiles", {
-            entities:
-              rows
-                .filter((r) => !(r.metrics.budget! > 0))
-                .map((r) => r.entity.code)
-                .join(", ") || "—",
-          })}
-        </text>
-      </GraphicCard>
+      <SalesMixGraphic data={data} context={context} sourceNote={sourceNote} />
     </div>
+  );
+}
+
+function SalesMixGraphic({
+  data,
+  context,
+  sourceNote,
+}: {
+  data: Dashboard;
+  context: string;
+  sourceNote: string;
+}) {
+  const { tr } = useI18n();
+  const rows = [
+    ...(data.filters.salesType !== "group"
+      ? [{ name: tr("common.external"), value: data.external }]
+      : []),
+    ...(data.filters.salesType !== "external"
+      ? [{ name: tr("common.group"), value: data.group }]
+      : []),
+  ];
+  return (
+    <GraphicCard
+      title={tr("chart.externalGroup")}
+      context={context}
+      note={`${tr("graphics.mixRule")} ${sourceNote}`}
+      exportTable={{
+        columns: [{ label: tr("filters.type") }, { label: "kEUR" }],
+        rows: rows.map((r) => [r.name, r.value]),
+      }}
+    >
+      <DonutPlot
+        rows={rows.flatMap((r) =>
+          r.value === null ? [] : [{ name: r.name, value: r.value }],
+        )}
+        empty={tr("graphics.incompleteAnnual")}
+        totalLabel={tr("graphics.annualBase")}
+        otherLabel={tr("graphics.other")}
+      />
+    </GraphicCard>
   );
 }

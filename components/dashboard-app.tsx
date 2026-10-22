@@ -193,7 +193,7 @@ function DashboardView({
 }) {
   const { tr, display, locale } = useI18n();
   const [readiness, setReadiness] = useState(false),
-    [frequency, setFrequency] = useState("month"),
+    [frequency, setFrequency] = useState("week"),
     [matrixLevel, setMatrixLevel] = useState("entity"),
     [customer, setCustomer] = useState("all");
   const snapshotWrapper = useRef<HTMLDivElement>(null);
@@ -866,7 +866,7 @@ function DashboardView({
           </section>
           <CustomerGraphics filters={filters} revision={data.revision} />
           <section className="panel matrix-panel" id="time-matrix">
-            <details open>
+            <details>
               <summary>
                 <span>
                   <p className="panel-kicker">{tr("matrix.period")}</p>

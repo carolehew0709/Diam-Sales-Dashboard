@@ -75,3 +75,5 @@ Validation covers source reconciliation, period handling, filter/RBAC boundaries
 A full browser reload starts at the top: an early local script disables scroll restoration and removes stale section fragments only for reload navigations. Ordinary deep links, in-page section navigation, browser back/forward and filter refresh behavior retain their existing rules.
 
 At owner request, the last-sheet customer contribution donut is restored. The customer section places the customer-mix overview across the upper row, with equally sized contribution and YoY cards below. The restored donut retains monthly source labels, six-customer denominator, scope/RBAC checks, themed hover, PNG/SVG and a separate bilingual Excel chart sheet.
+
+The supplementary matrix is retained for its unique weekly annual outlook history; monthly planning values overlap the monthly chart details. It is collapsed by default and opens in Week mode, while Month remains available. Weekly columns are annual outlook snapshots, not weekly sales increments, and are never summed.

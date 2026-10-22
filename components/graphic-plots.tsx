@@ -99,16 +99,44 @@ export function ComboPlot({
   ytdLabel,
   empty,
 }: {
-  points: { label: string; monthly: Amount; ytd: Amount }[];
+  points: {
+    label: string;
+    monthly: Amount;
+    ytd: Amount;
+    estimated: boolean | null;
+  }[];
   monthlyLabel: string;
   ytdLabel: string;
   empty: string;
 }) {
-  const { locale } = useI18n();
+  const { locale, tr } = useI18n();
   const values = points
     .flatMap((p) => [p.monthly, p.ytd])
     .filter((v): v is number => v !== null);
   if (!values.length) return <PlotEmpty text={empty} />;
+  const earlierColor = "#d0bd93",
+    openColor = "#718699";
+  const knownPeriods = points.some((p) => p.estimated !== null);
+  const monthlyLegends = knownPeriods
+    ? [
+        ...(points.some((p) => p.monthly !== null && p.estimated === false)
+          ? [
+              {
+                name: `${monthlyLabel} · ${tr("graphics.earlierMonths")}`,
+                color: earlierColor,
+              },
+            ]
+          : []),
+        ...(points.some((p) => p.monthly !== null && p.estimated === true)
+          ? [
+              {
+                name: `${monthlyLabel} · ${tr("graphics.openMonths")}`,
+                color: openColor,
+              },
+            ]
+          : []),
+      ]
+    : points.some(p => p.monthly !== null) ? [{ name: monthlyLabel, color: earlierColor }] : [];
   const max = Math.max(...values, 1) * 1.13,
     min = Math.min(0, ...values) * 1.13;
   const y = (v: number) => 285 - ((v - min) / (max - min)) * 250,
@@ -131,9 +159,17 @@ export function ComboPlot({
         <g key={i}>
           {(p.monthly !== null || p.ytd !== null) && (
             <ChartMark
-              color="#a77a35"
+              color={p.estimated ? openColor : "#a77a35"}
               data={{
                 title: p.label,
+                subtitle:
+                  p.estimated === null
+                    ? undefined
+                    : tr(
+                        p.estimated
+                          ? "graphics.openMonths"
+                          : "graphics.earlierMonths",
+                      ),
                 rows: [
                   {
                     label: monthlyLabel,
@@ -159,7 +195,7 @@ export function ComboPlot({
                   width="30"
                   height={Math.max(1, Math.abs(y(0) - y(p.monthly)))}
                   rx="3"
-                  fill="#d0bd93"
+                  fill={p.estimated ? openColor : earlierColor}
                 />
               )}
               {p.ytd !== null && (
@@ -185,11 +221,14 @@ export function ComboPlot({
           </text>
         </g>
       ))}
+      <Legend labels={monthlyLegends} />
       <Legend
-        labels={[
-          { name: monthlyLabel, color: "#d0bd93" },
-          { name: ytdLabel, color: "#a77a35" },
-        ]}
+        y={375}
+        labels={
+          points.some((p) => p.ytd !== null)
+            ? [{ name: ytdLabel, color: "#a77a35" }]
+            : []
+        }
       />
     </>
   );

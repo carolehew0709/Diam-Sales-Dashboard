@@ -5,7 +5,10 @@ import { GraphicCard } from "./graphic-card";
 import { ComboPlot } from "./graphic-plots";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { months, type Dashboard } from "@/lib/dashboard";
-import { monthlyPerformanceSeries } from "@/lib/performance-chart";
+import {
+  firstOpenMonth,
+  monthlyPerformanceSeries,
+} from "@/lib/performance-chart";
 
 export function SalesMonthlyGraphic({
   data,
@@ -39,6 +42,10 @@ export function SalesMonthlyGraphic({
       ? data.rows
       : data.rows.filter((r) => r.entity.id === series.id);
   const metrics = index === 0 ? data.totals : selectedRows[0].metrics;
+  const openMonth = firstOpenMonth(
+    data.filters.year,
+    selectedRows.map((r) => r.snapshot),
+  );
   const view = monthlyPerformanceSeries(
     metrics,
     data.filters.scenario,
@@ -88,7 +95,7 @@ export function SalesMonthlyGraphic({
             : "graphics.partialPlanning",
         )
       : "";
-  const note = `${teamScoped ? "" : tr("graphics.planningRule")} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
+  const note = `${teamScoped ? "" : `${tr("graphics.planningRule")} ${tr("graphics.periodColorsRule")}`} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
   const exact = (v: number | null) =>
     v === null
       ? "—"
@@ -108,6 +115,7 @@ export function SalesMonthlyGraphic({
         note={note}
         exportNote={`${teamScoped ? tr("graphics.noTeamPerformance") : notice} ${note}`}
         notice={notice}
+        height={395}
         exportTable={{
           columns: [
             { label: tr("common.month") },
@@ -149,6 +157,7 @@ export function SalesMonthlyGraphic({
           points={view.points.map((p, i) => ({
             ...p,
             label: display(months[i]),
+            estimated: openMonth === null ? null : i >= openMonth,
           }))}
           monthlyLabel={monthlyLabel}
           ytdLabel={cumulativeLabel}

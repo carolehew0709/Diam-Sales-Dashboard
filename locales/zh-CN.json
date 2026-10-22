@@ -537,5 +537,8 @@
   "graphics.annualDetails": "查看区域与 BU 完整年度指标",
   "graphics.obKicker": "已确认订单簿 · kEUR",
   "graphics.obTitle": "团队与客户订单分布",
-  "graphics.mixRule": "已分类的年度 Sales + OB，不含 Prospect，并跟随销售类型筛选。来源特定调整可能导致分类小计与全部销售存在差异。"
+  "graphics.mixRule": "已分类的年度 Sales + OB，不含 Prospect，并跟随销售类型筛选。来源特定调整可能导致分类小计与全部销售存在差异。",
+  "graphics.earlierMonths": "过往月份",
+  "graphics.openMonths": "当月及后续",
+  "graphics.periodColorsRule": "蓝灰色月度柱形表示来源报告当月及后续月份，金额尚非最终月度销售；混合来源月份时，以最早的报告月份为界。"
 }

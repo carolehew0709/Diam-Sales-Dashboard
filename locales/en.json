@@ -537,5 +537,8 @@
   "graphics.annualDetails": "View full annual metrics by region and BU",
   "graphics.obKicker": "Committed order book · kEUR",
   "graphics.obTitle": "Order book by team & customer",
-  "graphics.mixRule": "Known classified annual Sales + OB, excluding Prospect. Follows the selected sales type. Source overrides can make the classified subtotal differ from All sales."
+  "graphics.mixRule": "Known classified annual Sales + OB, excluding Prospect. Follows the selected sales type. Source overrides can make the classified subtotal differ from All sales.",
+  "graphics.earlierMonths": "Earlier months",
+  "graphics.openMonths": "Current / future",
+  "graphics.periodColorsRule": "Blue-grey monthly bars mark the current and later reporting months. Mixed-source scopes use the earliest reporting month; these amounts are not final monthly sales."
 }

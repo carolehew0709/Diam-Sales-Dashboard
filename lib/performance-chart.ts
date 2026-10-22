@@ -1,8 +1,30 @@
-import type { Amount } from "./types";
+import type { Amount, Scenario, Snapshot } from "./types";
 import type { Metric } from "./dashboard";
-import type { Scenario } from "./types";
 
 export type PerformanceSeriesKey = "base" | "scenario";
+
+/** Zero-based first unfinished month; mixed scopes use the earliest reporting period. */
+export function firstOpenMonth(
+  year: number,
+  reports: (Pick<Snapshot, "year" | "month"> | undefined)[],
+): number | null {
+  if (
+    !reports.length ||
+    reports.some(
+      (s) =>
+        !s ||
+        !Number.isInteger(s.year) ||
+        !Number.isInteger(s.month) ||
+        s.month < 1 ||
+        s.month > 12,
+    )
+  )
+    return null;
+  return Math.max(
+    0,
+    Math.min(12, ...reports.map((s) => (s!.year - year) * 12 + s!.month - 1)),
+  );
+}
 
 /** Original planning curves combined without substituting zero for missing Prospect. */
 export function monthlyPerformanceSeries(

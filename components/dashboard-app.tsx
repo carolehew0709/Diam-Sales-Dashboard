@@ -184,14 +184,12 @@ function MetricsTable({
 }
 function DashboardView({
   data,
-  filters,
+  filters: requestedFilters,
   setFilters,
-  filterError,
 }: {
   data: Dashboard;
   filters: Filters;
   setFilters: (f: Filters) => void;
-  filterError: string;
 }) {
   const { tr, display, locale } = useI18n();
   const [readiness, setReadiness] = useState(false),
@@ -241,9 +239,9 @@ function DashboardView({
       document.removeEventListener("keydown", escape);
     };
   }, [readiness]);
+  // Keep the last complete snapshot and its source labels while filters load.
+  const filters = data.filters;
   const t = data.totals;
-  const isCurrent =
-    dashboardFilterKey(data.filters) === dashboardFilterKey(filters);
   const showForecast = showProspectForecast(filters, t);
   const hasLegacySplit =
     filters.year === 2026 &&
@@ -306,7 +304,6 @@ function DashboardView({
         <div
           className="snapshot-wrapper"
           ref={snapshotWrapper}
-          hidden={!isCurrent}
         >
           <button
             className="snapshot-cluster"
@@ -418,10 +415,10 @@ function DashboardView({
           <label htmlFor="region">{tr("filters.region")}</label>
           <select
             id="region"
-            value={filters.region}
+            value={requestedFilters.region}
             onChange={(e) =>
               setFilters({
-                ...filters,
+                ...requestedFilters,
                 region: e.target.value,
                 bu: "all",
                 entity: "all",
@@ -440,10 +437,10 @@ function DashboardView({
           <label htmlFor="bu">{tr("filters.businessUnitEntity")}</label>
           <select
             id="bu"
-            value={filters.bu}
+            value={requestedFilters.bu}
             onChange={(e) =>
               setFilters({
-                ...filters,
+                ...requestedFilters,
                 bu: e.target.value,
                 entity: "all",
                 salesTeam: "all",
@@ -454,7 +451,7 @@ function DashboardView({
             {[
               ...new Set(
                 data.entities
-                  .filter((e) => matchesRegion(e, filters.region))
+                  .filter((e) => matchesRegion(e, requestedFilters.region))
                   .map((e) => e.businessUnit),
               ),
             ].map((b) => (
@@ -466,9 +463,9 @@ function DashboardView({
           <label htmlFor="sales-team">{tr("team.label")}</label>
           <select
             id="sales-team"
-            value={filters.salesTeam ?? "all"}
+            value={requestedFilters.salesTeam ?? "all"}
             onChange={(e) =>
-              setFilters({ ...filters, salesTeam: e.target.value })
+              setFilters({ ...requestedFilters, salesTeam: e.target.value })
             }
           >
             <option value="all">{tr("team.all")}</option>
@@ -481,39 +478,38 @@ function DashboardView({
         </div>
         <Segmented
           label={tr("filters.years")}
-          value={String(filters.year)}
+          value={String(requestedFilters.year)}
           options={[
             { value: "2026", label: "2026" },
             { value: "2027", label: "2027" },
           ]}
-          onChange={(v) => setFilters({ ...filters, year: Number(v) })}
+          onChange={(v) => setFilters({ ...requestedFilters, year: Number(v) })}
         />
         <Segmented
           label={tr("filters.scenario")}
-          value={filters.scenario}
+          value={requestedFilters.scenario}
           options={[
             { value: "Sales", label: tr("metric.sales") },
             { value: "Sales + Prospect", label: tr("metric.salesProspect") },
           ]}
           onChange={(v) =>
-            setFilters({ ...filters, scenario: v as Filters["scenario"] })
+            setFilters({ ...requestedFilters, scenario: v as Filters["scenario"] })
           }
         />
         <Segmented
           label={tr("filters.type")}
-          value={filters.salesType}
+          value={requestedFilters.salesType}
           options={[
             { value: "all", label: tr("filters.allSales") },
             { value: "external", label: tr("common.external") },
             { value: "group", label: tr("common.group") },
           ]}
           onChange={(v) =>
-            setFilters({ ...filters, salesType: v as Filters["salesType"] })
+            setFilters({ ...requestedFilters, salesType: v as Filters["salesType"] })
           }
         />
       </section>
-      {isCurrent ? (
-        <>
+      <>
           {filters.salesTeam && filters.salesTeam !== "all" && (
             <p className="apac-notice">{tr("team.limitation")}</p>
           )}
@@ -1040,12 +1036,7 @@ function DashboardView({
               · kEUR
             </span>
           </footer>
-        </>
-      ) : (
-        <p className="apac-notice" role="status">
-          {tr(filterError ? "filters.unavailable" : "auth.updating")}
-        </p>
-      )}
+      </>
     </>
   );
 }
@@ -1211,7 +1202,7 @@ export default function Home() {
             {display(error)}
           </p>
         )}
-        {loading && (
+        {loading && !data && (
           <div className="loading-strip" role="status">
             {tr("auth.updating")}
           </div>
@@ -1240,14 +1231,13 @@ export default function Home() {
           </section>
         ) : data ? (
           <div
-            aria-busy={loading}
-            className={`dashboard-route dashboard-route-${view} ${loading ? "dashboard-updating" : ""}`}
+            aria-busy={loading || dashboardFilterKey(data.filters) !== dashboardFilterKey(filters)}
+            className={`dashboard-route dashboard-route-${view}`}
           >
             <DashboardView
               data={data}
               filters={filters}
               setFilters={setFilters}
-              filterError={error}
             />
           </div>
         ) : (

@@ -12,6 +12,7 @@ import type { ChartTable } from "@/lib/chart-workbook-types";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { ChartMark } from "./chart-interaction";
 import { chartAmount } from "@/lib/chart-tooltip";
+import { customerAnalysisQuery } from "@/lib/dashboard-presentation";
 
 type View = ReturnType<typeof customerAnalysisView>;
 const groupKeys: Record<string, MessageKey> = {
@@ -37,12 +38,7 @@ export function CustomerGraphics({
 }) {
   const [month, setMonth] = useState("");
   const selectedMonth = month.startsWith(`${filters.year}-`) ? month : "";
-  const query = new URLSearchParams({
-    ...Object.fromEntries(
-      Object.entries(filters).map(([k, v]) => [k, String(v)]),
-    ),
-    month: selectedMonth,
-  }).toString();
+  const query = customerAnalysisQuery(filters, selectedMonth);
   const [response, setResponse] = useState<{
     query: string;
     revision: number;

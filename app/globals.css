@@ -4781,10 +4781,6 @@ input {
   z-index: 100;
   font-size: 0;
 }
-.dashboard-updating {
-  opacity: 0.65;
-  pointer-events: none;
-}
 .apac-button {
   display: inline-flex;
   align-items: center;

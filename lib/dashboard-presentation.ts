@@ -13,6 +13,19 @@ export function dashboardFilterKey(filters: Filters) {
   ]);
 }
 
+/** Customer source is monthly and independent of the weekly Sales/Prospect toggle. */
+export function customerAnalysisQuery(filters: Filters, month: string) {
+  return new URLSearchParams({
+    region: filters.region,
+    bu: filters.bu,
+    entity: filters.entity,
+    year: String(filters.year),
+    salesType: filters.salesType,
+    salesTeam: filters.salesTeam ?? "all",
+    month,
+  }).toString();
+}
+
 export function showProspectForecast(
   filters: Pick<Filters, "scenario">,
   metrics: { base: Amount; scenario: Amount; prospect: Amount },

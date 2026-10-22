@@ -6,6 +6,7 @@ import { monthlyPerformanceSeries } from "../lib/performance-chart";
 import {
   dashboardFilterKey,
   showProspectForecast,
+  customerAnalysisQuery,
 } from "../lib/dashboard-presentation";
 import type { Filters, Store, User } from "../lib/types";
 
@@ -27,6 +28,27 @@ const state: Store = {
   batches: [],
   audit: [],
 };
+
+test("switching weekly scenario does not reload the independent monthly customer source", () => {
+  const query = customerAnalysisQuery(defaultFilters, "2026-08");
+  assert.equal(
+    customerAnalysisQuery({ ...defaultFilters, scenario: "Sales" }, "2026-08"),
+    query,
+  );
+  for (const patch of [
+    { region: "India" },
+    { bu: "DDC" },
+    { entity: "ddc" },
+    { year: 2027 },
+    { salesType: "external" },
+    { salesTeam: "Team A" },
+  ] as Partial<Filters>[])
+    assert.notEqual(
+      customerAnalysisQuery({ ...defaultFilters, ...patch }, "2026-08"),
+      query,
+    );
+  assert.notEqual(customerAnalysisQuery(defaultFilters, "2026-09"), query);
+});
 
 test("every global filter changes presentation identity; omitted team means all", () => {
   const initial = dashboardFilterKey(defaultFilters);

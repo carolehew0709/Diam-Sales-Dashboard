@@ -631,7 +631,7 @@ function DashboardView({
               {data.rows.map((r) => (
                 <section key={r.entity.id}>
                   <h3>{r.entity.code}</h3>
-                  <PerformanceChart rows={r.metrics.cumulative} cumulative context={`${r.entity.code} · ${chartContext}`} />
+                  <PerformanceChart rows={r.metrics.cumulative} cumulative context={`${r.entity.code} · ${chartContext}`} name={`${r.entity.code} · ${tr("chart.cumulativeTitle")}`} />
                 </section>
               ))}
             </div>

@@ -78,7 +78,7 @@ export function chartExportSvg(
   return new XMLSerializer().serializeToString(result);
 }
 
-function save(blob: Blob, filename: string) {
+export function saveChartFile(blob: Blob, filename: string) {
   const url = URL.createObjectURL(blob),
     link = document.createElement("a");
   link.href = url;
@@ -101,9 +101,22 @@ export async function downloadChart(
     .slice(0, 170);
   const blob = new Blob([source], { type: "image/svg+xml;charset=utf-8" });
   if (format === "svg") {
-    save(blob, `${filename}.svg`);
+    saveChartFile(blob, `${filename}.svg`);
     return;
   }
+  const png = await chartPng(svg, title, context, note);
+  saveChartFile(png.blob, `${filename}.png`);
+}
+
+export async function chartPng(
+  svg: SVGSVGElement,
+  title: string,
+  context: string,
+  note: string,
+) {
+  const blob = new Blob([chartExportSvg(svg, title, context, note)], {
+    type: "image/svg+xml;charset=utf-8",
+  });
   const url = URL.createObjectURL(blob);
   try {
     const image = new Image();
@@ -125,7 +138,7 @@ export async function downloadChart(
         "image/png",
       ),
     );
-    save(png, `${filename}.png`);
+    return { blob: png, width: image.width, height: image.height };
   } finally {
     URL.revokeObjectURL(url);
   }

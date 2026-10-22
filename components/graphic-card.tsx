@@ -1,23 +1,45 @@
 "use client";
-import { useRef, useState, type ReactNode, type RefObject } from "react";
+import {
+  useEffect,
+  useRef,
+  useState,
+  type ReactNode,
+  type RefObject,
+} from "react";
 import { Download } from "lucide-react";
 import { useI18n } from "./i18n-provider";
 import { downloadChart } from "@/lib/chart-export";
+import { registerWorkbookChart } from "@/lib/chart-workbook-registry";
+import type { ChartTable } from "@/lib/chart-workbook-types";
 
 export function ChartDownloads({
   svg,
   title,
   context,
   note,
+  exportTable,
+  sheetName,
 }: {
   svg: RefObject<SVGSVGElement>;
   title: string;
   context: string;
   note: string;
+  exportTable?: ChartTable;
+  sheetName?: string;
 }) {
   const { tr } = useI18n();
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(false);
+  useEffect(() => {
+    if (!svg.current || !exportTable) return;
+    return registerWorkbookChart(svg.current, {
+      name: sheetName ?? title,
+      title,
+      context,
+      note,
+      table: exportTable,
+    });
+  }, [svg, title, context, note, exportTable, sheetName]);
   const download = async (format: "png" | "svg") => {
     if (!svg.current) return;
     setBusy(true);
@@ -62,6 +84,7 @@ export function GraphicCard({
   className = "",
   height = 360,
   table,
+  exportTable,
 }: {
   title: string;
   context: string;
@@ -70,6 +93,7 @@ export function GraphicCard({
   className?: string;
   height?: number;
   table?: ReactNode;
+  exportTable: ChartTable;
 }) {
   const svg = useRef<SVGSVGElement>(null);
   const { tr } = useI18n();
@@ -77,7 +101,13 @@ export function GraphicCard({
     <article className={`panel graphic-card ${className}`}>
       <div className="graphic-heading">
         <h3>{title}</h3>
-        <ChartDownloads svg={svg} title={title} context={context} note={note} />
+        <ChartDownloads
+          svg={svg}
+          title={title}
+          context={context}
+          note={note}
+          exportTable={exportTable}
+        />
       </div>
       <p className="graphic-context">{context}</p>
       <div className="graphic-plot">

@@ -8,10 +8,12 @@ export function PerformanceChart({
   rows,
   cumulative = false,
   context = "",
+  name,
 }: {
   rows: { label: string; budget: Amount; base: Amount; scenario: Amount }[];
   cumulative?: boolean;
   context?: string;
+  name?: string;
 }) {
   const { tr, display } = useI18n();
   const svg = useRef<SVGSVGElement>(null);
@@ -140,7 +142,8 @@ export function PerformanceChart({
       <div className="apac-legend">
         <small className="chart-note">{tr("chart.gaps")}</small>
       </div>
-      <ChartDownloads svg={svg} title={cumulative ? tr("chart.cumulativeTitle") : tr("chart.monthlyTitle")} context={context}
+      <ChartDownloads svg={svg} title={cumulative ? tr("chart.cumulativeTitle") : tr("chart.monthlyTitle")} context={context} sheetName={name}
+        exportTable={{ columns: [{ label: tr("common.month") }, { label: `${tr("metric.budget")} (kEUR)` }, { label: `${tr("metric.base")} (kEUR)` }, { label: `${tr("metric.scenario")} (kEUR)` }], rows: rows.map(r => [display(r.label), r.budget, r.base, r.scenario]) }}
         note={`${tr("metric.budget")} · ${tr("metric.base")} · ${tr("metric.scenario")} · ${tr("chart.gaps")}`} />
     </div>
   );

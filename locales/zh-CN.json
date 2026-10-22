@@ -498,5 +498,12 @@
   "graphics.validation.categories": "客户构成分类与支持的来源行不符。",
   "graphics.validation.positive": "客户贡献金额必须非负，且至少提供一个客户。",
   "graphics.validation.rows": "客户名称必须唯一，且客户列表后必须有 TOTAL 合计行。",
-  "graphics.validation.total": "来源合计核对不一致：{cell}"
+  "graphics.validation.total": "来源合计核对不一致：{cell}",
+  "graphics.workbookDownload": "导出图表 Excel",
+  "graphics.workbookProgress": "正在生成 Excel · {done}/{total}",
+  "graphics.workbookLayout": "每个 sheet 一张图 · 上方数据表、下方图表 · 包含折叠的 BU 图",
+  "graphics.workbookWait": "来源数据正在更新，请加载完成后再次导出。",
+  "graphics.workbookSourceError": "月度客户数据读取失败，请刷新后导出，以免遗漏图表。",
+  "graphics.workbookError": "导出失败或筛选已改变，请保持当前筛选后重试。",
+  "graphics.workbookStep": "指标／步骤"
 }

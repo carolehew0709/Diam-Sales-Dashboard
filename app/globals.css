@@ -5379,6 +5379,10 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 .graphics-customer-kpis small { font-size: 11px; color: var(--muted); }
 .graphics-customer-kpis .graphics-month-value { font-size: 18px; }
 .bu-graphics { margin: 20px 0; }
+.chart-workbook-export { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; margin: 0 0 18px; }
+.chart-workbook-export .apac-button { display: inline-flex; align-items: center; gap: 8px; border-color: var(--gold); color: var(--gold-strong); }
+.chart-workbook-export small { color: var(--muted); font-size: 11px; line-height: 1.8; }
+.chart-workbook-export [role=alert] { width: 100%; color: #a34f3d; font-size: 12px; }
 .apac-chart > .graphic-downloads { margin-top: 12px; }
 .graphic-import-review { margin: 16px 0; padding: 16px; background: var(--panel-soft); border: 1px solid var(--line); border-radius: 8px; font-size: 12px; line-height: 1.8; overflow-x: auto; }
 @media (max-width: 1000px) { .graphics-grid { grid-template-columns: 1fr; } .graphic-wide { grid-column: auto; } }

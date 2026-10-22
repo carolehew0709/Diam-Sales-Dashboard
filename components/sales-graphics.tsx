@@ -10,6 +10,8 @@ import {
   graphicColors,
 } from "./graphic-plots";
 import { formatK, months, percent, type Dashboard } from "@/lib/dashboard";
+import { ChartWorkbookExport } from "./chart-workbook-export";
+import type { ChartTable } from "@/lib/chart-workbook-types";
 
 export function SalesGraphics({ data }: { data: Dashboard }) {
   const { tr, display } = useI18n();
@@ -138,6 +140,11 @@ export function SalesGraphics({ data }: { data: Dashboard }) {
         context={context}
         note={`${tr("graphics.monthEndRule")} ${note}`}
         table={monthlyTable(index)}
+        exportTable={{
+          columns: [{ label: tr("common.month") }, { label: `${tr("graphics.monthlySales")} (kEUR)` }, { label: `${tr("graphics.ytdSales")} (kEUR)` }, { label: tr("common.source") }],
+          rows: s.points.map((p, i) => [display(months[i]), p.monthly, p.ytd,
+            index === 0 ? data.graphics.series.slice(1).map(b => { const x = b.points[i]; return `${b.name}: ${x.week ? `W${x.week} · ${x.sourceFile} · ${x.sourceSheet}` : "—"}`; }).join("; ") : p.week ? `W${p.week} · ${p.sourceFile} · ${p.sourceSheet}` : null]),
+        }}
       >
         <ComboPlot
           points={s.points.map((p, i) => ({ ...p, label: display(months[i]) }))}
@@ -168,11 +175,13 @@ export function SalesGraphics({ data }: { data: Dashboard }) {
           {tr("graphics.weekly", { week })}
         </span>
       </div>
+      <ChartWorkbookExport />
       <div className="graphics-grid">
         <GraphicCard
           title={tr("graphics.waterfall")}
           context={context}
           note={`${tr("graphics.noProspect")} ${provisional} ${note}`}
+          exportTable={{ columns: [{ label: tr("graphics.workbookStep") }, { label: "kEUR" }], rows: bars.map(b => [b.name, b.value]), summaryRows: [bars.length - 1] }}
         >
           {!budgetReady ? (
             <PlotEmpty text={tr("graphics.incompleteAnnual")} />
@@ -236,6 +245,10 @@ export function SalesGraphics({ data }: { data: Dashboard }) {
           title={tr("graphics.gauge")}
           context={context}
           note={`${tr("graphics.noProspect")} ${provisional} ${note}`}
+          exportTable={{ columns: [{ label: tr("graphics.workbookStep") }, { label: "kEUR" }, { label: tr("metric.coverage"), format: "0.0%" }], rows: [
+            [tr("graphics.annualBudget"), t.budget, null], [tr("graphics.invoiced"), t.sales, null], [tr("metric.ob"), t.orderbook, null],
+            [tr("graphics.annualBase"), t.base, t.coverage], [tr("metric.gap"), t.gap, null],
+          ], summaryRows: [3] }}
         >
           {coverage === null ? (
             <PlotEmpty text={tr("graphics.incompleteAnnual")} />
@@ -296,6 +309,7 @@ export function SalesGraphics({ data }: { data: Dashboard }) {
           title={tr("graphics.teamContribution")}
           context={context}
           note={`${tr("graphics.teamRule")} ${note}`}
+          exportTable={{ columns: [{ label: tr("team.label") }, { label: "kEUR" }, { label: "%", format: "0.0%" }], rows: teamRows.map(r => [r.name, r.value, teamTotal > 0 ? r.value / teamTotal : null]) }}
           table={
             <table className="bu-table">
               <thead>
@@ -380,6 +394,10 @@ export function BusinessUnitGraphics({ data }: { data: Dashboard }) {
       </tbody>
     </table>
   );
+  const exportTable: ChartTable = {
+    columns: [{ label: tr("common.buEntity") }, { label: `${tr("graphics.annualBudget")} (kEUR)` }, { label: `${tr("graphics.annualBase")} (kEUR)` }, { label: tr("metric.coverage"), format: "0.0%" }, { label: tr("common.source") }],
+    rows: rows.map(r => [r.entity.code, r.metrics.budget, r.metrics.base, r.metrics.coverage, r.snapshot ? `W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}` : null]),
+  };
   return (
     <div className="graphics-grid bu-graphics">
       <GraphicCard
@@ -387,6 +405,7 @@ export function BusinessUnitGraphics({ data }: { data: Dashboard }) {
         context={context}
         note={`${tr("graphics.buRule")} ${sourceNote}`}
         table={table}
+        exportTable={exportTable}
         height={Math.max(300, rows.length * 52 + 60)}
       >
         {rows.map((r, i) => (
@@ -415,6 +434,7 @@ export function BusinessUnitGraphics({ data }: { data: Dashboard }) {
         context={context}
         note={`${tr("graphics.treemapRule")} ${sourceNote}`}
         table={table}
+        exportTable={exportTable}
       >
         {budgetTotal <= 0 ? (
           <PlotEmpty text={tr("graphics.incompleteAnnual")} />

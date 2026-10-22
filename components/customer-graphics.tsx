@@ -8,6 +8,7 @@ import type { customerAnalysisView } from "@/lib/customer-analysis";
 import { formatK } from "@/lib/dashboard";
 import type { MessageKey } from "@/lib/i18n";
 import { customerGrowth, customerMetrics } from "@/lib/customer-metrics";
+import type { ChartTable } from "@/lib/chart-workbook-types";
 
 type View = ReturnType<typeof customerAnalysisView>;
 const groupKeys: Record<string, MessageKey> = {
@@ -157,9 +158,14 @@ export function CustomerGraphics({
     1,
     ...(analysis?.customers.flatMap((c) => [c.prior, c.current]) ?? []),
   );
+  const customerExport: ChartTable | null = analysis ? {
+    columns: [{ label: tr("common.customer") }, { label: `${priorLabel} (kEUR)` }, { label: `${currentLabel} (kEUR)` }, { label: tr("graphics.yoy"), format: "0.0%" }, { label: tr("graphics.status") }],
+    rows: analysis.customers.map(c => [c.name, c.prior, c.current, customerGrowth(c.prior, c.current), statusKeys[c.status] ? tr(statusKeys[c.status]) : c.status]),
+  } : null;
   return (
     <section
       className="graphics-section customer-graphics"
+      data-customer-status={!current ? "loading" : current.error ? "error" : "ready"}
       aria-labelledby="customer-graphics-title"
     >
       <div className="graphics-section-heading">
@@ -235,6 +241,7 @@ export function CustomerGraphics({
               context={context}
               note={`${tr("graphics.forecastRule")} ${sourceNote}`}
               height={410}
+              exportTable={{ columns: [{ label: tr("common.customer") }, ...columns.map(label => ({ label: `${label} (kEUR)` }))], rows: [...analysis.breakdown.map(r => [groupLabel(r.name), ...r.values]), [tr("graphics.total"), ...columns.map((_, i) => analysis.breakdown.reduce((n, r) => n + r.values[i], 0))]], summaryRows: [analysis.breakdown.length] }}
               table={
                 <table className="bu-table">
                   <thead>
@@ -360,6 +367,7 @@ export function CustomerGraphics({
               context={context}
               note={`${tr("graphics.pieRule")} ${sourceNote}`}
               table={customerTable}
+              exportTable={{ columns: [{ label: tr("common.customer") }, { label: `${currentLabel} (kEUR)` }, { label: "%", format: "0.0%" }], rows: analysis.customers.map(c => [c.name, c.current, metrics!.keyTotal > 0 ? c.current / metrics!.keyTotal : null]) }}
             >
               <DonutPlot
                 rows={analysis.customers.map((c) => ({
@@ -377,6 +385,7 @@ export function CustomerGraphics({
               note={`${tr("graphics.yoyRule")} ${sourceNote}`}
               height={410}
               table={customerTable}
+              exportTable={customerExport!}
             >
               {analysis.customers.map((c, i) => (
                 <g key={c.name} transform={`translate(0,${24 + i * 52})`}>

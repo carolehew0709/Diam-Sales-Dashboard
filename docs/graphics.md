@@ -38,6 +38,12 @@ Analyze creates a review batch only. Editing all three China BUs is required to 
 
 Each new chart and existing monthly/cumulative SVG chart has local **PNG** (3× resolution) and **SVG** downloads. Exported images contain the title, selected scope, source period, units and limitation/source notes. Text is escaped through DOM text nodes. Exports use a self-contained SVG and browser canvas; no chart data is sent to an external image service. Existing workbook export layout is unchanged. Data/source details remain available alongside each chart.
 
+The **Download charts Excel / 导出图表 Excel** button in Sales performance graphics downloads a separate `.xlsx`: one chart per worksheet, exact numeric data in the upper table and the corresponding high-resolution PNG underneath. It includes the original monthly/cumulative charts, collapsed BU charts and permitted monthly customer charts, using their currently selected customer-source month. The default China view has 17 worksheets (12 new graphics and 5 original performance charts). Unavailable charts retain blank values and Review notes; no numbers are invented. Incompatible or unauthorized customer scopes have no customer sheets.
+
+This export is a snapshot: images do not recalculate if spreadsheet cells are edited. Full numeric precision is retained in cells; percentages use numeric ratios with percentage formatting. Sheet names are sanitized and made unique, the data table and image never overlap, and sources/filter context appear on every sheet. It uses only mounted authenticated chart data; it never fetches unscoped source data. Filter/revision changes during export cancel the download; pending or failed monthly-source loading blocks incomplete exports. The writer is loaded on demand, leaving initial dashboard loading unaffected. Existing Export Excel continues to provide the original data workbook separately.
+
+All chart worksheets share one visual template: centered table headers and all data cells (text, amounts, percentages and blanks), a gold title accent, dark headers, clear cell borders, alternating row shading and emphasized total/key-result rows. Metadata stays in a separate wrapped title/source block above the table. Column widths and row heights accommodate source labels without changing the data or the table-above-chart layout.
+
 ## Remaining source gaps
 
 | Missing source | Visible behavior |

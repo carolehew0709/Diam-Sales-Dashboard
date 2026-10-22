@@ -498,5 +498,12 @@
   "graphics.validation.categories": "Customer breakdown categories do not match the supported source rows.",
   "graphics.validation.positive": "Customer contributions require non-negative amounts and at least one customer.",
   "graphics.validation.rows": "Customer names must be unique and followed by a TOTAL row.",
-  "graphics.validation.total": "Source total does not reconcile: {cell}"
+  "graphics.validation.total": "Source total does not reconcile: {cell}",
+  "graphics.workbookDownload": "Download charts Excel",
+  "graphics.workbookProgress": "Preparing Excel · {done}/{total}",
+  "graphics.workbookLayout": "One chart per sheet · data table above, chart below · includes collapsed BU charts",
+  "graphics.workbookWait": "Source data is updating. Please wait, then export again.",
+  "graphics.workbookSourceError": "Monthly customer data could not be loaded. Refresh before exporting to avoid an incomplete workbook.",
+  "graphics.workbookError": "Export failed or filters changed. Keep the filters unchanged and retry.",
+  "graphics.workbookStep": "Metric / step"
 }

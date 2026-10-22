@@ -10,11 +10,10 @@ import { ReceivablesApp } from "@/components/receivables-app";
 import { hasReceivablesAccess } from "@/lib/receivables";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
-import { PerformanceChart } from "@/components/performance-chart";
+import { SalesMonthlyGraphic } from "@/components/sales-monthly-graphic";
 import { SalesGraphics, BusinessUnitGraphics } from "@/components/sales-graphics";
 import { CustomerGraphics } from "@/components/customer-graphics";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { performanceChartContext } from "@/lib/chart-workbook-context";
 import { performanceChartSeries } from "@/lib/performance-chart";
 import {
   defaultFilters,
@@ -254,7 +253,6 @@ function DashboardView({
   ].sort((a, b) => a - b);
   const knownMix = (data.external ?? 0) + (data.group ?? 0);
   const externalShare = knownMix ? ((data.external ?? 0) / knownMix) * 100 : 0;
-  const chartContext = performanceChartContext(data, locale);
   return (
     <>
       <section className="executive-head" id="overview">
@@ -599,49 +597,8 @@ function DashboardView({
           </span>
         </div>
       </section>
-      <section className="dashboard-grid dashboard-grid-main">
-        <article className="panel cumulative-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="panel-kicker">{tr("chart.trajectory")}</p>
-              <h2>{tr("chart.cumulativeTitle")}</h2>
-              <p>
-                {filters.bu === "all" ? tr("filters.allBU") : filters.bu} ·{" "}
-                {filters.year} ·{" "}
-                {filters.salesType === "all"
-                  ? tr("filters.allSales")
-                  : display(filters.salesType)}
-              </p>
-            </div>
-          </div>
-          <PerformanceChart rows={t.cumulative} cumulative context={chartContext} workbookContext={language => performanceChartContext(data, language)} />
-          <div className="panel-foot">
-            <span>
-              {tr("notes.annualScenario", {
-                scenario: formatK(t.scenario),
-                gap: formatK(t.gap),
-              })}
-            </span>
-            <span className="source-note">{tr("chart.anchor")}</span>
-          </div>
-          <details className="analysis-disclosure">
-            <summary>
-              <span>
-                <strong>{tr("chart.compare")}</strong>
-                <small>{tr("chart.compareNote")}</small>
-              </span>
-              <span className="disclosure-action">{tr("chart.explore")}</span>
-            </summary>
-            <div className="analysis-disclosure-body comparison-grid">
-              {data.rows.map((r) => (
-                <section key={r.entity.id}>
-                  <h3>{r.entity.code}</h3>
-                  <PerformanceChart rows={r.metrics.cumulative} cumulative context={`${r.entity.code} · ${chartContext}`} name={r.entity.code} workbookContext={language => `${r.entity.code} · ${performanceChartContext(data, language)}`} />
-                </section>
-              ))}
-            </div>
-          </details>
-        </article>
+      <section className="dashboard-grid dashboard-grid-main sales-overview-grid">
+        <SalesMonthlyGraphic data={data} standalone />
         <article className="panel gap-panel">
           <div className="panel-heading">
             <div>
@@ -709,62 +666,6 @@ function DashboardView({
                 {hasLegacySplit && <small>{tr("chart.dcpSplit")}</small>}
               </div>
             </div>
-          </div>
-        </article>
-      </section>
-      <section className="dashboard-grid dashboard-grid-secondary">
-        <article className="panel monthly-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="panel-kicker">{tr("chart.monthly")}</p>
-              <h2>{tr("chart.monthlyTitle")}</h2>
-              <p>{tr("chart.phasing")}</p>
-            </div>
-          </div>
-          <PerformanceChart rows={t.monthly} context={chartContext} workbookContext={language => performanceChartContext(data, language)} />
-        </article>
-        <article className="panel weekly-panel">
-          <div className="panel-heading">
-            <div>
-              <p className="panel-kicker">{tr("chart.control")}</p>
-              <h2>{tr("chart.invoice")}</h2>
-              <p>
-                {[
-                  ...new Set(
-                    data.rows.flatMap((r) =>
-                      r.snapshot && r.metrics.monthEstimate !== null
-                        ? [display(months[r.snapshot.month - 1])]
-                        : [],
-                    ),
-                  ),
-                ].join(" / ")}{" "}
-                {tr("chart.sourceMonth")}
-              </p>
-            </div>
-          </div>
-          <div className="apac-delivery">
-            <strong>
-              {formatK(t.monthSales)}
-              <small>{tr("chart.mtd")}</small>
-            </strong>
-            <span>
-              {tr("notes.estimate", { amount: formatK(t.monthEstimate) })}
-            </span>
-            <div className="delivery-track">
-              <i
-                style={{
-                  width: `${t.monthEstimate ? Math.min(100, ((t.monthSales ?? 0) / t.monthEstimate) * 100) : 0}%`,
-                }}
-              />
-            </div>
-            <p>
-              {tr("chart.stillInvoice")}
-              <b>{formatK(t.remaining)} kEUR</b>
-            </p>
-          </div>
-          <div className="panel-foot">
-            <span>{tr("chart.monthNote")}</span>
-            <span className="source-note">{tr("chart.partialMonth")}</span>
           </div>
         </article>
       </section>

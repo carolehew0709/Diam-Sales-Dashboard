@@ -5386,6 +5386,13 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 @media(prefers-reduced-motion:reduce) { .chart-mark, .chart-mark-visual { transition: none; } .chart-mark[data-chart-active] > .chart-mark-visual { transform: none; } }
 .graphic-heading { display: flex; align-items: flex-start; justify-content: space-between; gap: 12px; }
 .graphic-heading h3 { font-size: 16px; font-weight: 600; margin: 0; line-height: 1.5; }
+.monthly-sales-graphic { min-width: 0; }
+.sales-overview-grid .monthly-sales-graphic > .graphic-card { height: 100%; }
+.primary-sales-graphic .graphic-heading h3 { font-size: 22px; letter-spacing: -.02em; }
+.sales-overview-grid > .gap-panel { display: flex; flex-direction: column; }
+.sales-overview-grid > .gap-panel .sales-mix-block { margin-top: auto; }
+.invoice-progress-card { display: flex; flex-direction: column; }
+.invoice-progress-card .apac-delivery { flex: 1; align-content: center; }
 .graphic-downloads { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 5px; flex-shrink: 0; }
 .graphic-downloads button { display: inline-flex; align-items: center; gap: 4px; border: 1px solid var(--line); background: var(--panel); color: var(--muted); border-radius: 5px; font: inherit; font-size: 10px; padding: 6px 8px; cursor: pointer; }
 .graphic-downloads button:hover { color: var(--gold-strong); border-color: var(--gold); background: var(--gold-soft); }

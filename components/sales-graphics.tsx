@@ -2,7 +2,6 @@
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import {
-  ComboPlot,
   DonutPlot,
   Legend,
   PlotEmpty,
@@ -16,6 +15,7 @@ import { useRef } from "react";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { ChartMark } from "./chart-interaction";
 import { chartAmount } from "@/lib/chart-tooltip";
+import { SalesMonthlyGraphic } from "./sales-monthly-graphic";
 
 export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; exportOnly?: boolean }) {
   const { tr, display, locale } = useI18n();
@@ -98,69 +98,6 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
   const wy = (v: number) =>
     280 - ((v - waterfallMin) / (waterfallMax - waterfallMin)) * 245;
   const coverage = t.coverage;
-  const monthlyTable = (index: number) => (
-    <table className="bu-table">
-      <thead>
-        <tr>
-          <th>{tr("common.month")}</th>
-          <th className="numeric">{tr("graphics.monthlySales")}</th>
-          <th className="numeric">{tr("graphics.ytdSales")}</th>
-          <th>{tr("common.source")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {data.graphics.series[index].points.map((p, i) => (
-          <tr key={i}>
-            <td>{display(months[i])}</td>
-            <td className="numeric">{exact(p.monthly)}</td>
-            <td className="numeric">{exact(p.ytd)}</td>
-            <td>
-              {index === 0
-                ? data.graphics.series
-                    .slice(1)
-                    .map((s) => {
-                      const x = s.points[i];
-                      return x.week
-                        ? `${s.name}: W${x.week} · ${x.sourceFile} · ${x.sourceSheet}`
-                        : `${s.name}: —`;
-                    })
-                    .join("; ")
-                : p.week
-                  ? `W${p.week} · ${p.sourceFile} · ${p.sourceSheet}`
-                  : "—"}
-            </td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
-  const seriesCard = (index: number) => {
-    const s = data.graphics.series[index];
-    const title = tr("graphics.performanceFor", {
-      name: index === 0 ? display(s.name) : s.name,
-    });
-    return (
-      <GraphicCard
-        key={s.id}
-        title={title}
-        context={context}
-        note={`${tr("graphics.monthEndRule")} ${note}`}
-        table={monthlyTable(index)}
-        exportTable={{
-          columns: [{ label: tr("common.month") }, { label: `${tr("graphics.monthlySales")} (kEUR)` }, { label: `${tr("graphics.ytdSales")} (kEUR)` }, { label: tr("common.source") }],
-          rows: s.points.map((p, i) => [display(months[i]), p.monthly, p.ytd,
-            index === 0 ? data.graphics.series.slice(1).map(b => { const x = b.points[i]; return `${b.name}: ${x.week ? `W${x.week} · ${x.sourceFile} · ${x.sourceSheet}` : "—"}`; }).join("; ") : p.week ? `W${p.week} · ${p.sourceFile} · ${p.sourceSheet}` : null]),
-        }}
-      >
-        <ComboPlot
-          points={s.points.map((p, i) => ({ ...p, label: display(months[i]) }))}
-          monthlyLabel={tr("graphics.monthlySales")}
-          ytdLabel={tr("graphics.ytdSales")}
-          empty={tr("graphics.noActuals")}
-        />
-      </GraphicCard>
-    );
-  };
   const teams = data.graphics.teams;
   const teamTotal = teams.reduce((n, r) => n + r.value, 0);
   const teamRows = teams.map((r) => ({
@@ -312,7 +249,7 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
             </ChartMark>
           )}
         </GraphicCard>
-        {seriesCard(0)}
+        <InvoiceProgress data={data} />
         <GraphicCard
           title={tr("graphics.teamContribution")}
           context={context}
@@ -354,11 +291,62 @@ export function SalesGraphics({ data, exportOnly = false }: { data: Dashboard; e
       <details className="graphics-entity-details">
         <summary>{tr("graphics.entityCharts")}</summary>
         <div className="graphics-grid">
-          {data.graphics.series.slice(1).map((_, i) => seriesCard(i + 1))}
+          {data.graphics.series.slice(1).map((series, i) => <SalesMonthlyGraphic key={series.id} data={data} index={i + 1} />)}
         </div>
       </details>
       <p className="graphics-limitation">{tr("graphics.missingYoY")}</p>
     </section>
+  );
+}
+
+function InvoiceProgress({ data }: { data: Dashboard }) {
+  const { tr, display } = useI18n();
+  const t = data.totals;
+  return (
+        <article className="panel invoice-progress-card">
+          <div className="panel-heading">
+            <div>
+              <p className="panel-kicker">{tr("chart.control")}</p>
+              <h2>{tr("chart.invoice")}</h2>
+              <p>
+                {[
+                  ...new Set(
+                    data.rows.flatMap((r) =>
+                      r.snapshot && r.metrics.monthEstimate !== null
+                        ? [display(months[r.snapshot.month - 1])]
+                        : [],
+                    ),
+                  ),
+                ].join(" / ")}{" "}
+                {tr("chart.sourceMonth")}
+              </p>
+            </div>
+          </div>
+          <div className="apac-delivery">
+            <strong>
+              {formatK(t.monthSales)}
+              <small>{tr("chart.mtd")}</small>
+            </strong>
+            <span>
+              {tr("notes.estimate", { amount: formatK(t.monthEstimate) })}
+            </span>
+            <div className="delivery-track">
+              <i
+                style={{
+                  width: `${t.monthEstimate ? Math.min(100, ((t.monthSales ?? 0) / t.monthEstimate) * 100) : 0}%`,
+                }}
+              />
+            </div>
+            <p>
+              {tr("chart.stillInvoice")}
+              <b>{formatK(t.remaining)} kEUR</b>
+            </p>
+          </div>
+          <div className="panel-foot">
+            <span>{tr("chart.monthNote")}</span>
+            <span className="source-note">{tr("chart.partialMonth")}</span>
+          </div>
+        </article>
   );
 }
 

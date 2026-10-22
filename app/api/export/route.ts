@@ -4,6 +4,7 @@ import * as XLSX from "xlsx-js-style";
 import { currentUser, ApiError } from "@/lib/auth";
 import { repository } from "@/lib/repository";
 import { filtersFrom, getDashboardSnapshot, months } from "@/lib/dashboard";
+import { translate } from "@/lib/i18n";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
@@ -58,7 +59,7 @@ export async function GET(request: Request) {
       [],
       [
         "Entity",
-        "Annual Dashboard",
+        translate("en", "metric.budget"),
         "Sales to date",
         "Orderbook",
         "Sales & Dashboard",

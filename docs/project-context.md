@@ -28,7 +28,7 @@ DCP follows the same direct entity-week sales/orderbook parsing rules as DEHK/DD
 
 ## KPI definitions
 
-- Annual Dashboard: approved annual budget for the selected scope/year; null if any selected entity budget is missing. Budgets have no External/Group allocation, so filtered sales-type coverage/gap are unavailable.
+- Annual Budget: approved annual budget for the selected scope/year; null if any selected entity budget is missing. Budgets have no External/Group allocation, so filtered sales-type coverage/gap are unavailable.
 - Sales & Dashboard (OB): YTD invoiced + current-year committed OB. DCP uses the provided unsplit annual scenario, with no invented component split.
 - Sales + Prospect: base + supplied Prospect. Known subtotals remain visible when inputs are missing, clearly marked partial. Unknown Prospect is not asserted to be zero; it does not block Coverage or Residual Gap.
 - Coverage: annual Sales + OB / complete comparable annual budget, excluding Prospect in both scenarios. Never divide by an artificial denominator of one.
@@ -88,10 +88,10 @@ Current China FY2026 base is DEHK 32,518.276 + DCP 2,620.651 + DDC 7,158.8329 = 
 
 ## FY2027 known annual budget subtotal (2026-10-03)
 
-At the owner request, the FY2027 Annual Dashboard total now displays the known approved DEHK + DDC budget: 29,014 + 6,017 = 35,031 kEUR for China/APAC selections that include both. It is explicitly labelled a known subtotal and names the included BUs; missing DCP/DSI/DDI/DDJ budgets remain null. Permission and BU filters apply before summing. `budgetComplete` remains false if any selected BU budget is absent; coverage/gap still require a complete comparable budget. FY2026 aggregation retains its existing complete-budget rule. Exports show the subtotal with its partial-scope note.
+At the owner request, the FY2027 Annual Budget total now displays the known approved DEHK + DDC budget: 29,014 + 6,017 = 35,031 kEUR for China/APAC selections that include both. It is explicitly labelled a known subtotal and names the included BUs; missing DCP/DSI/DDI/DDJ budgets remain null. Permission and BU filters apply before summing. `budgetComplete` remains false if any selected BU budget is absent; coverage/gap still require a complete comparable budget. FY2026 aggregation retains its existing complete-budget rule. Exports show the subtotal with its partial-scope note.
 
 
-The owner subsequently requested pending FY2027 DCP/DSI/DDI/DDJ budgets display as 0. `pending2027Budgets` keeps these placeholders separate from confirmed budgets; source/operating data remains absent. Each pending BU shows budget 0 and a translated pending finding. China/APAC Annual Dashboard sums to 35,031 with a pending-budget note. `budgetComplete` stays false, so these provisional zeros do not enable approved-budget coverage/gap. No monthly allocation is invented; FY2026 values are unchanged.
+The owner subsequently requested pending FY2027 DCP/DSI/DDI/DDJ budgets display as 0. `pending2027Budgets` keeps these placeholders separate from confirmed budgets; source/operating data remains absent. Each pending BU shows budget 0 and a translated pending finding. China/APAC Annual Budget sums to 35,031 with a pending-budget note. `budgetComplete` stays false, so these provisional zeros do not enable approved-budget coverage/gap. No monthly allocation is invented; FY2026 values are unchanged.
 
 
 ## DCP W40 source refresh (2026-10-03)

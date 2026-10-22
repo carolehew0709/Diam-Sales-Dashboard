@@ -4,6 +4,7 @@ import { emptySnapshot, weekDate } from "./workbook-parser";
 import { resolveEntity } from "./entities";
 import type { ImportBatch, OrderBookLine, User } from "./types";
 import { ApiError } from "./auth";
+import { translate } from "./i18n";
 const amount = (v: unknown, label: string, optional = false): number | null => {
   if (v === "" || v === null || v === undefined) {
     if (optional) return null;
@@ -67,10 +68,10 @@ export function manualBatch(input: unknown, user: User): ImportBatch {
       throw new ApiError(400, "MTD turnover cannot exceed YTD turnover");
   s.prospect = amount(b.prospect, "Prospect", true);
   s.nextProspect = amount(b.nextProspect, "2027 Prospect", true);
-  s.annualBudget = amount(b.annualBudget, "Annual Dashboard", true);
+  s.annualBudget = amount(b.annualBudget, translate("en", "metric.budget"), true);
   s.nextAnnualBudget = amount(
     b.nextAnnualBudget,
-    "2027 Annual Dashboard",
+    translate("en", "validation.nextBudget"),
     true,
   );
   s.sourceNote = source;

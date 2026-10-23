@@ -33,6 +33,21 @@ export function monthlyPerformanceSeries(
   salesTeam = "all",
 ) {
   const teamScoped = salesTeam !== "all";
+  if (teamScoped)
+    return {
+      key: "base" as const,
+      partial: false,
+      points: metrics.monthly.map((m, i) => {
+        const amounts = metrics.monthly.slice(0, i + 1).map((x) => x.orderbook);
+        return {
+          label: m.label,
+          monthly: m.orderbook,
+          ytd: amounts.every((v) => v !== null)
+            ? amounts.reduce<number>((sum, v) => sum + v!, 0)
+            : null,
+        };
+      }),
+    };
   const wantsProspect = scenario === "Sales + Prospect";
   const hasScenario =
     metrics.monthly.some((m) => m.scenario !== null) ||
@@ -40,7 +55,6 @@ export function monthlyPerformanceSeries(
   const key: PerformanceSeriesKey =
     wantsProspect && hasScenario ? "scenario" : "base";
   const partial =
-    !teamScoped &&
     wantsProspect &&
     metrics.monthly.some(
       (m, i) =>
@@ -53,8 +67,8 @@ export function monthlyPerformanceSeries(
     partial,
     points: metrics.monthly.map((m, i) => ({
       label: m.label,
-      monthly: teamScoped ? null : m[key],
-      ytd: teamScoped ? null : metrics.cumulative[i][key],
+      monthly: m[key],
+      ytd: metrics.cumulative[i][key],
     })),
   };
 }

@@ -3,7 +3,34 @@ import assert from "node:assert/strict";
 import {
   firstOpenMonth,
   performanceChartSeries,
+  monthlyPerformanceSeries,
 } from "../lib/performance-chart";
+import type { Metric } from "../lib/dashboard";
+
+test("team monthly OB is scenario independent and cumulative gaps remain missing", () => {
+  const metrics = {
+    monthly: [0, 12.25, null, 3].map((orderbook, i) => ({
+      label: String(i),
+      orderbook,
+      base: 999,
+      scenario: 1999,
+    })),
+    cumulative: [0, 0, 0, 0].map(() => ({ base: 999, scenario: 1999 })),
+  } as Pick<Metric, "monthly" | "cumulative">;
+  const view = monthlyPerformanceSeries(metrics, "Sales", "Team A");
+  assert.deepEqual(
+    view.points.map((p) => p.monthly),
+    [0, 12.25, null, 3],
+  );
+  assert.deepEqual(
+    view.points.map((p) => p.ytd),
+    [0, 12.25, null, null],
+  );
+  assert.deepEqual(
+    view,
+    monthlyPerformanceSeries(metrics, "Sales + Prospect", "Team A"),
+  );
+});
 
 test("current reporting month stays unfinished alongside future months", () => {
   assert.equal(firstOpenMonth(2026, [{ year: 2026, month: 10 }]), 9);

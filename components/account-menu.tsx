@@ -45,7 +45,6 @@ export function AccountMenu({
             <Link href={sectionPath(locale, "analysis")} onClick={() => setOpen(false)}>{tr("nav.analysis")}</Link>
             <Link href={sectionPath(locale, "business-units")} onClick={() => setOpen(false)}>{tr("nav.entities")}</Link>
             <Link href={sectionPath(locale, "management-checks")} onClick={() => setOpen(false)}>{tr("nav.checks")}</Link>
-            <Link href={pagePath(locale, "brand")} onClick={() => setOpen(false)}>{tr("nav.brand")}</Link>
           </nav>
           {canManageUsers(user) && (
             <Link href={pagePath(locale, "admin")}

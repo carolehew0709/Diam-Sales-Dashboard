@@ -1220,15 +1220,6 @@ export default function Home() {
           <AdminPanel onClose={() => setView("overview")} />
         ) : view === "ar-aging" ? (
           hasReceivablesAccess(user) ? <ReceivablesApp /> : <p role="alert">{tr("common.noAccess")}</p>
-        ) : view === "brand" ? (
-          <section className="panel apac-workspace">
-            <p className="panel-kicker">{tr("brand.title")}</p>
-            <h1>{tr("brand.pending")}</h1>
-            <p>{tr("brand.note")}</p>
-            <button className="apac-button" onClick={() => setView("overview")}>
-              {tr("common.backOverview")}
-            </button>
-          </section>
         ) : data ? (
           <div
             aria-busy={loading || dashboardFilterKey(data.filters) !== dashboardFilterKey(filters)}

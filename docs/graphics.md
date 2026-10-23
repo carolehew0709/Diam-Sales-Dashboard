@@ -14,6 +14,8 @@ The five-sheet `Graphics.xlsx` supplied on 2026-10-21 is a reference and a month
 
 The catalog's Team Contribution chart uses published **order book**, including unassigned teams, not team revenue. It follows existing line exclusions and selected scope/type/year. Small tails group as Other without changing the denominator. It does not imply supplied team invoices, budgets or attainment.
 
+W42 team detail now preserves every supplied team below the donut's data disclosure, including teams grouped as Other in the picture. It includes twelve source delivery months, total OB, share, BUs, order-line count and source file/sheet/rows; the bilingual chart workbook uses the same exact table. Selecting a team switches the main and BU monthly charts to clearly labeled monthly/cumulative team OB from these source allocations; it does not manufacture invoiced performance. The default All teams sales chart remains unchanged.
+
 ## Periods and calculations
 
 Weekly sales planning and monthly customer sources remain separate. The primary full-width monthly/cumulative combination chart reuses the **same monthly and cumulative metrics as the former Annual trajectory / Monthly phasing planning curves**, with monthly columns and one cumulative line. Sales selects Sales + OB; Sales + Prospect selects the supplied monthly/cumulative scenario. If all Prospect phasing is unavailable, known Sales + OB is shown with an explicit notice. Partially supplied scenarios retain their gaps. Missing Prospect is never converted to zero. The Time Matrix uses the same metric-selection helper, so it and the chart cannot choose conflicting scenario fallbacks. No monthly budget is allocated.
@@ -79,5 +81,7 @@ A full browser reload starts at the top: an early local script disables scroll r
 At owner request, the last-sheet customer contribution donut is restored. The customer section places the customer-mix overview across the upper row, with equally sized contribution and YoY cards below. The restored donut retains monthly source labels, six-customer denominator, scope/RBAC checks, themed hover, PNG/SVG and a separate bilingual Excel chart sheet.
 
 The supplementary matrix is retained for its unique weekly annual outlook history; monthly planning values overlap the monthly chart details. It is collapsed by default and opens in Week mode, while Month remains available. Weekly columns are annual outlook snapshots, not weekly sales increments, and are never summed.
+
+The Brand Source / Sales by Brand placeholder page and both navigation links were removed at owner request on 2026-10-23. Its old bilingual `/brand` addresses are no longer registered pages and return 404. The source-backed customer OB module remains in Sales Performance.
 
 Monthly planning bars distinguish earlier reporting months (sand) from the unfinished current reporting month and later months (slate blue). The boundary follows the selected source snapshots and uses the earliest period for mixed-month scopes; next-year planning is entirely open. Missing source periods do not invent a cutoff. The cumulative line remains gold. Legends, hover and PNG/SVG/bilingual Excel chart images use the same period colors; numeric amounts and monthly allocation rules do not change.

@@ -74,6 +74,67 @@ test("BU shares preserve genuine zero and do not invent shares for incomplete or
   assert.deepEqual(businessUnitShares([]), []);
 });
 
+test("W42 team OB detail reconciles monthly and annual values and retains scoped source evidence", () => {
+  const before = JSON.stringify(state);
+  for (const year of [2026, 2027]) {
+    for (const salesType of ["all", "external", "group"] as const) {
+      const data = getDashboardSnapshot(state, admin, {
+        ...defaultFilters,
+        year,
+        salesType,
+      });
+      close(
+        data.graphics.teams.reduce((sum, t) => sum + t.value, 0),
+        data.totals.orderbook!,
+      );
+      for (const team of data.graphics.teams) {
+        close(
+          team.monthly.reduce<number>((sum, v) => sum + v!, 0),
+          team.value,
+        );
+        assert.ok(team.lineCount > 0);
+        assert.match(team.source, /W42/);
+        assert.ok(
+          team.entityIds.every((id) =>
+            data.rows.some((r) => r.entity.id === id),
+          ),
+        );
+        const selected = getDashboardSnapshot(state, admin, {
+          ...defaultFilters,
+          year,
+          salesType,
+          salesTeam: team.name,
+        });
+        close(selected.totals.orderbook, team.value);
+        assert.deepEqual(
+          selected.graphics.teams.map((t) => t.name),
+          [team.name],
+        );
+      }
+    }
+  }
+  const scoped = getDashboardSnapshot(
+    state,
+    { ...admin, role: "viewer", permissions: { ddc: ["view"] } },
+    defaultFilters,
+  );
+  assert.ok(
+    scoped.graphics.teams.every((t) => t.entityIds.every((id) => id === "ddc")),
+  );
+  assert.ok(
+    scoped.graphics.teams.every(
+      (t) => !t.source.includes("DEHK") && !t.source.includes("DCP"),
+    ),
+  );
+  const unassigned = getDashboardSnapshot(
+    state,
+    admin,
+    defaultFilters,
+  ).graphics.teams.find((t) => t.name === "__unassigned__");
+  assert.ok(unassigned?.entityIds.includes("dcp"));
+  assert.equal(JSON.stringify(state), before);
+});
+
 test("monthly customer source preserves August totals without double-counting intergroup subtotal", () => {
   const view = customerAnalysisView(state, admin, defaultFilters);
   assert.deepEqual(view.months, ["2026-08"]);

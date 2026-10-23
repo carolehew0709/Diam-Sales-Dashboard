@@ -1,7 +1,47 @@
-import type { Snapshot, Store } from "./types";
+import type { Snapshot, Store, OrderBookLine } from "./types";
 
 export const teamName = (value?: string) =>
   value?.replace(/\s+/g, " ").trim() || "__unassigned__";
+
+/** Receives only latest, authorized reporting lines, after exclusions and filters. */
+export function teamOrderbookSummary(lines: OrderBookLine[], year: number) {
+  const groups = new Map<string, OrderBookLine[]>();
+  for (const line of lines) {
+    const name = teamName(line.salesTeam);
+    const group = groups.get(name) ?? [];
+    group.push(line);
+    groups.set(name, group);
+  }
+  return [...groups]
+    .map(([name, group]) => {
+      const monthly = group.map((l) =>
+        year === 2027 ? l.monthly2027 : l.monthly2026,
+      );
+      const evidence = new Map<string, number[]>();
+      for (const line of group) {
+        const key = `${line.sourceFile} · ${line.sourceSheet}`;
+        evidence.set(key, [...(evidence.get(key) ?? []), line.sourceRow]);
+      }
+      return {
+        name,
+        value: group.reduce(
+          (sum, l) => sum + (year === 2027 ? l.total2027 : l.total2026),
+          0,
+        ),
+        monthly: Array.from({ length: 12 }, (_, i) =>
+          monthly.every((m) => m[i] !== null && m[i] !== undefined)
+            ? monthly.reduce((sum, m) => sum + m[i]!, 0)
+            : null,
+        ),
+        entityIds: [...new Set(group.map((l) => l.entityId))],
+        lineCount: group.length,
+        source: [...evidence]
+          .map(([source, rows]) => `${source} · rows ${rows.join(", ")}`)
+          .join("; "),
+      };
+    })
+    .sort((a, b) => b.value - a.value);
+}
 
 /** Project only source-backed team OB. Do not allocate BU invoices or budgets to teams. */
 export function salesTeamState(state: Store, salesTeam = "all"): Store {

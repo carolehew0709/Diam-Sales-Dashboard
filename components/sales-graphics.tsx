@@ -257,6 +257,13 @@ export function TeamContributionGraphic({
     ...r,
     name: r.name === "__unassigned__" ? tr("team.unassigned") : r.name,
   }));
+  const teamBUs = (row: (typeof teamRows)[number]) =>
+    row.entityIds
+      .map((id) => data.entities.find((e) => e.id === id)?.code ?? id)
+      .join(" / ");
+  const detailMonths = months
+    .map((label, index) => ({ label, index }))
+    .filter(({ index }) => teamRows.some((row) => row.monthly[index] !== 0));
   return (
     <div ref={root} className="team-contribution-graphic">
       <GraphicCard
@@ -268,11 +275,19 @@ export function TeamContributionGraphic({
             { label: tr("team.label") },
             { label: "kEUR" },
             { label: "%", format: "0.0%" },
+            ...months.map((month) => ({ label: `${display(month)} (kEUR)` })),
+            { label: tr("common.buEntity") },
+            { label: tr("team.orderLines") },
+            { label: tr("common.source") },
           ],
           rows: teamRows.map((r) => [
             r.name,
             r.value,
             teamTotal > 0 ? r.value / teamTotal : null,
+            ...r.monthly,
+            teamBUs(r),
+            r.lineCount,
+            r.source,
           ]),
         }}
         table={
@@ -282,6 +297,14 @@ export function TeamContributionGraphic({
                 <th>{tr("team.label")}</th>
                 <th className="numeric">kEUR</th>
                 <th className="numeric">%</th>
+                {detailMonths.map(({ label, index }) => (
+                  <th className="numeric" key={index}>
+                    {display(label)}
+                  </th>
+                ))}
+                <th>{tr("common.buEntity")}</th>
+                <th className="numeric">{tr("team.orderLines")}</th>
+                <th>{tr("common.source")}</th>
               </tr>
             </thead>
             <tbody>
@@ -291,9 +314,17 @@ export function TeamContributionGraphic({
                   <td className="numeric">{exact(r.value)}</td>
                   <td className="numeric">
                     {teamTotal > 0
-                      ? ((r.value / teamTotal) * 100).toFixed(1)
+                      ? `${((r.value / teamTotal) * 100).toFixed(1)}%`
                       : "—"}
                   </td>
+                  {detailMonths.map(({ index }) => (
+                    <td className="numeric" key={index}>
+                      {exact(r.monthly[index])}
+                    </td>
+                  ))}
+                  <td>{teamBUs(r)}</td>
+                  <td className="numeric">{r.lineCount}</td>
+                  <td>{r.source}</td>
                 </tr>
               ))}
             </tbody>

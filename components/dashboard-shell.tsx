@@ -64,17 +64,11 @@ export function DashboardShell({
               <>
                 <Link
                   href={pagePath(locale, "overview")}
-                  aria-current={page !== "brand" && page !== "ar-aging" ? "page" : undefined}
+                  aria-current={page !== "ar-aging" ? "page" : undefined}
                 >
                   {tr("nav.performance")}
                 </Link>
                 {hasReceivablesAccess(user) && <Link href={pagePath(locale, "ar-aging")} aria-current={page === "ar-aging" ? "page" : undefined}>{tr("ar.nav")}</Link>}
-                <Link
-                  href={pagePath(locale, "brand")}
-                  aria-current={page === "brand" ? "page" : undefined}
-                >
-                  {tr("nav.brand")}
-                </Link>
               </>
             )}
           </nav>

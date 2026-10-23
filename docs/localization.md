@@ -21,7 +21,7 @@ dashboard metrics until a dashboard page is opened.
 The URL is authoritative: `/en/overview` and `/zh-CN/overview` select the locale.
 The dashboard is one continuous page with `#overview`, `#analysis`,
 `#business-units`, and `#management-checks` anchors under `/{locale}/overview`.
-Legacy section-only paths redirect to these anchors. `imports`, `admin`, `brand`,
+Legacy section-only paths redirect to these anchors. `imports`, `admin`,
 and `login` remain separate pages. The root redirects using the `diam_locale` cookie
 (English by default). Language switching retains the page, query and fragment;
 the persistent application shell retains filters and form drafts. Refreshing

@@ -8,7 +8,6 @@ export const pages = [
   "management-checks",
   "imports",
   "admin",
-  "brand",
   "login",
 ] as const;
 export type Page = (typeof pages)[number];

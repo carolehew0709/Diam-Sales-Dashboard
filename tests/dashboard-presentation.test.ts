@@ -191,7 +191,7 @@ test("scope-linked main planning chart uses the same reviewed monthly metrics as
   );
 });
 
-test("team scope never invents invoiced performance or leaks whole-BU figures", () => {
+test("team monthly chart shows only its source OB, without inventing invoiced performance", () => {
   const team = getDashboardSnapshot(state, admin, defaultFilters).salesTeams[0];
   assert.ok(team);
   const data = getDashboardSnapshot(state, admin, {
@@ -200,6 +200,12 @@ test("team scope never invents invoiced performance or leaks whole-BU figures", 
   });
   assert.equal(data.totals.sales, null);
   const points = monthlyPerformanceSeries(data.totals, "Sales", team).points;
-  assert.ok(points.every((p) => p.monthly === null && p.ytd === null));
+  assert.equal(data.totals.budget, null);
+  assert.equal(data.totals.prospect, null);
+  assert.deepEqual(
+    points.map((p) => p.monthly),
+    data.totals.monthly.map((m) => m.orderbook),
+  );
+  assert.ok(Math.abs(points[11].ytd! - data.totals.orderbook!) < 1e-6);
   assert.ok(data.graphics.teams.every((r) => r.name === team));
 });

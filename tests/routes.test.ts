@@ -13,7 +13,14 @@ test("every page has a bilingual address", () => {
   for (const locale of ["en", "zh-CN"] as const)
     for (const page of pages)
       assert.deepEqual(parsePagePath(pagePath(locale, page)), { locale, page });
-  for (const path of ["/", "/fr/overview", "/en/missing", "/en/admin/extra"])
+  for (const path of [
+    "/",
+    "/fr/overview",
+    "/en/missing",
+    "/en/admin/extra",
+    "/en/brand",
+    "/zh-CN/brand",
+  ])
     assert.equal(parsePagePath(path), null);
 });
 test("language switch preserves page and URL state", () => {

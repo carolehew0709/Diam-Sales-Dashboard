@@ -1,5 +1,7 @@
 # Source and metric contract
 
+The independent Windows sales-order matching utility is documented in [order-matcher.md](order-matcher.md). It copies verified DEHK source currency/prices into a separate DDC result workbook and does not modify dashboard snapshots, permissions or published data.
+
 ## Grain and scope
 
 A snapshot is entity × source year × ISO week; a line is entity × year × week × source row. Weekly snapshots are immutable observations and are not summed across weeks. The active entity record is its latest populated snapshot, including explicitly entered zeroes. Untouched future W tabs with blank input cells are skipped even when formulas return zero.

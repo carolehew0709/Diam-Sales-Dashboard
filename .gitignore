@@ -156,3 +156,8 @@ localhost-overview*.png
 Dashboard/DEHK+DDC OVERDUE.xlsx
 Dashboard/Unknown Payment.xlsx
 data/ar-aging.json
+
+# Standalone order-matcher Python caches and packaging output.
+__pycache__/
+*.py[cod]
+tools/order-matcher/*.spec

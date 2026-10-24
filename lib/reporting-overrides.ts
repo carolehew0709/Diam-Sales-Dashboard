@@ -9,7 +9,7 @@ export function applyReportingOverrides(snapshot: Snapshot, salesType: SalesType
     const sourceMonthlyOB = snapshot.sourceExternalMonthlyOrderbook ?? snapshot.monthlyOrderbook.external;
     const external = salesType === "external";
     const ob = external ? sourceOB : snapshot.monthEstimate.external;
-    const correctedSales = [40, 41, 42].includes(snapshot.week) ? 260814.49 / 1000 : undefined;
+    const correctedSales = [40, 41, 42, 43].includes(snapshot.week) ? 260814.49 / 1000 : undefined;
     return {
       ...snapshot,
       sourceExternalOrderbook: sourceOB,
@@ -27,7 +27,9 @@ export function applyReportingOverrides(snapshot: Snapshot, salesType: SalesType
       sourceCells: {
         ...snapshot.sourceCells,
         ...(correctedSales !== undefined ? {
-          dcpYtdSales: snapshot.week === 42
+          dcpYtdSales: snapshot.week === 43
+            ? "Project owner confirmation · 2026-10-24 · retain 260.81449 kEUR External YTD for FY2026 W43; workbook H10 200.091 kEUR preserved; no monthly allocation supplied"
+            : snapshot.week === 42
             ? "Project owner confirmation · 2026-10-19 · retain 260.81449 kEUR External YTD for FY2026 W42; workbook H10 200.091 kEUR preserved; no monthly allocation supplied"
             : snapshot.week === 41
             ? "Project owner confirmation · 2026-10-11 · retain 260.81449 kEUR External YTD for FY2026 W41; workbook H10 200.091 kEUR preserved; no monthly allocation supplied"

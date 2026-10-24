@@ -2,7 +2,7 @@
 
 Owner decisions confirmed on 2026-10-19:
 
-- W42 DCP retains 260.81449 kEUR External YTD despite raw H10 200.091. W40/W41 confirmations remain; do not extend the correction to W43 or later without confirmation.
+- W42 DCP retains 260.81449 kEUR External YTD despite raw H10 200.091. W40/W41 confirmations remain. The owner separately confirmed W43 at the same 260.81449 on 2026-10-24; do not extend to W44 or later without confirmation.
 - Sales Team initially filters source-backed OB only. No team YTD invoices, approved budget, Prospect or attainment allocations are supplied. Those metrics remain blank with a pending-data explanation. All Teams preserves all existing BU reporting formulas.
 - AR Due means Not Due. Aging stays at the source snapshot, 2026-09-30; the application does not recompute aging using today's date or infer settlement from free-text follow-up comments.
 - Unknown/Advance has no BU allocation and is independent of the BU and invoice-aging controls. Use Summary EUR balances once; Unknown and Advance classify those same receipts. Do not deduct unapplied receipts automatically from invoice AR.

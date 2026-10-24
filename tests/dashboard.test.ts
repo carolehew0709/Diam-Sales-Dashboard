@@ -819,7 +819,7 @@ test("W41 live seed preserves BU rules, approved budgets, owner DCP YTD and futu
   }
   const rawDcp = latest.snapshots.find(s => s.entityId === "dcp" && s.week === 41)!;
   close(rawDcp.turnover.external, 200.091);
-  close(entityMetric({ ...rawDcp, week: 43 }, defaultFilters).sales, 200.091); // W42 approval does not carry into later unconfirmed weeks.
+  close(entityMetric({ ...rawDcp, week: 44 }, defaultFilters).sales, 200.091); // W43 approval does not carry into later unconfirmed weeks.
   const historical = latest.snapshots.find(s => s.entityId === "dcp" && s.week === 40)!;
   close(entityMetric(historical, defaultFilters).sales, 260.81449);
   assert.equal(JSON.stringify(latest), before);

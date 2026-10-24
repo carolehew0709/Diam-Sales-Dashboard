@@ -214,3 +214,20 @@ W43 is dated 2026-10-23. H10 is 7,549 and H11 is 13; all-sales invoicing is 7,56
 Owner-confirmed DDJ total-only Annual Budget is 9,700 for FY2026 and 11,000 for FY2027. No External/Group or monthly allocation is approved; those views retain missing budgets, as do team views. DDJ no longer uses the FY2027 pending-zero placeholder. W43 FY2026 Coverage = 9,603 / 9,700 = 99%; Gap = -97. FY2027 Coverage = 438 / 11,000 = 3.981818181818%; Gap = -10,562. Both exclude Prospect. FY2027 APAC known budget now totals 56,988 (China 35,788 + India 10,200 + Japan 11,000), superseding the preceding subtotal. Singapore remains pending with missing operating data.
 
 Publication is scoped to Japan entity/year/week only. Verify 43 snapshots/2,143 orders, latest W43, unchanged other-BU records, India budgets/data, users/permissions, AR and customer analyses; retain audit/revision and same-batch idempotency. Synthetic Japan regression tests cover aliases, populated-week detection, source order bounds, Group invoicing, total-only budgets and India isolation. Verify the deployed dashboard and downloaded Excel against the table above.
+
+## China W43 partial publication (2026-10-24)
+
+Received `Dashboard 2026 - DEHK(5).xlsx`, `Dashboard 2026 - DDC(5).xlsx` and `W43-- Dashboard 2026 - DCP(1).xlsx`. Each workbook contains 57 sheets, with latest valid source G4 W43/G6 October, reporting date 2026-10-23. All sheets including hidden/supporting sheets were inspected for errors and formula caches: no formula errors or missing cached formula values were found. W44–W52 are unused templates. W1–W42 financial values match the previously published data. Source files contain private customer/order details, remain unchanged in restricted server storage, and are ignored by public Git; the committed demonstration seed remains the separate W42 China baseline.
+
+DEHK was published through analyze → review → explicit publish in batch `e905945a-54aa-4cdf-b1d4-38bf627f61b6`, revision 9 (43 snapshots, 1,531 historical order rows; W43 has 42 actual orders). DDC was published in batch `2875e2cb-6c5e-4ed9-991e-65605616f1d4`, revision 10 (43 snapshots, 819 historical rows; W43 has 19 actual orders). Re-publication of each batch is idempotent. DCP, India, Japan, users/permissions, AR and customer analyses were verified unchanged by these two publications.
+
+| Metric (kEUR) | DEHK W42 | DEHK W43 | DDC W42 | DDC W43 |
+| --- | ---: | ---: | ---: | ---: |
+| Reported invoiced sales | 27,360.379 | 27,605.287 | 5,247.068 | 5,322.373 |
+| Reported current OB | 5,388.523 | 5,432.615 | 2,013.3319 | 2,052.6339 |
+| Annual Sales + OB | 32,748.902 | 33,037.902 | 7,260.3999 | 7,375.0069 |
+| FY2027 reported OB | 3,411.526 | 3,606.526 | 51 | 51 |
+
+DEHK uses H12 invoices and K17+K18 OB; its annual base rises 289 (invoices +244.908, OB +44.092). DDC retains External-only H10/O10/K17 reporting; annual base rises 114.607 (invoices +75.305, OB +39.302). Group and intercompany exclusions remain unchanged. Monthly and team OB use source allocations; approved annual budgets remain China 33,207 for FY2026 and 35,788 for FY2027, with no monthly budget/Prospect inference.
+
+DCP's new workbook has 42 populated snapshots and 252 historical order rows, including two W43 orders. W43 H10 remains 200.091, below the owner-confirmed W42 reporting value 260.81449. The prior correction is explicitly limited to W40–W42; extending it requires owner confirmation. Batch `606afa81-cc3c-42ed-80bc-b5ece2f59629` is reviewed but **not published** while the W43 figure is pending. DCP therefore remains visibly W42 at Sales + OB 261.99849. China currently shows mixed weeks W42/W43 and annual base 40,674.90739, not a fully updated W43 dataset. If the owner confirms W43, record the decision and publish this reviewed DCP batch; do not silently activate it or infer continuation from elapsed time.

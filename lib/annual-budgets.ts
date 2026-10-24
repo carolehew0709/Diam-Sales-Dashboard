@@ -17,19 +17,28 @@ export const approved2027BudgetSplits: Readonly<Record<string, ApprovedSplit>> =
 function totals(splits: Readonly<Record<string, ApprovedSplit>>): Readonly<Record<string, number>> {
   return Object.fromEntries(Object.entries(splits).map(([id, split]) => [id, split.external + split.group]));
 }
-export const approved2026Budgets = totals(approved2026BudgetSplits);
-export const approved2027Budgets = totals(approved2027BudgetSplits);
+// India total approved by the owner on 2026-10-24; no sales-type split supplied.
+export const approved2026Budgets: Readonly<Record<string, number>> = {
+  ...totals(approved2026BudgetSplits),
+  ddi: 10667,
+};
+export const approved2027Budgets: Readonly<Record<string, number>> = {
+  ...totals(approved2027BudgetSplits),
+  ddi: 10200,
+};
 
 /** Undefined means no approved budget; never infer an allocation for missing BUs. */
 export function approvedAnnualBudget(entityId: string, year: number, salesType: SalesType): number | undefined {
   const split = (year === 2026 ? approved2026BudgetSplits : year === 2027 ? approved2027BudgetSplits : {})[entityId];
-  if (!split) return undefined;
+  if (!split) return salesType === "all"
+    ? (year === 2026 ? approved2026Budgets : year === 2027 ? approved2027Budgets : {})[entityId]
+    : undefined;
   return salesType === "all" ? split.external + split.group : split[salesType];
 }
 
 // Owner-requested display placeholders, 2026-10-03; these are NOT approved budgets.
 export const pending2027Budgets: Readonly<Record<string, number>> = {
-  dcp: 0, dsi: 0, ddi: 0, ddj: 0,
+  dcp: 0, dsi: 0, ddj: 0,
 };
 
 export function applyApprovedBudget(snapshot: Snapshot): Snapshot {
@@ -54,14 +63,18 @@ export function applyApprovedBudget(snapshot: Snapshot): Snapshot {
     sourceCells: {
       ...snapshot.sourceCells,
       budget:
-        snapshot.year === 2026
+        snapshot.entityId === "ddi"
+          ? `Project owner confirmation · 2026-10-24 · lib/annual-budgets.ts · ${approved} kEUR · FY${snapshot.year} India total only; External/Group and monthly allocation not supplied`
+          : snapshot.year === 2026
           ? "Project owner final budget table · 2026-10-09 · 4bdcb716c2c1194b6363ecb78198efa8.png · lib/annual-budgets.ts · kEUR · FY2026 External/Group"
           : "Project owner final budget table · 2026-10-09 · 4bdcb716c2c1194b6363ecb78198efa8.png · lib/annual-budgets.ts · kEUR · FY2027 External/Group",
       ...(snapshot.year === 2026 &&
       approved2027Budgets[snapshot.entityId] !== undefined
         ? {
             nextBudget:
-              "Project owner final budget table · 2026-10-09 · 4bdcb716c2c1194b6363ecb78198efa8.png · lib/annual-budgets.ts · kEUR · FY2027 External/Group",
+              snapshot.entityId === "ddi"
+                ? "Project owner confirmation · 2026-10-24 · lib/annual-budgets.ts · 10,200 kEUR · FY2027 India total only; External/Group and monthly allocation not supplied"
+                : "Project owner final budget table · 2026-10-09 · 4bdcb716c2c1194b6363ecb78198efa8.png · lib/annual-budgets.ts · kEUR · FY2027 External/Group",
           }
         : {}),
     },

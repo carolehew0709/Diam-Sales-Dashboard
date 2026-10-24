@@ -611,7 +611,7 @@ test("DDC H10/O10 reporting preserves raw Group sources and other BUs", () => {
 test("2027 provisional budgets respect scope and require complete operating inputs",()=>{
  for(const region of ["China","APAC"]){
   const d=getDashboardSnapshot(state,admin,{...defaultFilters,year:2027,region,scenario:"Sales"});
-  close(d.totals.budget,35788);assert.equal(d.totals.budgetComplete,false);
+  close(d.totals.budget,region === "China" ? 35788 : 45988);assert.equal(d.totals.budgetComplete,false);
   if(region === "China") { close(d.totals.coverage, d.totals.base! / 35788); close(d.totals.gap, d.totals.base! - 35788); }
   else { assert.equal(d.totals.coverage,null);assert.equal(d.totals.gap,null); }
  }
@@ -625,7 +625,7 @@ test("2027 provisional budgets respect scope and require complete operating inpu
 
 
 test("FY2027 pending BUs display zero without inventing approved budgets or operating data",()=>{
- for(const id of ["dcp","dsi","ddi","ddj"]){
+ for(const id of ["dcp","dsi","ddj"]){
  const d=getDashboardSnapshot(state,admin,{...defaultFilters,entity:id,region:"APAC",year:2027,scenario:"Sales"});
  close(d.totals.budget,0);assert.equal(d.totals.budgetComplete,false);if(id === "dcp") close(d.totals.gap, d.totals.base!); else assert.equal(d.totals.gap,null);assert.equal(d.totals.coverage,null);
  assert.ok(d.checks.some(c=>c.message==="FY2027 annual budget pending; displayed as 0"));
@@ -854,9 +854,39 @@ test("India source imports actual order ranges and retains monthly/source eviden
   assert.ok(s.findings.includes("Orderbook movement bridge has an unexplained difference; source amounts retained"));
   const m = entityMetric(s, defaultFilters);
   close(m.sales, 6195); close(m.orderbook, 2909.3515846505334);close(m.base, 9104.351584650532);close(m.remaining, 1484.396964781534);
-  assert.equal(m.budget, null);assert.equal(m.prospect, null);assert.equal(m.coverage, null);
+  close(m.budget, 10667);assert.equal(m.prospect, null);close(m.coverage, 9104.351584650532 / 10667);
   close(entityMetric(s, { ...defaultFilters, year: 2027 }).orderbook, 109.15973);
   assert.deepEqual(s.monthlySales.external.slice(0, 10), [600,320,797,430,396,688,856,605,1021,304]);
+});
+
+test("India approved annual totals do not invent sales-type, monthly or team allocations", async () => {
+  const { applyApprovedBudget, approvedAnnualBudget } = await import("../lib/annual-budgets");
+  const raw = source.snapshots.find(s => s.entityId === "ddi" && s.week === 41) as unknown as Snapshot;
+  const projected = applyApprovedBudget({ ...raw, annualBudget: 1, monthlyBudget: Array(12).fill(1) });
+  assert.equal(projected.annualBudget, 10667);
+  assert.equal(projected.nextAnnualBudget, 10200);
+  assert.ok(projected.sourceCells.nextBudget.includes("2026-10-24"));
+  assert.ok(projected.sourceCells.budget.includes("2026-10-24"));
+  assert.ok(projected.monthlyBudget.every(v => v === null));
+  assert.equal(approvedAnnualBudget("ddi", 2026, "all"), 10667);
+  for (const salesType of ["external", "group"] as const) {
+    assert.equal(approvedAnnualBudget("ddi", 2026, salesType), undefined);
+    assert.equal(entityMetric(projected, { ...defaultFilters, salesType }).budget, null);
+    assert.equal(approvedAnnualBudget("ddi", 2027, salesType), undefined);
+    assert.equal(entityMetric(projected, { ...defaultFilters, salesType, year: 2027 }).budget, null);
+  }
+  for (const scenario of ["Sales", "Sales + Prospect"] as const) {
+    const metric = entityMetric(projected, { ...defaultFilters, scenario });
+    close(metric.coverage, metric.base! / 10667);
+    close(metric.gap, metric.base! - 10667);
+    assert.equal(metric.prospect, null);
+  }
+  const future = entityMetric(projected, { ...defaultFilters, year: 2027 });
+  assert.equal(future.budget, 10200);assert.equal(future.budgetComplete, true);
+  close(future.coverage, future.base! / 10200);close(future.gap, future.base! - 10200);
+  const futureSnapshot = applyApprovedBudget({ ...raw, year: 2027, annualBudget: 1 });
+  assert.equal(futureSnapshot.annualBudget, 10200);assert.ok(futureSnapshot.sourceCells.budget.includes("FY2027 India total only"));
+  assert.equal(entityMetric({ ...projected, teamScope: true, annualBudget: null }, defaultFilters).budget, null);
 });
 
 test("India editor cannot view, edit, publish or aggregate China records", async () => {

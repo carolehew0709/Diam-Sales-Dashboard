@@ -193,3 +193,24 @@ The existing analyze → review → publish flow published batch `72d39179-dbbc-
 W42→W43 invoicing rises 83 and OB falls 83.447478624, giving a net annual-base decrease of 0.447478624; preserve source amounts rather than forcing a monotonic forecast. W43 October invoices are 513 External + 50 Group; October OB is 687.208400426555, November OB 1,212.848273150610 and December OB 842.854808802370. Prospect remains missing.
 
 The owner additionally confirmed India Annual Budgets at **10,667 kEUR for FY2026** and **10,200 kEUR for FY2027**, total only. `lib/annual-budgets.ts` applies them to All sales without inventing External/Group or monthly allocations, and weekly imports cannot overwrite them. W43 FY2026 Coverage is 86.199601409764% and Gap is -1,472.088517620467 kEUR, both excluding Prospect. FY2027 supplied OB 105 gives Coverage 1.029411764706% and Gap -10,095 kEUR. Team budgets remain missing. Prior documentation describing the India budgets as unavailable/pending is superseded by these confirmations; China budgets remain unchanged. FY2027 APAC known budget becomes 45,988 (China 35,788 + India 10,200); unavailable operating inputs still prevent complete APAC Coverage/Gap, and other pending BUs remain marked.
+
+## Japan DDJ W43 source and budgets (2026-10-24)
+
+Owner supplied `Dashboard 2026_W43- DJP.xlsx` and explicitly confirmed W43. Source G2 `Diam Japan`, G4 `W43` and G6 `October` agree with the filename. Map `Diam Japan` and `DJP` aliases to existing internal `ddj`, display BU `DDJ`, reporting region Japan; do not create a second BU. All-sales invoice-only top strip uses H12 = H10+H11, retaining Group invoices. External/Group and the DDC/DCP special rules stay separate.
+
+All 57 sheets were inventoried, including hidden parameters and DB analysis orders. W1–W43 contain 43 valid Japan snapshots and 2,143 order lines; W44–W52 are unpopulated templates, not zero-valued new reporting weeks. Supporting Synth/pivot/analysis sheets are not added to weekly totals. Formula caches are supplied, no formula errors were found, and source order SUMIF bounds exclude footer/template rows. The original workbook contains customer/order details and stays in a restricted private source directory, excluded from public Git. The demonstration seed is unchanged; active production data uses authenticated analyze → review → explicit publish into PostgreSQL.
+
+| Metric (kEUR) | W41 | W42 | W43 |
+| --- | ---: | ---: | ---: |
+| Invoiced sales H12 | 7,562 | 7,562 | 7,562 |
+| Current-year OB K17+K18 | 1,734 | 1,992 | 2,041 |
+| Annual Sales + OB O12 | 9,296 | 9,554 | 9,603 |
+| Remaining this month | 917 | 534 | 512 |
+| FY2027 OB L17+L18 | 531 | 675 | 438 |
+| Actual order rows | 54 | 57 | 57 |
+
+W43 is dated 2026-10-23. H10 is 7,549 and H11 is 13; all-sales invoicing is 7,562, not External alone. October invoicing is a supplied 0; monthly OB is October 512, November 720 and December 809, totaling 2,041. FY2027 monthly OB is January 179, February 78 and March 181, totaling 438. Annual base increases 49 from W42, entirely from current-year OB. FY2027 OB decreases 237; preserve the new source instead of carrying the prior week's amount. Prospect and team assignments are unavailable and must not be inferred.
+
+Owner-confirmed DDJ total-only Annual Budget is 9,700 for FY2026 and 11,000 for FY2027. No External/Group or monthly allocation is approved; those views retain missing budgets, as do team views. DDJ no longer uses the FY2027 pending-zero placeholder. W43 FY2026 Coverage = 9,603 / 9,700 = 99%; Gap = -97. FY2027 Coverage = 438 / 11,000 = 3.981818181818%; Gap = -10,562. Both exclude Prospect. FY2027 APAC known budget now totals 56,988 (China 35,788 + India 10,200 + Japan 11,000), superseding the preceding subtotal. Singapore remains pending with missing operating data.
+
+Publication is scoped to Japan entity/year/week only. Verify 43 snapshots/2,143 orders, latest W43, unchanged other-BU records, India budgets/data, users/permissions, AR and customer analyses; retain audit/revision and same-batch idempotency. Synthetic Japan regression tests cover aliases, populated-week detection, source order bounds, Group invoicing, total-only budgets and India isolation. Verify the deployed dashboard and downloaded Excel against the table above.

@@ -17,14 +17,16 @@ export const approved2027BudgetSplits: Readonly<Record<string, ApprovedSplit>> =
 function totals(splits: Readonly<Record<string, ApprovedSplit>>): Readonly<Record<string, number>> {
   return Object.fromEntries(Object.entries(splits).map(([id, split]) => [id, split.external + split.group]));
 }
-// India total approved by the owner on 2026-10-24; no sales-type split supplied.
+// India/Japan totals approved by the owner on 2026-10-24; no sales-type split supplied.
 export const approved2026Budgets: Readonly<Record<string, number>> = {
   ...totals(approved2026BudgetSplits),
   ddi: 10667,
+  ddj: 9700,
 };
 export const approved2027Budgets: Readonly<Record<string, number>> = {
   ...totals(approved2027BudgetSplits),
   ddi: 10200,
+  ddj: 11000,
 };
 
 /** Undefined means no approved budget; never infer an allocation for missing BUs. */
@@ -38,7 +40,7 @@ export function approvedAnnualBudget(entityId: string, year: number, salesType: 
 
 // Owner-requested display placeholders, 2026-10-03; these are NOT approved budgets.
 export const pending2027Budgets: Readonly<Record<string, number>> = {
-  dcp: 0, dsi: 0, ddj: 0,
+  dcp: 0, dsi: 0,
 };
 
 export function applyApprovedBudget(snapshot: Snapshot): Snapshot {
@@ -50,6 +52,7 @@ export function applyApprovedBudget(snapshot: Snapshot): Snapshot {
         ? approved2027Budgets[snapshot.entityId]
         : undefined;
   if (approved === undefined) return snapshot;
+  const totalOnlyEntity = ({ ddi: "India", ddj: "Japan" } as Record<string, string>)[snapshot.entityId];
   const finding = "Approved annual budget has no supplied monthly phasing";
   return {
     ...snapshot,
@@ -63,8 +66,8 @@ export function applyApprovedBudget(snapshot: Snapshot): Snapshot {
     sourceCells: {
       ...snapshot.sourceCells,
       budget:
-        snapshot.entityId === "ddi"
-          ? `Project owner confirmation · 2026-10-24 · lib/annual-budgets.ts · ${approved} kEUR · FY${snapshot.year} India total only; External/Group and monthly allocation not supplied`
+        totalOnlyEntity
+          ? `Project owner confirmation · 2026-10-24 · lib/annual-budgets.ts · ${approved} kEUR · FY${snapshot.year} ${totalOnlyEntity} total only; External/Group and monthly allocation not supplied`
           : snapshot.year === 2026
           ? "Project owner final budget table · 2026-10-09 · 4bdcb716c2c1194b6363ecb78198efa8.png · lib/annual-budgets.ts · kEUR · FY2026 External/Group"
           : "Project owner final budget table · 2026-10-09 · 4bdcb716c2c1194b6363ecb78198efa8.png · lib/annual-budgets.ts · kEUR · FY2027 External/Group",
@@ -72,8 +75,8 @@ export function applyApprovedBudget(snapshot: Snapshot): Snapshot {
       approved2027Budgets[snapshot.entityId] !== undefined
         ? {
             nextBudget:
-              snapshot.entityId === "ddi"
-                ? "Project owner confirmation · 2026-10-24 · lib/annual-budgets.ts · 10,200 kEUR · FY2027 India total only; External/Group and monthly allocation not supplied"
+              totalOnlyEntity
+                ? `Project owner confirmation · 2026-10-24 · lib/annual-budgets.ts · ${approved2027Budgets[snapshot.entityId]} kEUR · FY2027 ${totalOnlyEntity} total only; External/Group and monthly allocation not supplied`
                 : "Project owner final budget table · 2026-10-09 · 4bdcb716c2c1194b6363ecb78198efa8.png · lib/annual-budgets.ts · kEUR · FY2027 External/Group",
           }
         : {}),

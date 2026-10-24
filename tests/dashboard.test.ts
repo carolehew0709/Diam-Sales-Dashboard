@@ -611,7 +611,7 @@ test("DDC H10/O10 reporting preserves raw Group sources and other BUs", () => {
 test("2027 provisional budgets respect scope and require complete operating inputs",()=>{
  for(const region of ["China","APAC"]){
   const d=getDashboardSnapshot(state,admin,{...defaultFilters,year:2027,region,scenario:"Sales"});
-  close(d.totals.budget,region === "China" ? 35788 : 45988);assert.equal(d.totals.budgetComplete,false);
+  close(d.totals.budget,region === "China" ? 35788 : 56988);assert.equal(d.totals.budgetComplete,false);
   if(region === "China") { close(d.totals.coverage, d.totals.base! / 35788); close(d.totals.gap, d.totals.base! - 35788); }
   else { assert.equal(d.totals.coverage,null);assert.equal(d.totals.gap,null); }
  }
@@ -625,7 +625,7 @@ test("2027 provisional budgets respect scope and require complete operating inpu
 
 
 test("FY2027 pending BUs display zero without inventing approved budgets or operating data",()=>{
- for(const id of ["dcp","dsi","ddj"]){
+ for(const id of ["dcp","dsi"]){
  const d=getDashboardSnapshot(state,admin,{...defaultFilters,entity:id,region:"APAC",year:2027,scenario:"Sales"});
  close(d.totals.budget,0);assert.equal(d.totals.budgetComplete,false);if(id === "dcp") close(d.totals.gap, d.totals.base!); else assert.equal(d.totals.gap,null);assert.equal(d.totals.coverage,null);
  assert.ok(d.checks.some(c=>c.message==="FY2027 annual budget pending; displayed as 0"));

@@ -12,7 +12,7 @@ import {
 import { formatK, months, percent, type Dashboard } from "@/lib/dashboard";
 import { ChartWorkbookExport } from "./chart-workbook-export";
 import type { ChartTable } from "@/lib/chart-workbook-types";
-import { useRef, useState } from "react";
+import { useRef } from "react";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { ChartMark } from "./chart-interaction";
 import { chartAmount } from "@/lib/chart-tooltip";
@@ -36,7 +36,7 @@ export function SalesGraphics({
   const t = data.totals;
   const week =
     data.weeks.map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
-  const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · kEUR`;
+  const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · ${data.filters.customer && data.filters.customer !== "all" ? data.filters.customer + " · " : ""}kEUR`;
   const sources = [
     ...new Set(
       data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
@@ -228,27 +228,22 @@ export function SalesGraphics({
 export function TeamContributionGraphic({
   data,
   exportOnly = false,
-  selectedTeam = "all",
 }: {
   data: Dashboard;
   exportOnly?: boolean;
-  selectedTeam?: string;
 }) {
   const { tr, display, locale } = useI18n();
-  const [requestedTeam, setTeam] = useState(selectedTeam);
-  const team = data.graphics.teams.some((row) => row.name === requestedTeam)
-    ? requestedTeam
-    : "all";
+  const team = data.filters.salesTeam ?? "all";
   const root = useRef<HTMLDivElement>(null);
   useWorkbookGroup(
     root,
     exportOnly
       ? null
-      : () => <TeamContributionGraphic data={data} selectedTeam={team} exportOnly />,
+      : () => <TeamContributionGraphic data={data} exportOnly />,
   );
   const week =
     data.weeks.map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
-  const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${team === "all" ? tr("team.all") : team === "__unassigned__" ? tr("team.unassigned") : team} · kEUR`;
+  const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${team === "all" ? tr("team.all") : team === "__unassigned__" ? tr("team.unassigned") : team} · ${data.filters.customer && data.filters.customer !== "all" ? data.filters.customer + " · " : ""}kEUR`;
   const sources = [
     ...new Set(
       data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
@@ -286,23 +281,6 @@ export function TeamContributionGraphic({
     .filter(({ index }) => teamRows.some((row) => row.monthly[index] !== 0));
   return (
     <div ref={root} className="team-contribution-graphic">
-      {!exportOnly && (
-        <label className="commercial-filter team-local-filter" htmlFor="sales-team">
-          <span>{tr("team.label")}</span>
-          <select
-            id="sales-team"
-            value={team}
-            onChange={(event) => setTeam(event.target.value)}
-          >
-            <option value="all">{tr("team.all")}</option>
-            {data.graphics.teams.map((row) => (
-              <option key={row.name} value={row.name}>
-                {row.name === "__unassigned__" ? tr("team.unassigned") : row.name}
-              </option>
-            ))}
-          </select>
-        </label>
-      )}
       <GraphicCard
         className="team-monthly-graphic-card"
         title={trendTitle}
@@ -336,7 +314,6 @@ export function TeamContributionGraphic({
         title={tr("graphics.teamContribution")}
         context={context}
         note={`${tr("graphics.teamRule")} ${note}`}
-        notice={tr("team.localScope")}
         exportTable={{
           columns: [
             { label: tr("team.label") },
@@ -474,7 +451,7 @@ export function BusinessUnitGraphics({
   );
   const { tr, display, locale } = useI18n();
   const rows = data.rows;
-  const context = `${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · ${data.weeks.map((w) => `W${w}`).join(" / ")} · kEUR`;
+  const context = `${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · ${data.weeks.map((w) => `W${w}`).join(" / ")} · ${data.filters.customer && data.filters.customer !== "all" ? data.filters.customer + " · " : ""}kEUR`;
   const sourceNote = tr("graphics.source", {
     source:
       [

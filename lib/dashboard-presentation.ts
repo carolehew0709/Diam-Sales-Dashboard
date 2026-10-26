@@ -10,6 +10,7 @@ export function dashboardFilterKey(filters: Filters) {
     filters.salesType,
     filters.scenario,
     filters.salesTeam ?? "all",
+    filters.customer ?? "all",
   ]);
 }
 
@@ -22,6 +23,7 @@ export function customerAnalysisQuery(filters: Filters, month: string) {
     year: String(filters.year),
     salesType: filters.salesType,
     salesTeam: filters.salesTeam ?? "all",
+    customer: filters.customer ?? "all",
     month,
   }).toString();
 }

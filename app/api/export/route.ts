@@ -1,5 +1,5 @@
 import { reportingState } from "@/lib/intercompany";
-import { salesTeamState, teamName } from "@/lib/sales-teams";
+import { salesTeamState, matchesOrderDimensions } from "@/lib/sales-teams";
 import * as XLSX from "xlsx-js-style";
 import { currentUser, ApiError } from "@/lib/auth";
 import { repository } from "@/lib/repository";
@@ -11,11 +11,11 @@ export async function GET(request: Request) {
     const user = await currentUser();
     const filters = filtersFrom(new URL(request.url));
     const rawState = reportingState(await repository.read(), filters.salesType);
-    const state = { ...salesTeamState(rawState, filters.salesTeam), intercompanyExcluded: rawState.intercompanyExcluded.filter(line => !filters.salesTeam || filters.salesTeam === "all" || teamName(line.salesTeam) === filters.salesTeam) };
+    const state = { ...salesTeamState(rawState, filters.salesTeam, filters.customer), intercompanyExcluded: rawState.intercompanyExcluded.filter(line => matchesOrderDimensions(line, filters.salesTeam, filters.customer)) };
     const d = getDashboardSnapshot(state, user, filters);
     const wb = XLSX.utils.book_new();
     const context = [
-      `${filters.year} · ${filters.region} / ${filters.bu} / ${filters.entity} · Team: ${filters.salesTeam ?? "all"} · ${filters.scenario} · ${filters.salesType} · kEUR · ${d.weeks.map((w) => `W${w}`).join(", ")}`,
+      `${filters.year} · ${filters.region} / ${filters.bu} / ${filters.entity} · Team: ${filters.salesTeam ?? "all"} · Customer: ${filters.customer ?? "all"} · ${filters.scenario} · ${filters.salesType} · kEUR · ${d.weeks.map((w) => `W${w}`).join(", ")}`,
     ];
     function add(name: string, rows: unknown[][]) {
       const sheet = XLSX.utils.aoa_to_sheet(rows);

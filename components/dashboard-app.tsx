@@ -257,6 +257,8 @@ function DashboardView({
           ? "all"
           : (data.entities.find((e) => e.id === id)?.businessUnit ?? "all"),
       entity: "all",
+      salesTeam: "all",
+      customer: "all",
     });
   const totalRows = [
     {
@@ -280,9 +282,10 @@ function DashboardView({
     matrixLevel === "entity"
       ? data.rows.map((r) => ({ name: r.entity.code, metrics: r.metrics }))
       : data.buGroups;
-  const monthlyView = monthlyPerformanceSeries(t, filters.scenario);
+  const dimensionScoped = (!!filters.salesTeam && filters.salesTeam !== "all") || (!!filters.customer && filters.customer !== "all");
+  const monthlyView = monthlyPerformanceSeries(t, filters.scenario, dimensionScoped ? "selection" : "all");
   const monthlyMatrixKey = monthlyView.key;
-  const monthlyMatrixLabel = tr(
+  const monthlyMatrixLabel = dimensionScoped ? tr("metric.ob") : tr(
     monthlyMatrixKey === "scenario" ? "chart.salesOBProspect" : "chart.salesOB",
   );
   const weeks = [
@@ -420,6 +423,7 @@ function DashboardView({
                 bu: "all",
                 entity: "all",
                 salesTeam: "all",
+                customer: "all",
               })
             }
           >
@@ -441,6 +445,7 @@ function DashboardView({
                 bu: e.target.value,
                 entity: "all",
                 salesTeam: "all",
+                customer: "all",
               })
             }
           >
@@ -456,6 +461,22 @@ function DashboardView({
             ))}
           </select>
         </div>
+        <div className="filter-field">
+          <label htmlFor="sales-team">{tr("team.label")}</label>
+          <select id="sales-team" value={requestedFilters.salesTeam ?? "all"}
+            onChange={(event) => setFilters({ ...requestedFilters, salesTeam: event.target.value, customer: "all" })}>
+            <option value="all">{tr("team.all")}</option>
+            {data.salesTeams.map((team) => <option key={team} value={team}>{team === "__unassigned__" ? tr("team.unassigned") : team}</option>)}
+          </select>
+        </div>
+        <div className="filter-field">
+          <label htmlFor="customer">{tr("common.customer")}</label>
+          <select id="customer" value={requestedFilters.customer ?? "all"}
+            onChange={(event) => setFilters({ ...requestedFilters, customer: event.target.value })}>
+            <option value="all">{tr("filters.allAvailable")}</option>
+            {data.customers.map((customer) => <option key={customer} value={customer}>{customer}</option>)}
+          </select>
+        </div>
         <Segmented
           label={tr("filters.years")}
           value={String(requestedFilters.year)}
@@ -463,7 +484,7 @@ function DashboardView({
             { value: "2026", label: "2026" },
             { value: "2027", label: "2027" },
           ]}
-          onChange={(v) => setFilters({ ...requestedFilters, year: Number(v) })}
+          onChange={(v) => setFilters({ ...requestedFilters, year: Number(v), salesTeam: "all", customer: "all" })}
         />
         <Segmented
           label={tr("filters.scenario")}
@@ -485,11 +506,12 @@ function DashboardView({
             { value: "group", label: tr("common.group") },
           ]}
           onChange={(v) =>
-            setFilters({ ...requestedFilters, salesType: v as Filters["salesType"] })
+            setFilters({ ...requestedFilters, salesType: v as Filters["salesType"], salesTeam: "all", customer: "all" })
           }
         />
       </section>
       <>
+          {dimensionScoped && <p className="apac-notice">{tr("filters.dimensionLimitation")}</p>}
           {data.regionRows.length > 0 && (
             <section
               className="china-strip"

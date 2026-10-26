@@ -126,6 +126,7 @@ export type Store = {
 };
 export type Filters = {
   salesTeam?: string;
+  customer?: string;
   region: string;
   bu: string;
   entity: string;

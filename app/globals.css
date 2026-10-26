@@ -5215,7 +5215,7 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 }
 .sales-filter-bar {
   display: grid;
-  grid-template-columns: minmax(110px,.8fr) minmax(150px,1.1fr) minmax(130px,.85fr) minmax(220px,1.35fr) minmax(195px,1.25fr);
+  grid-template-columns: repeat(4,minmax(0,1fr));
   overflow: visible;
 }
 .sales-filter-bar .filter-field,
@@ -5226,6 +5226,7 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 }
 @media (max-width: 640px) {
   .sales-filter-bar { position: static; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .sales-filter-bar .filter-field:last-child { grid-column: 1 / -1; }
   .sales-filter-bar .segmented { height: auto; min-height: 40px; }
   .sales-filter-bar .segmented button { min-height: 32px; white-space: normal; overflow-wrap: anywhere; padding: 3px; font-size: 10px; }
 }

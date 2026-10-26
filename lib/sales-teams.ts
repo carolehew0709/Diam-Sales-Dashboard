@@ -1,7 +1,13 @@
 import type { Snapshot, Store, OrderBookLine } from "./types";
+import { keyCustomerName } from "./key-customers";
 
 export const teamName = (value?: string) =>
   value?.replace(/\s+/g, " ").trim() || "__unassigned__";
+export const customerName = (value?: string) =>
+  keyCustomerName(value ?? "") ?? (value?.replace(/\s+/g, " ").trim() || "Unspecified customer");
+export const matchesOrderDimensions = (line: OrderBookLine, salesTeam = "all", customer = "all") =>
+  (salesTeam === "all" || teamName(line.salesTeam) === salesTeam) &&
+  (customer === "all" || customerName(line.customer) === customer);
 
 /** Receives only latest, authorized reporting lines, after exclusions and filters. */
 export function teamOrderbookSummary(lines: OrderBookLine[], year: number) {
@@ -44,10 +50,10 @@ export function teamOrderbookSummary(lines: OrderBookLine[], year: number) {
 }
 
 /** Project only source-backed team OB. Do not allocate BU invoices or budgets to teams. */
-export function salesTeamState(state: Store, salesTeam = "all"): Store {
-  if (salesTeam === "all") return state;
+export function salesTeamState(state: Store, salesTeam = "all", customer = "all"): Store {
+  if (salesTeam === "all" && customer === "all") return state;
   const lines = state.lines.filter(
-    (line) => teamName(line.salesTeam) === salesTeam,
+    (line) => matchesOrderDimensions(line, salesTeam, customer),
   );
   const snapshots = state.snapshots.map((s): Snapshot => {
     if (s.teamScope) return s;
@@ -63,19 +69,12 @@ export function salesTeamState(state: Store, salesTeam = "all"): Store {
         line.year === s.year &&
         line.week === s.week,
     );
-    const sum = (kind: string, year: 2026 | 2027, month?: number) =>
-      source.length
-        ? selected
-            .filter((line) => line.customerType.toLowerCase() === kind)
-            .reduce(
-              (n, line) =>
-                n +
-                (month === undefined
-                  ? line[`total${year}`]
-                  : (line[`monthly${year}`][month] ?? 0)),
-              0,
-            )
-        : null;
+    const sum = (kind: string, year: 2026 | 2027, month?: number) => {
+      if (!source.length) return null;
+      const matching = selected.filter((line) => line.customerType.toLowerCase() === kind);
+      if (month !== undefined && matching.some((line) => line[`monthly${year}`][month] == null)) return null;
+      return matching.reduce((n, line) => n + (month === undefined ? line[`total${year}`] : line[`monthly${year}`][month]!), 0);
+    };
     const empty = () => Array<null>(12).fill(null);
     return {
       ...s,
@@ -117,7 +116,7 @@ export function salesTeamState(state: Store, salesTeam = "all"): Store {
       findings: [
         ...new Set([
           ...s.findings,
-          "Team invoices and budget not supplied; only team orderbook is available",
+          customer !== "all" ? "Customer invoices and budget not supplied; only customer orderbook is available" : "Team invoices and budget not supplied; only team orderbook is available",
         ]),
       ],
     };

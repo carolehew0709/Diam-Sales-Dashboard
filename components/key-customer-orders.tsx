@@ -1,5 +1,4 @@
 "use client";
-import { useState } from "react";
 import type { Dashboard } from "@/lib/dashboard";
 import { formatK } from "@/lib/dashboard";
 import { keyCustomerOrderbook } from "@/lib/key-customers";
@@ -7,8 +6,8 @@ import { useI18n } from "./i18n-provider";
 
 export function KeyCustomerOrders({ data }: { data: Dashboard }) {
   const { tr } = useI18n();
-  const [customer, setCustomer] = useState("all");
-  const rows = keyCustomerOrderbook(data.commercial);
+  const customerScoped = !!data.filters.customer && data.filters.customer !== "all";
+  const rows = keyCustomerOrderbook(data.commercial).filter((row) => !customerScoped || row.sources.length > 0);
   const max = Math.max(1, ...rows.flatMap((row) => row.value === null ? [] : [row.value]));
   return (
     <section className="panel commercial-panel key-customer-orders">
@@ -16,18 +15,12 @@ export function KeyCustomerOrders({ data }: { data: Dashboard }) {
         <div>
           <p className="panel-kicker">{tr("commercial.exposure")}</p>
           <h3>{tr("commercial.title")}</h3>
-          <p>{tr("graphics.weekly", { week: data.weeks.map((week) => `W${week}`).join(" / ") || tr("snapshot.none") })} · {data.filters.year} · kEUR</p>
+          <p>{tr("graphics.weekly", { week: data.weeks.map((week) => `W${week}`).join(" / ") || tr("snapshot.none") })} · {data.filters.year} · {data.filters.salesTeam === "all" ? tr("team.all") : data.filters.salesTeam} · {data.filters.customer === "all" || !data.filters.customer ? tr("filters.allAvailable") : data.filters.customer} · kEUR</p>
         </div>
-        <label className="commercial-filter">
-          <span>{tr("common.customer")}</span>
-          <select value={customer} onChange={(event) => setCustomer(event.target.value)}>
-            <option value="all">{tr("filters.allAvailable")}</option>
-            {rows.map((row) => <option key={row.name}>{row.name}</option>)}
-          </select>
-        </label>
+
       </div>
       <div className="commercial-grid">
-        {rows.filter((row) => customer === "all" || row.name === customer).map((row) => (
+        {rows.map((row) => (
           <div className="apac-commercial" key={row.name}>
             <span>{row.name}</span>
             <strong>{formatK(row.value)} <small>kEUR</small></strong>
@@ -36,6 +29,7 @@ export function KeyCustomerOrders({ data }: { data: Dashboard }) {
           </div>
         ))}
       </div>
+      {!rows.length && <p>{tr("commercial.empty")}</p>}
       <div className="panel-foot">{tr("commercial.note")}</div>
     </section>
   );

@@ -74,9 +74,9 @@ DCP FY2026 W43 is separately confirmed at 260.81449 kEUR External YTD on 2026-10
 
 ## Owner decisions 2026-10-26
 
-- Sales Team selection is local to the team module, removed from the global top bar. It filters only team OB contribution, monthly detail and corresponding chart exports in the browser; global sales cards, monthly/BU/customer charts and dashboard data export keep all-team scope. Existing API team projections remain supported for compatibility. Global region/BU/entity/year/sales-type permissions and exclusions still apply.
+- Latest owner direction on 2026-10-26 supersedes the earlier local-team decision: Sales Team and Customer are global top-bar filters, applied together to every supported chart, detail and export. Customer choices come only from authorized latest source orders and the selected team. Changing Region/BU/year/sales type resets both; changing team resets customer. Team/customer invoiced sales, budgets and Prospect remain unavailable without source allocations. Preserve global scope, permissions and exclusions.
 - Continue excluding FY2026 DDC Group from reporting; the owner will explicitly advise if this changes. OB/Prospect/Forecast terminology and scenario behavior remain under discussion, not an approved calculation change.
-- The team module includes its own monthly OB columns and cumulative OB line from selected source delivery allocations. This is not team invoiced sales or a sum of weekly snapshots. Move the former customer/brand OB card to the following Key Customer Dashboard section, limited to Sephora, Estee Lauder, Loreal, LVMH, Coty and Fenty. Only combine explicit name variants; do not infer parent companies from brand ownership. Keep weekly OB separate from monthly customer sales.
+- The team module includes its own monthly OB columns and cumulative OB line from globally selected source delivery allocations. This is not team invoiced sales or a sum of weekly snapshots. Move the former customer/brand OB card to the following Key Customer Dashboard section, limited to Sephora, Estee Lauder, Loreal, LVMH, Coty and Fenty. Only combine explicit name variants; do not infer parent companies from brand ownership. Keep weekly OB separate from monthly customer sales.
 
 ## 收到新 Excel 后的更新 Checklist
 

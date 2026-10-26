@@ -3,7 +3,7 @@ import { applyApprovedBudget, approvedAnnualBudget, pending2027Budgets } from ".
 import { applyReportingOverrides } from "./reporting-overrides";
 import { entities, regions, matchesRegion } from "./entities";
 import { canView } from "./permissions";
-import { salesTeamState, teamName, teamOrderbookSummary } from "./sales-teams";
+import { salesTeamState, teamName, customerName, teamOrderbookSummary } from "./sales-teams";
 import { salesGraphicSeries } from "./sales-graphics";
 import type {
   Amount,
@@ -30,6 +30,7 @@ export const months = [
 ];
 export const defaultFilters: Filters = {
   salesTeam: "all",
+  customer: "all",
   region: "China",
   bu: "all",
   entity: "all",
@@ -40,6 +41,7 @@ export const defaultFilters: Filters = {
 export function filtersFrom(url: URL): Filters {
   return {
     salesTeam: url.searchParams.get("salesTeam") || "all",
+    customer: url.searchParams.get("customer") || "all",
     region: url.searchParams.get("region") ?? "China",
     bu:
       url.searchParams.get("bu") === "DHK"
@@ -271,11 +273,14 @@ export function getDashboardSnapshot(
 ) {
   state = reportingState(state, filters.salesType);
   const allowed = entities.filter((e) => canView(user, e));
-  const salesTeams = [...new Set(state.lines.filter(line => allowed.some(e => e.id === line.entityId &&
+  const dimensionLines = state.lines.filter(line => allowed.some(e => e.id === line.entityId &&
     matchesRegion(e, filters.region) && (filters.bu === "all" || filters.bu === e.businessUnit)) &&
-    line.week === Math.max(...state.snapshots.filter(s => s.entityId === line.entityId && s.year === 2026).map(s => s.week)))
-    .map(line => teamName(line.salesTeam)))].sort();
-  state = salesTeamState(state, filters.salesTeam);
+    (filters.entity === "all" || filters.entity === line.entityId) &&
+    (filters.salesType === "all" || line.customerType.toLowerCase() === filters.salesType) &&
+    line.week === Math.max(...state.snapshots.filter(s => s.entityId === line.entityId && s.year === 2026).map(s => s.week)));
+  const salesTeams = [...new Set(dimensionLines.map(line => teamName(line.salesTeam)))].sort();
+  const customers = [...new Set(dimensionLines.filter(line => !filters.salesTeam || filters.salesTeam === "all" || teamName(line.salesTeam) === filters.salesTeam).map(line => customerName(line.customer)))].sort();
+  state = salesTeamState(state, filters.salesTeam, filters.customer);
   const latest = (id: string) =>
     state.snapshots
       .filter((s) => s.entityId === id && s.year === 2026)
@@ -364,6 +369,7 @@ export function getDashboardSnapshot(
       teams: teamOrderbookSummary(visibleLines, filters.year),
     },
     salesTeams,
+    customers,
     entities: allowed,
     regions: regions.filter(region => allowed.some(entity => matchesRegion(entity, region))),
     rows: selected,

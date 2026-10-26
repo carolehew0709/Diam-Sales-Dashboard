@@ -94,7 +94,7 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
     ? tr("graphics.ytdYear", { year: analysis.year })
     : "";
   const context = analysis
-    ? `${tr("graphics.monthlySource", { month: monthLabel(analysis.month) })} · ${tr("regions.China")} (DEHK + DCP + DDC) · kEUR · ${analysis.sourceLabel}`
+    ? `${tr("graphics.monthlySource", { month: monthLabel(analysis.month) })} · ${tr("regions.China")} (DEHK + DCP + DDC) · ${view?.customerScoped ? `${view.customer} · ` : ""}kEUR · ${analysis.sourceLabel}`
     : "";
   const sourceNote = analysis
     ? `${tr("graphics.customerRule")} ${tr("graphics.source", { source: `${analysis.sourceFile} · ${analysis.breakdownSheet}!A4:E11; ${analysis.customerSheet}!A4:E${(analysis.customers.at(-1)?.sourceRow ?? 4) + 1}` })}`
@@ -107,7 +107,7 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
       ? "—"
       : `${growth >= 0 ? "+" : ""}${(growth * 100).toFixed(1)}%`;
   };
-  const metrics = analysis ? customerMetrics(analysis) : null;
+  const metrics = analysis ? customerMetrics(analysis, view?.referenceTotal) : null;
   const metricsShare = (amount: number) => metrics && metrics.keyTotal > 0
     ? `${(amount / metrics.keyTotal * 100).toFixed(1)}%` : "—";
   const contributionTable = analysis && (
@@ -185,7 +185,7 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
   const max =
     Math.max(
       1,
-      ...(analysis?.breakdown[0].values.map((_, i) =>
+      ...(analysis?.breakdown[0]?.values.map((_, i) =>
         analysis.breakdown.reduce((n, r) => n + r.values[i], 0),
       ) ?? []),
     ) * 1.13;
@@ -272,6 +272,7 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
             </div>
           </div>
           <div className="graphics-grid">
+            {view?.customerScoped ? <p className="graphic-wide graphic-unavailable">{tr("graphics.customerBreakdownUnavailable")}</p> : (
             <GraphicCard
               title={tr("graphics.customerBreakdown")}
               className="graphic-wide"
@@ -397,7 +398,7 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
                 </g>
               ))}
             </GraphicCard>
-
+            )}
             <GraphicCard
               title={tr("graphics.customerPie")}
               context={context}

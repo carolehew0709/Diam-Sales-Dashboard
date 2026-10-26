@@ -49,20 +49,20 @@ export function SalesMonthlyGraphic({
   const view = monthlyPerformanceSeries(
     metrics,
     data.filters.scenario,
-    data.filters.salesTeam,
+    data.filters.customer && data.filters.customer !== "all" ? "selection" : data.filters.salesTeam,
   );
   const teamScoped =
-    !!data.filters.salesTeam && data.filters.salesTeam !== "all";
+    (!!data.filters.salesTeam && data.filters.salesTeam !== "all") || (!!data.filters.customer && data.filters.customer !== "all");
   const monthlyLabel = tr(
     teamScoped
-      ? "graphics.monthlyTeamOB"
+      ? "graphics.monthlyScopedOB"
       : view.key === "scenario"
         ? "graphics.monthlyScenario"
         : "graphics.monthlyConfirmed",
   );
   const cumulativeLabel = tr(
     teamScoped
-      ? "graphics.cumulativeTeamOB"
+      ? "graphics.cumulativeScopedOB"
       : view.key === "scenario"
         ? "graphics.cumulativeScenario"
         : "graphics.cumulativeConfirmed",
@@ -70,7 +70,7 @@ export function SalesMonthlyGraphic({
   const week =
     data.weeks.map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
   const filters = data.filters;
-  const context = `${tr("graphics.weekly", { week })} · ${filters.year} · ${display(filters.region)} · ${filters.bu === "all" ? tr("filters.allBU") : filters.bu} · ${filters.salesType === "all" ? tr("filters.allSales") : display(filters.salesType)} · ${teamScoped ? "" : `${display(filters.scenario)} · `}${filters.salesTeam === "all" || !filters.salesTeam ? tr("team.all") : filters.salesTeam} · kEUR`;
+  const context = `${tr("graphics.weekly", { week })} · ${filters.year} · ${display(filters.region)} · ${filters.bu === "all" ? tr("filters.allBU") : filters.bu} · ${filters.salesType === "all" ? tr("filters.allSales") : display(filters.salesType)} · ${teamScoped ? "" : `${display(filters.scenario)} · `}${filters.salesTeam === "all" || !filters.salesTeam ? tr("team.all") : filters.salesTeam} · ${filters.customer && filters.customer !== "all" ? filters.customer + " · " : ""}kEUR`;
   const sources = [
     ...new Set(
       selectedRows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
@@ -90,7 +90,7 @@ export function SalesMonthlyGraphic({
         ? filters.bu
         : display(filters.region);
   const title = tr(
-    teamScoped ? "graphics.teamPerformanceFor" : "graphics.performanceFor",
+    teamScoped ? "graphics.scopedPerformanceFor" : "graphics.performanceFor",
     {
       name: index === 0 ? scopeName : series.name,
     },
@@ -103,7 +103,7 @@ export function SalesMonthlyGraphic({
             : "graphics.partialPlanning",
         )
       : "";
-  const note = `${teamScoped ? tr("graphics.teamMonthlyRule") : `${tr("graphics.planningRule")} ${tr("graphics.periodColorsRule")}`} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
+  const note = `${teamScoped ? tr("graphics.scopedOBRule") : `${tr("graphics.planningRule")} ${tr("graphics.periodColorsRule")}`} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
   const exact = (v: number | null) =>
     v === null
       ? "—"
@@ -170,7 +170,7 @@ export function SalesMonthlyGraphic({
           monthlyLabel={monthlyLabel}
           ytdLabel={cumulativeLabel}
           empty={tr(
-            filters.salesTeam && filters.salesTeam !== "all"
+            teamScoped
               ? "graphics.noTeam"
               : "graphics.noPlanning",
           )}

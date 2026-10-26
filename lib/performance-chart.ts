@@ -3,6 +3,21 @@ import type { Metric } from "./dashboard";
 
 export type PerformanceSeriesKey = "base" | "scenario";
 
+/** Sum the selected snapshot's team delivery allocations, never weekly snapshots. */
+export function teamMonthlyPerformance(teams: readonly { monthly: Amount[] }[]) {
+  const monthly = Array.from({ length: 12 }, (_, index): Amount =>
+    teams.length && teams.every((team) => team.monthly[index] != null)
+      ? teams.reduce((sum, team) => sum + team.monthly[index]!, 0)
+      : null,
+  );
+  return monthly.map((value, index) => ({
+    monthly: value,
+    ytd: monthly.slice(0, index + 1).every((amount) => amount !== null)
+      ? monthly.slice(0, index + 1).reduce<number>((sum, amount) => sum + amount!, 0)
+      : null,
+  }));
+}
+
 /** Zero-based first unfinished month; mixed scopes use the earliest reporting period. */
 export function firstOpenMonth(
   year: number,

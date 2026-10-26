@@ -76,6 +76,7 @@ DCP FY2026 W43 is separately confirmed at 260.81449 kEUR External YTD on 2026-10
 
 - Sales Team selection is local to the team module, removed from the global top bar. It filters only team OB contribution, monthly detail and corresponding chart exports in the browser; global sales cards, monthly/BU/customer charts and dashboard data export keep all-team scope. Existing API team projections remain supported for compatibility. Global region/BU/entity/year/sales-type permissions and exclusions still apply.
 - Continue excluding FY2026 DDC Group from reporting; the owner will explicitly advise if this changes. OB/Prospect/Forecast terminology and scenario behavior remain under discussion, not an approved calculation change.
+- The team module includes its own monthly OB columns and cumulative OB line from selected source delivery allocations. This is not team invoiced sales or a sum of weekly snapshots. Move the former customer/brand OB card to the following Key Customer Dashboard section, limited to Sephora, Estee Lauder, Loreal, LVMH, Coty and Fenty. Only combine explicit name variants; do not infer parent companies from brand ownership. Keep weekly OB separate from monthly customer sales.
 
 ## 收到新 Excel 后的更新 Checklist
 

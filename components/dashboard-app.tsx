@@ -22,6 +22,7 @@ import {
   TeamContributionGraphic,
 } from "@/components/sales-graphics";
 import { CustomerGraphics } from "@/components/customer-graphics";
+import { KeyCustomerOrders } from "@/components/key-customer-orders";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { monthlyPerformanceSeries } from "@/lib/performance-chart";
 import {
@@ -194,8 +195,7 @@ function DashboardView({
   const { tr, display, locale } = useI18n();
   const [readiness, setReadiness] = useState(false),
     [frequency, setFrequency] = useState("week"),
-    [matrixLevel, setMatrixLevel] = useState("entity"),
-    [customer, setCustomer] = useState("all");
+    [matrixLevel, setMatrixLevel] = useState("entity");
   const snapshotWrapper = useRef<HTMLDivElement>(null);
   const filterBar = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -276,9 +276,6 @@ function DashboardView({
       week: r.snapshot?.week,
     })),
   ];
-  const selectedCustomer = data.commercial.some((c) => c.customer === customer)
-    ? customer
-    : "all";
   const matrixRows =
     matrixLevel === "entity"
       ? data.rows.map((r) => ({ name: r.entity.code, metrics: r.metrics }))
@@ -791,63 +788,14 @@ function DashboardView({
                 <h2 id="orderbook-graphics-title">{tr("graphics.obTitle")}</h2>
               </div>
             </div>
-            <div className="graphics-grid orderbook-grid">
               <TeamContributionGraphic
                 key={`${filters.region}:${filters.bu}:${filters.entity}:${filters.year}:${filters.salesType}`}
                 data={data}
               />
-              <section className="panel commercial-panel">
-                <div className="panel-heading">
-                  <div>
-                    <p className="panel-kicker">{tr("commercial.exposure")}</p>
-                    <h2>{tr("commercial.title")}</h2>
-                    <p>{tr("commercial.largest")}</p>
-                  </div>
-                  <label className="commercial-filter">
-                    <span>{tr("common.customer")}</span>
-                    <select
-                      value={selectedCustomer}
-                      onChange={(e) => setCustomer(e.target.value)}
-                    >
-                      <option value="all">{tr("filters.allAvailable")}</option>
-                      {data.commercial.map((c) => (
-                        <option key={c.customer}>{c.customer}</option>
-                      ))}
-                    </select>
-                  </label>
-                </div>
-                <div className="commercial-grid">
-                  {data.commercial
-                    .filter(
-                      (c) =>
-                        selectedCustomer === "all" ||
-                        c.customer === selectedCustomer,
-                    )
-                    .slice(0, 8)
-                    .map((c) => (
-                      <div className="apac-commercial" key={c.customer}>
-                        <span>{c.customer}</span>
-                        <strong>
-                          {formatK(c.value)} <small>kEUR</small>
-                        </strong>
-                        <div>
-                          <i
-                            style={{
-                              width: `${Math.max(0, (c.value / Math.max(data.commercial[0]?.value ?? 1, 1)) * 100)}%`,
-                            }}
-                          />
-                        </div>
-                      </div>
-                    ))}
-                </div>
-                {!data.commercial.length && (
-                  <p className="muted">{tr("commercial.empty")}</p>
-                )}
-                <div className="panel-foot">{tr("commercial.note")}</div>
-              </section>
-            </div>
           </section>
-          <CustomerGraphics filters={filters} revision={data.revision} />
+          <CustomerGraphics filters={filters} revision={data.revision}>
+            <KeyCustomerOrders data={data} />
+          </CustomerGraphics>
           <section className="panel matrix-panel" id="time-matrix">
             <details>
               <summary>

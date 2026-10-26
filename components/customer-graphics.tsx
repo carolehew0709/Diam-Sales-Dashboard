@@ -1,5 +1,5 @@
 "use client";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import { DonutPlot, Legend, graphicColors } from "./graphic-plots";
@@ -32,9 +32,11 @@ const statusKeys: Record<string, MessageKey> = {
 export function CustomerGraphics({
   filters,
   revision,
+  children,
 }: {
   filters: Filters;
   revision: number;
+  children?: ReactNode;
 }) {
   const [month, setMonth] = useState("");
   const selectedMonth = month.startsWith(`${filters.year}-`) ? month : "";
@@ -64,14 +66,15 @@ export function CustomerGraphics({
     response?.query === query && response.revision === revision
       ? response
       : undefined;
-  return <CustomerGraphicsView current={current} selectedMonth={selectedMonth} setMonth={setMonth} />;
+  return <CustomerGraphicsView current={current} selectedMonth={selectedMonth} setMonth={setMonth} orderbook={children} />;
 }
 
-function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = false }: {
+function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = false, orderbook }: {
   current?: { data?: View; error?: boolean };
   selectedMonth: string;
   setMonth: (month: string) => void;
   exportOnly?: boolean;
+  orderbook?: ReactNode;
 }) {
   const { tr, locale } = useI18n();
   const root = useRef<HTMLElement>(null);
@@ -222,6 +225,7 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
           </label>
         )}
       </div>
+      {orderbook}
       {!analysis ? (
         <div className="panel graphic-unavailable" role="status">
           {!current

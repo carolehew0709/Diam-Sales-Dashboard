@@ -5399,9 +5399,13 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 .graphics-section > .graphics-entity-details:first-child { margin: 0 0 28px; }
 .team-contribution-graphic { min-width: 0; }
 .team-contribution-graphic { display: flex; flex-direction: column; gap: 12px; }
-.team-contribution-graphic > .graphic-card { flex: 1; }
+.team-contribution-graphic .graphic-card { min-width: 0; }
 .team-local-filter { align-self: flex-start; max-width: 100%; }
 .team-local-filter select { max-width: 100%; }
+.key-customer-orders { margin-bottom: 24px; }
+.key-customer-orders .panel-heading { flex-wrap: wrap; }
+.key-customer-orders .commercial-filter { max-width: 100%; }
+.key-customer-orders .apac-commercial > small { display: block; overflow-wrap: anywhere; color: var(--muted); font-size: 11px; margin-top: 8px; }
 .orderbook-grid > .commercial-panel { margin-top: 0; }
 .orderbook-grid .panel-heading { flex-wrap: wrap; }
 .orderbook-grid .commercial-filter { min-width: 180px; max-width: 100%; }

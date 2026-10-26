@@ -1,6 +1,20 @@
 import type { Filters, Store, Entity, Amount } from "./types";
 import type { SalesGraphicSeries } from "./graphics-types";
 
+/** Explore the authorized reporting region, excluding a specifically selected BU. */
+export function exploreBusinessUnitRows<T extends { entity: Pick<Entity, "id" | "businessUnit"> }>(
+  regionRows: readonly T[],
+  filters: Pick<Filters, "bu" | "entity">,
+): T[] {
+  if (new Set(regionRows.map((row) => row.entity.businessUnit)).size <= 1) return [];
+  const selectedBU = filters.bu !== "all"
+    ? filters.bu === "DHK" ? "DEHK" : filters.bu
+    : filters.entity !== "all"
+      ? regionRows.find((row) => row.entity.id === filters.entity)?.entity.businessUnit
+      : undefined;
+  return regionRows.filter((row) => row.entity.businessUnit !== selectedBU);
+}
+
 const complete = (values: Amount[]): Amount =>
   values.length && values.every((v) => v !== null)
     ? values.reduce<number>((a, v) => a + v!, 0)

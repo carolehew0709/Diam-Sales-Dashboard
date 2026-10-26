@@ -15,11 +15,13 @@ export function SalesMonthlyGraphic({
   index = 0,
   standalone = false,
   exportOnly = false,
+  comparisonRow,
 }: {
   data: Dashboard;
   index?: number;
   standalone?: boolean;
   exportOnly?: boolean;
+  comparisonRow?: Dashboard["rows"][number];
 }) {
   const { tr, display } = useI18n();
   const root = useRef<HTMLDivElement>(null);
@@ -32,16 +34,17 @@ export function SalesMonthlyGraphic({
             index={index}
             standalone
             exportOnly
+            comparisonRow={comparisonRow}
           />
         )
       : null,
   );
-  const series = data.graphics.series[index];
+  const series = comparisonRow ? { id: comparisonRow.entity.id, name: comparisonRow.entity.code } : data.graphics.series[index];
   const selectedRows =
-    index === 0
+    comparisonRow ? [comparisonRow] : index === 0
       ? data.rows
       : data.rows.filter((r) => r.entity.id === series.id);
-  const metrics = index === 0 ? data.totals : selectedRows[0].metrics;
+  const metrics = comparisonRow?.metrics ?? (index === 0 ? data.totals : selectedRows[0].metrics);
   const openMonth = firstOpenMonth(
     data.filters.year,
     selectedRows.map((r) => r.snapshot),
@@ -68,8 +71,8 @@ export function SalesMonthlyGraphic({
         : "graphics.cumulativeConfirmed",
   );
   const week =
-    data.weeks.map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
-  const filters = data.filters;
+    [...new Set(selectedRows.flatMap((row) => row.snapshot ? [row.snapshot.week] : []))].sort((a, b) => a - b).map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
+  const filters = comparisonRow ? { ...data.filters, bu: comparisonRow.entity.businessUnit, entity: comparisonRow.entity.id } : data.filters;
   const context = `${tr("graphics.weekly", { week })} · ${filters.year} · ${display(filters.region)} · ${filters.bu === "all" ? tr("filters.allBU") : filters.bu} · ${filters.salesType === "all" ? tr("filters.allSales") : display(filters.salesType)} · ${teamScoped ? "" : `${display(filters.scenario)} · `}${filters.salesTeam === "all" || !filters.salesTeam ? tr("team.all") : filters.salesTeam} · ${filters.customer && filters.customer !== "all" ? filters.customer + " · " : ""}kEUR`;
   const sources = [
     ...new Set(
@@ -92,7 +95,7 @@ export function SalesMonthlyGraphic({
   const title = tr(
     teamScoped ? "graphics.scopedPerformanceFor" : "graphics.performanceFor",
     {
-      name: index === 0 ? scopeName : series.name,
+      name: comparisonRow ? comparisonRow.entity.code : index === 0 ? scopeName : series.name,
     },
   );
   const notice =

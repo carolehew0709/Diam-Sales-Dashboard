@@ -474,6 +474,7 @@
   "graphics.monthEndRule": "Monthly = change in invoiced YTD between the last available weekly snapshots of consecutive reporting months; current month is partial. YTD corrections with no monthly allocation stay blank in monthly bars. Future months stay blank.",
   "graphics.noActuals": "No invoiced sales source for this scope / year",
   "graphics.entityCharts": "Explore monthly & cumulative performance by business unit",
+  "graphics.otherEntityCharts": "Explore other BUs · Monthly & cumulative charts",
   "graphics.missingYoY": "Data gap · weekly workbooks do not supply comparable 2025 invoiced sales. Weekly sales YoY remains unavailable. Monthly customer YoY is shown separately below.",
   "graphics.other": "Other",
   "graphics.teamContribution": "Sales team · Prospect contribution",

@@ -474,6 +474,7 @@
   "graphics.monthEndRule": "月度销售为连续报表月份最后可用周快照的累计开票差额；当月尚未结束。没有月度分配的累计修正不填入月度柱图；未来月份保留为空。",
   "graphics.noActuals": "此范围或年度暂无已开票销售来源",
   "graphics.entityCharts": "展开各 BU 月度与累计业绩",
+  "graphics.otherEntityCharts": "查看其他 BU · 月度与累计业绩",
   "graphics.missingYoY": "数据缺口 · 周报未提供可比的 2025 年开票销售，周度销售同比暂缺；月度客户同比在下方单独展示。",
   "graphics.other": "其他",
   "graphics.teamContribution": "销售团队 · Prospect 贡献占比",

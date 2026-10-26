@@ -17,7 +17,7 @@ import { useWorkbookGroup } from "./use-workbook-group";
 import { ChartMark } from "./chart-interaction";
 import { chartAmount } from "@/lib/chart-tooltip";
 import { SalesMonthlyGraphic } from "./sales-monthly-graphic";
-import { businessUnitShares } from "@/lib/sales-graphics";
+import { businessUnitShares, exploreBusinessUnitRows } from "@/lib/sales-graphics";
 import { firstOpenMonth, teamMonthlyPerformance } from "@/lib/performance-chart";
 
 export function SalesGraphics({
@@ -34,6 +34,7 @@ export function SalesGraphics({
     exportOnly ? null : () => <SalesGraphics data={data} exportOnly />,
   );
   const t = data.totals;
+  const exploreRows = exploreBusinessUnitRows(data.regionRows, data.filters);
   const week =
     data.weeks.map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
   const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · ${data.filters.customer && data.filters.customer !== "all" ? data.filters.customer + " · " : ""}kEUR`;
@@ -115,14 +116,14 @@ export function SalesGraphics({
       className="graphics-section"
       aria-labelledby={exportOnly ? undefined : "sales-graphics-title"}
     >
-      <details className="graphics-entity-details">
-        <summary>{tr("graphics.entityCharts")}</summary>
+      {exploreRows.length > 0 && <details className="graphics-entity-details bu-explore">
+        <summary>{tr(data.filters.bu !== "all" || data.filters.entity !== "all" ? "graphics.otherEntityCharts" : "graphics.entityCharts")}</summary>
         <div className="graphics-grid">
-          {data.graphics.series.slice(1).map((series, i) => (
-            <SalesMonthlyGraphic key={series.id} data={data} index={i + 1} />
+          {exploreRows.map((row) => (
+            <SalesMonthlyGraphic key={row.entity.id} data={data} comparisonRow={row} />
           ))}
         </div>
-      </details>
+      </details>}
       <div className="graphics-section-heading">
         <div>
           <p className="panel-kicker">{tr("graphics.weeklyKicker")}</p>

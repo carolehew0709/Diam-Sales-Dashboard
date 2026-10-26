@@ -55,3 +55,17 @@ test("language preference only accepts supported locales", () => {
   for (const value of [null, "", "fr", "zh", 1])
     assert.equal(isLocale(value), false);
 });
+
+test("Entity terminology changes presentation without rewriting source sheet evidence", () => {
+  for (const catalog of Object.values(messages)) {
+    for (const [key, value] of Object.entries(catalog)) {
+      assert.doesNotMatch(value, /\bBUs?\b|business units?|业务单元/i, key);
+    }
+  }
+  assert.equal(displayText("en", "Payment BU must be confirmed"), "Payment Entity must be confirmed");
+  const legacyNote = "China aggregate customer analysis; no BU, sales-type or team allocation. Monthly source remains separate from weekly sales and approved budgets.";
+  assert.equal(displayText("en", legacyNote), translate("en", "graphics.aggregateNote"));
+  const sheet = "Entity & Business Unit Breakdow";
+  assert.equal(displayText("en", sheet), sheet);
+  assert.equal(displayText("zh-CN", sheet), sheet);
+});

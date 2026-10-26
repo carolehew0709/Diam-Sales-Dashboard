@@ -33,3 +33,9 @@ At the owner's 2026-10-23 request, the W42 source-backed team view includes annu
 
 
 Latest owner direction on 2026-10-26 supersedes local team selection: Sales Team and Customer now live in the global Sales Performance bar. The same source-only OB projection filters their intersection across API, charts and exports. Unallocated invoices/budgets/Prospect remain missing; customer and team options are permission-scoped. AR keeps its independent filters and snapshot contract.
+
+## Report entry and interaction (2026-10-26)
+
+Entering AR Aging Report immediately shows its heading, disabled filters and placeholder cards/charts while the first request loads. Placeholders contain no invented amounts. A failed initial request offers an explicit retry. Applied filter labels and source dates stay with the existing figures while subsequent requests are pending; the latest response wins. Export and invoice pagination are disabled during updates, and empty tables explain that the current filters have no matching records. Reduced-motion preferences disable loading pulses and reveal animations. Display/export terminology uses Entity (实体); stored source evidence and the `bu` filter API are preserved.
+
+Explicit product navigation into AR starts at the report heading even when Sales Performance was scrolled down. Browser history remains managed by Next.js. Browser checks cover home/product entry, delayed responses, retained scope, failures/retry, empty results, mobile layout and reduced motion.

@@ -261,3 +261,11 @@ The owner's supplied customer list identifies DEHK source column **E**, stored a
 ## Filter interaction polish (2026-10-26)
 
 Filtering now separates immediate control feedback from the applied dashboard render, preserves customer-module height while fetching, and retains team chart/detail identity. Chart groups reuse unchanged data during local section interactions; successful responses reveal exact committed values with a short reduced-motion-aware fade. Dashboard, customer-month and AR requests keep latest-selection guards; pending scope exports remain blocked. Verified slow-network/4x-CPU switching, response races, error recovery, anchors, mobile layout and reduced motion. No source import, metric change or data republication is involved; see `docs/graphics.md`.
+
+## Interaction and Entity terminology (2026-10-26)
+
+- User-facing BU / Business Unit labels now use Entity / Entities (实体 in Chinese), including navigation, filters, chart metadata and AR CSV headings. Internal `bu` query fields, entity IDs, source sheet names and business rules remain unchanged. Legacy generated validation notes are localized at display time; original source evidence is preserved.
+- Account disclosure supports outside-click, Escape with focus return and tab-out dismissal. Effective entity permissions use the same permission helpers as the application. Sign-out displays pending/failure states and redirects only after a successful response.
+- Account administration provides search, selected-account state, required-field/password validation, per-account in-page drafts, explicit reset/save feedback and duplicate-submit protection. Drafts are memory-only and are discarded when leaving the page. Role-dependent checkboxes show effective access; server authorization remains authoritative.
+- Import analysis displays progress and the selected filename, retains inputs on failure and focuses the review after explicit analysis/history selection. History supports loading/error/retry and selection state. Analysis never publishes; the existing acknowledgement and publish checks remain in place.
+- Browser verification uses synthetic API responses for account saves, uploads and sign-out, including failures and narrow-screen layouts. No production accounts or data are changed by these checks.

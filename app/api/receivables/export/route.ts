@@ -24,7 +24,7 @@ export async function GET(request: Request) {
     const rows: unknown[][] = [
       [
         "Category",
-        "BU",
+        "Entity",
         "Invoice date",
         "Received date",
         "Invoice",

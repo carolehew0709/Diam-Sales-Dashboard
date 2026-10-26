@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { UpdateStatus } from "./update-status";
 import { useDataReveal } from "./use-data-reveal";
-import { Download, WalletCards } from "lucide-react";
+import { Download, LoaderCircle, WalletCards } from "lucide-react";
 import { useI18n } from "./i18n-provider";
 import { agingBuckets, defaultReceivablesFilters } from "@/lib/receivables";
 import type { ReceivablesView } from "@/lib/receivables";
@@ -17,6 +17,8 @@ export function ReceivablesApp() {
   const [data, setData] = useState<ReceivablesView | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [retry, setRetry] = useState(0);
+  const invoiceTable = useRef<HTMLDivElement>(null);
   const [appliedQuery, setAppliedQuery] = useState("");
   const [renderPending, startTransition] = useTransition();
   const root = useRef<HTMLDivElement>(null);
@@ -37,20 +39,25 @@ export function ReceivablesApp() {
         if (controller.signal.aborted) return;
         if (!result.ok) throw new Error(result.error);
         startTransition(() => {
-          setData((previous) => controller.signal.aborted ? previous : result.data);
-          setAppliedQuery((previous) => controller.signal.aborted ? previous : query);
+          setData((previous) =>
+            controller.signal.aborted ? previous : result.data,
+          );
+          setAppliedQuery((previous) =>
+            controller.signal.aborted ? previous : query,
+          );
           setError("");
           setInvoicePage(0);
         });
       })
       .catch((e) => {
-        if (!controller.signal.aborted && e.name !== "AbortError") setError(e.message);
+        if (!controller.signal.aborted && e.name !== "AbortError")
+          setError(e.message);
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [query]);
+  }, [query, retry]);
   const amount = (value: number | null) =>
     value === null
       ? "—"
@@ -87,6 +94,7 @@ export function ReceivablesApp() {
       <select
         id={`ar-${key}`}
         value={filters[key]}
+        disabled={!data}
         onChange={(e) => select(key, e.target.value as never)}
       >
         {choices.map((option) => (
@@ -99,11 +107,7 @@ export function ReceivablesApp() {
   );
   const all = { value: "all", label: tr("ar.all") };
   return (
-    <div
-      ref={root}
-      className="ar-workspace"
-      aria-busy={pending}
-    >
+    <div ref={root} className="ar-workspace" aria-busy={pending && !error}>
       <section className="ar-heading panel-heading">
         <div>
           <p className="panel-kicker">{tr("ar.kicker")}</p>
@@ -114,65 +118,147 @@ export function ReceivablesApp() {
           <WalletCards size={22} />
           <span>
             {tr("ar.asOf")}
-            <strong>{data?.asOfDates.join(" / ") || "—"}</strong>
+            <strong>
+              {data?.asOfDates.join(" / ") ||
+                (loading ? tr("ar.loadingShort") : "—")}
+            </strong>
           </span>
         </div>
       </section>
       {error && (
-        <p role="alert" className="apac-notice">
-          {tr("ar.loadError")}
-        </p>
+        <div role="alert" className="apac-notice ar-load-error">
+          <span>{tr("ar.loadError")}</span>
+          <button
+            className="apac-button"
+            onClick={() => setRetry((value) => value + 1)}
+          >
+            {tr("common.retry")}
+          </button>
+        </div>
+      )}
+      <section
+        className="filter-bar ar-filter-bar"
+        data-updating={(pending && !error) || undefined}
+        aria-label={tr("filters.global")}
+      >
+        {field("region", tr("filters.region"), [
+          { value: "APAC", label: tr("filters.apac") },
+          { value: "China", label: tr("ar.china") },
+        ])}
+        {field("bu", tr("common.buEntity"), [
+          all,
+          ...(data?.entities ?? []).map((e) => ({
+            value: e.code,
+            label: e.code,
+          })),
+        ])}
+        {field("salesTeam", tr("team.label"), [
+          all,
+          ...(data?.salesTeams ?? []).map((t) => ({
+            value: t,
+            label: team(t),
+          })),
+        ])}
+        {field("customerGroup", tr("ar.customerGroup"), [
+          all,
+          { value: "top10", label: tr("ar.top10") },
+          { value: "other", label: tr("ar.other") },
+        ])}
+        {field("customer", tr("ar.customer"), [
+          {
+            ...all,
+            label:
+              filters.customerGroup === "other" ? tr("ar.allOther") : all.label,
+          },
+          ...(data?.customers ?? []).map((c) => ({ value: c, label: c })),
+        ])}
+        {field("salesType", tr("filters.type"), [
+          all,
+          { value: "external", label: tr("ar.external") },
+          { value: "group", label: tr("ar.group") },
+        ])}
+        {field("aging", tr("ar.agingFilter"), [
+          all,
+          ...agingBuckets.map((bucket) => ({
+            value: bucket,
+            label: tr(`ar.bucket.${bucket}`),
+          })),
+        ])}
+        <UpdateStatus pending={pending && !error} />
+      </section>
+      <p className="ar-context">
+        {tr("ar.currencyNote")} {tr("ar.receiptNote")}
+      </p>
+      {!data && !error && (
+        <>
+          <p className="ar-entry-status ui-feedback" role="status">
+            <LoaderCircle className="ui-spinner" size={16} aria-hidden="true" />
+            {tr("ar.loadingReport")}
+          </p>
+          <section className="ar-kpi-grid ar-loading" aria-hidden="true">
+            {(["ar", "due", "overdue", "unknown"] as const).map((key) => (
+              <article key={key} className="kpi-card ar-kpi-card">
+                <div className="kpi-topline">{tr(`ar.metric.${key}`)}</div>
+                <div className="ar-placeholder ar-placeholder-value" />
+                <div className="ar-placeholder" />
+                <p>{tr(`ar.note.${key}`)}</p>
+              </article>
+            ))}
+          </section>
+          <div className="ar-chart-grid ar-loading" aria-hidden="true">
+            {[0, 1].map((index) => (
+              <section className="panel" key={index}>
+                <h2>{tr("ar.agingProfile")}</h2>
+                <div className="ar-placeholder-chart">
+                  {[90, 70, 45, 60, 35, 25, 20].map((width, row) => (
+                    <div
+                      key={row}
+                      className="ar-placeholder"
+                      style={{ width: `${width}%` }}
+                    />
+                  ))}
+                </div>
+              </section>
+            ))}
+          </div>
+        </>
       )}
       {data && (
         <>
-          <section
-            className="filter-bar ar-filter-bar"
-            data-updating={pending && !error || undefined}
-            aria-label={tr("filters.global")}
-          >
-            {field("region", tr("filters.region"), [
-              { value: "APAC", label: tr("filters.apac") },
-              { value: "China", label: tr("ar.china") },
-            ])}
-            {field("bu", tr("common.buEntity"), [
-              all,
-              ...data.entities.map((e) => ({ value: e.code, label: e.code })),
-            ])}
-            {field("salesTeam", tr("team.label"), [
-              all,
-              ...data.salesTeams.map((t) => ({ value: t, label: team(t) })),
-            ])}
-            {field("customerGroup", tr("ar.customerGroup"), [
-              all,
-              { value: "top10", label: tr("ar.top10") },
-              { value: "other", label: tr("ar.other") },
-            ])}
-            {field("customer", tr("ar.customer"), [
-              {
-                ...all,
-                label:
-                  filters.customerGroup === "other"
-                    ? tr("ar.allOther")
-                    : all.label,
-              },
-              ...data.customers.map((c) => ({ value: c, label: c })),
-            ])}
-            {field("salesType", tr("filters.type"), [
-              all,
-              { value: "external", label: tr("ar.external") },
-              { value: "group", label: tr("ar.group") },
-            ])}
-            {field("aging", tr("ar.agingFilter"), [
-              all,
-              ...agingBuckets.map((bucket) => ({
-                value: bucket,
-                label: tr(`ar.bucket.${bucket}`),
-              })),
-            ])}
-            <UpdateStatus pending={pending && !error} />
-          </section>
-          <p className="ar-context">
-            {tr("ar.currencyNote")} {tr("ar.receiptNote")}
+          <p className="ar-applied-scope">
+            {tr("ar.showingScope", {
+              scope: [
+                data.filters.region === "APAC"
+                  ? tr("filters.apac")
+                  : tr("ar.china"),
+                data.filters.bu === "all"
+                  ? tr("filters.allBU")
+                  : data.filters.bu,
+                data.filters.salesTeam === "all"
+                  ? tr("team.all")
+                  : team(data.filters.salesTeam),
+                data.filters.customer === "all"
+                  ? tr("ar.allCustomers")
+                  : data.filters.customer,
+                data.filters.customerGroup === "all"
+                  ? tr("ar.allGroups")
+                  : tr(
+                      data.filters.customerGroup === "top10"
+                        ? "ar.top10"
+                        : "ar.other",
+                    ),
+                data.filters.salesType === "all"
+                  ? tr("filters.allSales")
+                  : tr(
+                      data.filters.salesType === "external"
+                        ? "ar.external"
+                        : "ar.group",
+                    ),
+                data.filters.aging === "all"
+                  ? tr("ar.allAging")
+                  : tr(`ar.bucket.${data.filters.aging}`),
+              ].join(" · "),
+            })}
           </p>
           {data.unclassifiedPayments > 0 && (
             <p className="ar-context">{tr("ar.receiptClassification")}</p>
@@ -192,7 +278,9 @@ export function ReceivablesApp() {
                       <div key={t.currency}>
                         <dt>{t.currency}</dt>
                         <dd
-                          className={t[key] === null ? "ar-kpi-missing" : undefined}
+                          className={
+                            t[key] === null ? "ar-kpi-missing" : undefined
+                          }
                         >
                           <strong>{amount(t[key])}</strong>
                         </dd>
@@ -201,7 +289,9 @@ export function ReceivablesApp() {
                   ) : (
                     <div>
                       <dt>{tr("ar.currency")}</dt>
-                      <dd className="ar-kpi-missing"><strong>—</strong></dd>
+                      <dd className="ar-kpi-missing">
+                        <strong>—</strong>
+                      </dd>
                     </div>
                   )}
                 </dl>
@@ -258,6 +348,13 @@ export function ReceivablesApp() {
                   </tr>
                 </thead>
                 <tbody>
+                  {!data.ranking.length && (
+                    <tr>
+                      <td colSpan={4} className="ar-empty">
+                        {tr("ar.noMatches")}
+                      </td>
+                    </tr>
+                  )}
                   {[
                     ...data.ranking
                       .filter((r) => r.currency === "EUR")
@@ -293,14 +390,16 @@ export function ReceivablesApp() {
               <a
                 className="apac-button"
                 href={`/api/receivables/export?${query}`}
-                aria-disabled={pending || undefined}
-                onClick={(event) => { if (pending) event.preventDefault(); }}
+                aria-disabled={pending || !!error || undefined}
+                onClick={(event) => {
+                  if (pending || error) event.preventDefault();
+                }}
               >
                 <Download size={15} />
                 {tr("nav.export")}
               </a>
             </div>
-            <div className="table-wrap">
+            <div className="table-wrap" ref={invoiceTable}>
               <table className="bu-table ar-table">
                 <thead>
                   <tr>
@@ -322,6 +421,13 @@ export function ReceivablesApp() {
                   </tr>
                 </thead>
                 <tbody>
+                  {!data.rows.length && (
+                    <tr>
+                      <td colSpan={9} className="ar-empty">
+                        {tr("ar.noMatches")}
+                      </td>
+                    </tr>
+                  )}
                   {data.rows
                     .slice(invoicePage * 50, invoicePage * 50 + 50)
                     .map((row) => (
@@ -348,8 +454,11 @@ export function ReceivablesApp() {
             <div className="ar-pagination">
               <button
                 className="apac-button"
-                disabled={!invoicePage}
-                onClick={() => setInvoicePage((p) => p - 1)}
+                disabled={pending || !invoicePage}
+                onClick={() => {
+                  setInvoicePage((p) => p - 1);
+                  invoiceTable.current?.scrollTo({ top: 0 });
+                }}
               >
                 {tr("ar.previous")}
               </button>
@@ -359,8 +468,11 @@ export function ReceivablesApp() {
               </span>
               <button
                 className="apac-button"
-                disabled={(invoicePage + 1) * 50 >= data.rows.length}
-                onClick={() => setInvoicePage((p) => p + 1)}
+                disabled={pending || (invoicePage + 1) * 50 >= data.rows.length}
+                onClick={() => {
+                  setInvoicePage((p) => p + 1);
+                  invoiceTable.current?.scrollTo({ top: 0 });
+                }}
               >
                 {tr("ar.next")}
               </button>
@@ -402,6 +514,17 @@ export function ReceivablesApp() {
                   </tr>
                 </thead>
                 <tbody>
+                  {!data.payments.length && (
+                    <tr>
+                      <td colSpan={7} className="ar-empty">
+                        {tr(
+                          data.paymentsAllowed
+                            ? "ar.noMatches"
+                            : "ar.sharedAccess",
+                        )}
+                      </td>
+                    </tr>
+                  )}
                   {data.payments.map((row) => (
                     <tr key={row.id}>
                       <td>

@@ -26,6 +26,8 @@ export function translate(
 // Source notes and customer names are evidence, not interface copy. Unknown text stays intact.
 export function displayText(locale: Locale, value: string): string {
   const codes: Record<string, MessageKey> = {
+    "Payment BU must be confirmed": "errors.paymentEntity",
+    "China aggregate customer analysis; no BU, sales-type or team allocation. Monthly source remains separate from weekly sales and approved budgets.": "graphics.aggregateNote",
     "Coverage and annual gap require complete comparable budgets and Sales + OB for all selected entities; Prospect is excluded. FY2027 pending budgets count as 0 for provisional calculations.": "checks.note",
     "2027 Prospect": "validation.nextProspect",
     "Prospect not supplied": "validation.prospect",

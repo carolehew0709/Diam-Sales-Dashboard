@@ -119,3 +119,9 @@ The monthly customer module keeps its previous complete result and that result's
 A delayed, slim progress indicator occupies no layout space. Visible charts and KPI cards reveal committed values over 180ms; amounts are never interpolated, and animation is disabled for reduced-motion users. Chart animation wraps the SVG rather than altering exported geometry. Pending/stale scopes block data Excel, chart workbook and individual image export as applicable. Source values, formulas, authorization and published data remain unchanged.
 
 Browser verification used delayed responses and 4x CPU throttling: unchanged main SVG had no mutations before the response, the monthly customer section retained its full height during loading, team/Explore details stayed open, rapid DCP/DDC and AR switches resolved to the final choice, failed requests retained the applied snapshot and recovered, and month/anchor/mobile/reduced-motion/export behavior was checked.
+
+## Entity display terminology (2026-10-26)
+
+Chart titles, filter descriptions, download context and workbook labels use Entity / Entities (实体) in place of BU / Business Unit. The existing `bu` filter contract and source sheet names are retained for compatibility. No chart data, metric formulas, source scope or allocation rules change.
+
+Native select scroll regression: global scroll padding now reserves only the fixed header. The additional sticky-filter offset applies to dashboard section anchors through scroll margins. Reserving the filter itself globally caused Chromium to scroll upward on each click/focus of a sticky native select; pointer-based browser checks confirmed repeated opens now retain scroll position. Mobile section offsets omit the non-sticky filter height.

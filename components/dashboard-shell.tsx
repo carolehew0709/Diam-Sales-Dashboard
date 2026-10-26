@@ -24,7 +24,7 @@ export function DashboardShell({
 }: {
   user: User;
   filters: Filters;
-  onLogout: () => void;
+  onLogout: () => Promise<void>;
   page: Page;
   updating?: boolean;
   children: React.ReactNode;
@@ -70,7 +70,18 @@ export function DashboardShell({
                 >
                   {tr("nav.performance")}
                 </Link>
-                {hasReceivablesAccess(user) && <Link href={pagePath(locale, "ar-aging")} aria-current={page === "ar-aging" ? "page" : undefined}>{tr("ar.nav")}</Link>}
+                {hasReceivablesAccess(user) && (
+                  <Link
+                    href={pagePath(locale, "ar-aging")}
+                    scroll={false}
+                    onNavigate={() =>
+                      window.scrollTo({ top: 0, behavior: "instant" })
+                    }
+                    aria-current={page === "ar-aging" ? "page" : undefined}
+                  >
+                    {tr("ar.nav")}
+                  </Link>
+                )}
               </>
             )}
           </nav>
@@ -137,7 +148,9 @@ export function DashboardShell({
               className="excel-export"
               href={`/api/export?${query}`}
               aria-disabled={updating || undefined}
-              onClick={(event) => { if (updating) event.preventDefault(); }}
+              onClick={(event) => {
+                if (updating) event.preventDefault();
+              }}
               title={tr("nav.export")}
               aria-label={tr("nav.export")}
             >

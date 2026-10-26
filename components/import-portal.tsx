@@ -1,7 +1,8 @@
 "use client";
 import { approved2026Budgets } from "@/lib/annual-budgets";
 import { useI18n } from "@/components/i18n-provider";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
+import { LoaderCircle } from "lucide-react";
 import { entities } from "@/lib/entities";
 import { canEdit, canPublish } from "@/lib/permissions";
 import { formatK, months } from "@/lib/dashboard";
@@ -52,31 +53,62 @@ export function ImportPortal({
     [message, setMessage] = useState(""),
     [busy, setBusy] = useState(false),
     [ack, setAck] = useState(false);
+  const [historyLoading, setHistoryLoading] = useState(true);
+  const [historyError, setHistoryError] = useState(false);
+  const [fileName, setFileName] = useState("");
+  const [operation, setOperation] = useState<"analyze" | "publish">("analyze");
+  const requestRunning = useRef(false);
+  const reviewPanel = useRef<HTMLElement>(null);
+  const focusReview = useRef(false);
+  useEffect(() => {
+    if (!review || !focusReview.current) return;
+    focusReview.current = false;
+    reviewPanel.current?.focus({ preventScroll: true });
+    reviewPanel.current?.scrollIntoView({
+      block: "start",
+      behavior: window.matchMedia("(prefers-reduced-motion: reduce)").matches
+        ? "instant"
+        : "smooth",
+    });
+  }, [review]);
   const load = async () => {
+    setHistoryLoading(true);
+    setHistoryError(false);
     try {
       const j = await (await fetch("/api/import/batches")).json();
       if (j.ok) setBatches(j.batches);
-      else setMessage(j.error);
+      else setHistoryError(true);
     } catch {
-      setMessage(tr("import.loadError"));
+      setHistoryError(true);
+    } finally {
+      setHistoryLoading(false);
     }
   };
   useEffect(() => {
     void load();
   }, []);
   const request = async (url: string, init: RequestInit) => {
+    if (requestRunning.current) return;
+    requestRunning.current = true;
+    setOperation(url.endsWith("/publish") ? "publish" : "analyze");
     setBusy(true);
     setMessage("");
     try {
       const j = await (await fetch(url, init)).json();
       if (!j.ok) throw new Error(j.error);
+      focusReview.current = true;
       setReview(j.batch);
       setAck(false);
       await load();
       return j;
     } catch (e) {
-      setMessage((e as Error).message);
+      setMessage(
+        e instanceof TypeError
+          ? tr("import.requestError")
+          : (e as Error).message,
+      );
     } finally {
+      requestRunning.current = false;
       setBusy(false);
     }
   };
@@ -110,6 +142,22 @@ export function ImportPortal({
         </button>
       </div>
       {!writable && <p className="apac-notice">{tr("import.storage")}</p>}
+      {(busy || message) && (
+        <div className="import-feedback ui-feedback" role="status">
+          {busy ? (
+            <>
+              <LoaderCircle
+                className="ui-spinner"
+                size={16}
+                aria-hidden="true"
+              />
+              {tr("import.working")}
+            </>
+          ) : (
+            display(message)
+          )}
+        </div>
+      )}
       <div className="dashboard-grid dashboard-grid-secondary">
         <section className="panel">
           <p className="panel-kicker">{tr("import.excelStep")}</p>
@@ -125,13 +173,20 @@ export function ImportPortal({
               onChange={(e) => {
                 const f = e.target.files?.[0];
                 if (f) {
+                  setFileName(f.name);
                   const body = new FormData();
                   body.append("file", f);
                   void request("/api/import/analyze", { method: "POST", body });
                 }
+                e.target.value = "";
               }}
             />
           </label>
+          {fileName && (
+            <p className="import-file-name">
+              {tr("import.selectedFile", { name: fileName })}
+            </p>
+          )}
         </section>
         <section className="panel">
           <p className="panel-kicker">{tr("import.manualUnit")}</p>
@@ -324,61 +379,140 @@ export function ImportPortal({
           disabled={busy || !writable || !editable.length}
           onClick={() => void submit()}
         >
-          {tr("import.analyze")}
+          {busy && operation === "analyze" && (
+            <LoaderCircle className="ui-spinner" size={15} aria-hidden="true" />
+          )}
+          {tr(
+            busy && operation === "analyze"
+              ? "import.analyzing"
+              : "import.analyze",
+          )}
         </button>
       </section>
       {review && (
-        <section className="panel review-panel">
+        <section
+          ref={reviewPanel}
+          tabIndex={-1}
+          className="panel review-panel"
+          aria-label={tr("import.reviewStep")}
+        >
           <p className="panel-kicker">{tr("import.reviewStep")}</p>
           <h2>{review.fileName}</h2>
-          {!review.customerAnalysis && <p>
-            {tr("import.summary", {
-              snapshots: review.snapshots.length,
-              lines: review.lines.length,
-              status: display(review.status),
-            })}
-          </p>}
-          {review.receivables?.length ? <p>{tr("ar.reviewRows", { count: review.receivables.length })} · {tr("ar.reviewCurrency")}</p> : null}
-          {review.customerAnalysis && <div className="graphic-import-review">
-            <p><strong>{tr("graphics.monthlySource", { month: review.customerAnalysis.month })}</strong> · {review.customerAnalysis.sourceLabel} · {tr("regions.China")} (DEHK + DCP + DDC) · kEUR</p>
-            <table className="bu-table"><thead><tr><th>{tr("common.customer")}</th><th className="numeric">{review.customerAnalysis.priorYear}</th><th className="numeric">{review.customerAnalysis.year}</th><th>{tr("common.source")}</th></tr></thead>
-              <tbody>{review.customerAnalysis.customers.map(c => <tr key={c.name}><td>{c.name}</td><td className="numeric">{formatK(c.prior)}</td><td className="numeric">{formatK(c.current)}</td><td>{review.customerAnalysis!.customerSheet} · {c.sourceRow}</td></tr>)}</tbody></table>
-            <p>{tr("graphics.customerRule")}</p>
-          </div>}
-          {!review.customerAnalysis && <div className="table-wrap">
-            <table className="bu-table">
-              <thead>
-                {review.receivables?.length ? <tr>
-                  <th>{tr("common.entity")}</th><th>{tr("ar.column.date")}</th><th>{tr("ar.customer")}</th>
-                  <th>{tr("team.label")}</th><th>{tr("ar.column.amount")}</th><th>{tr("common.source")}</th>
-                </tr> : <tr>
-                  <th>{tr("common.entity")}</th>
-                  <th>{tr("common.week")}</th>
-                  <th>{tr("import.ytdExternalShort")}</th>
-                  <th>{tr("import.ytdGroupShort")}</th>
-                  <th>{tr("metric.prospect")}</th>
-                  <th>{tr("common.source")}</th>
-                </tr>}
-              </thead>
-              <tbody>
-                {review.receivables?.slice(0, 20).map(r => <tr key={r.id}>
-                  <td>{r.entityId === "dhk" ? "DEHK" : r.entityId === "ddc" ? "DDC" : "—"}</td>
-                  <td>{r.invoiceDate ?? r.receivedDate}</td><td>{r.customer}</td><td>{r.salesTeam || tr("team.unassigned")}</td>
-                  <td>{formatK(r.amount)} {r.currency}</td><td>{r.sourceSheet} · {r.sourceRow}</td>
-                </tr>)}
-                {review.snapshots.map((s) => (
-                  <tr key={`${s.entityId}:${s.week}`}>
-                    <td>{s.entityId.toUpperCase()}</td>
-                    <td>W{s.week}</td>
-                    <td>{formatK(s.turnover.external)}</td>
-                    <td>{formatK(s.turnover.group)}</td>
-                    <td>{formatK(s.prospect)}</td>
-                    <td>{s.sourceSheet}</td>
+          {!review.customerAnalysis && (
+            <p>
+              {tr("import.summary", {
+                snapshots: review.snapshots.length,
+                lines: review.lines.length,
+                status: display(review.status),
+              })}
+            </p>
+          )}
+          {review.receivables?.length ? (
+            <p>
+              {tr("ar.reviewRows", { count: review.receivables.length })} ·{" "}
+              {tr("ar.reviewCurrency")}
+            </p>
+          ) : null}
+          {review.customerAnalysis && (
+            <div className="graphic-import-review">
+              <p>
+                <strong>
+                  {tr("graphics.monthlySource", {
+                    month: review.customerAnalysis.month,
+                  })}
+                </strong>{" "}
+                · {review.customerAnalysis.sourceLabel} · {tr("regions.China")}{" "}
+                (DEHK + DCP + DDC) · kEUR
+              </p>
+              <table className="bu-table">
+                <thead>
+                  <tr>
+                    <th>{tr("common.customer")}</th>
+                    <th className="numeric">
+                      {review.customerAnalysis.priorYear}
+                    </th>
+                    <th className="numeric">{review.customerAnalysis.year}</th>
+                    <th>{tr("common.source")}</th>
                   </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>}
+                </thead>
+                <tbody>
+                  {review.customerAnalysis.customers.map((c) => (
+                    <tr key={c.name}>
+                      <td>{c.name}</td>
+                      <td className="numeric">{formatK(c.prior)}</td>
+                      <td className="numeric">{formatK(c.current)}</td>
+                      <td>
+                        {review.customerAnalysis!.customerSheet} · {c.sourceRow}
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p>{tr("graphics.customerRule")}</p>
+            </div>
+          )}
+          {!review.customerAnalysis && (
+            <div className="table-wrap">
+              <table className="bu-table">
+                <thead>
+                  {review.receivables?.length ? (
+                    <tr>
+                      <th>{tr("common.entity")}</th>
+                      <th>{tr("ar.column.date")}</th>
+                      <th>{tr("ar.customer")}</th>
+                      <th>{tr("team.label")}</th>
+                      <th>{tr("ar.column.amount")}</th>
+                      <th>{tr("common.source")}</th>
+                    </tr>
+                  ) : (
+                    <tr>
+                      <th>{tr("common.entity")}</th>
+                      <th>{tr("common.week")}</th>
+                      <th>{tr("import.ytdExternalShort")}</th>
+                      <th>{tr("import.ytdGroupShort")}</th>
+                      <th>{tr("metric.prospect")}</th>
+                      <th>{tr("common.source")}</th>
+                    </tr>
+                  )}
+                </thead>
+                <tbody>
+                  {review.receivables?.slice(0, 20).map((r) => (
+                    <tr key={r.id}>
+                      <td>
+                        {r.entityId === "dhk"
+                          ? "DEHK"
+                          : r.entityId === "ddc"
+                            ? "DDC"
+                            : "—"}
+                      </td>
+                      <td>{r.invoiceDate ?? r.receivedDate}</td>
+                      <td>{r.customer}</td>
+                      <td>{r.salesTeam || tr("team.unassigned")}</td>
+                      <td>
+                        {formatK(r.amount)} {r.currency}
+                      </td>
+                      <td>
+                        {r.sourceSheet} · {r.sourceRow}
+                      </td>
+                    </tr>
+                  ))}
+                  {review.snapshots.map((s) => (
+                    <tr key={`${s.entityId}:${s.week}`}>
+                      <td>
+                        {entities.find((entity) => entity.id === s.entityId)
+                          ?.code ?? s.entityId.toUpperCase()}
+                      </td>
+                      <td>W{s.week}</td>
+                      <td>{formatK(s.turnover.external)}</td>
+                      <td>{formatK(s.turnover.group)}</td>
+                      <td>{formatK(s.prospect)}</td>
+                      <td>{s.sourceSheet}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
           <ul className="findings-list">
             {review.findings.map((f, i) => (
               <li key={i}>
@@ -388,7 +522,9 @@ export function ImportPortal({
                     : tr("common.review")}
                   :
                 </b>{" "}
-                {f.code ? tr(f.code as MessageKey, f.params) : display(f.message)}
+                {f.code
+                  ? tr(f.code as MessageKey, f.params)
+                  : display(f.message)}
               </li>
             ))}
           </ul>
@@ -417,35 +553,79 @@ export function ImportPortal({
                 }
                 onClick={() => void publish()}
               >
-                {tr("import.publish")}
+                {busy && operation === "publish" && (
+                  <LoaderCircle
+                    className="ui-spinner"
+                    size={15}
+                    aria-hidden="true"
+                  />
+                )}
+                {tr(
+                  busy && operation === "publish"
+                    ? "import.publishing"
+                    : "import.publish",
+                )}
               </button>
             </>
           )}
         </section>
       )}
-      {message && (
-        <p className="apac-notice" role="status">
-          {display(message)}
-        </p>
-      )}
       <section className="panel">
         <p className="panel-kicker">{tr("import.history")}</p>
         <h2>{tr("import.revisions")}</h2>
-        {!batches.length ? (
+        {historyLoading && (
+          <p className="ui-feedback" role="status">
+            {tr("import.historyLoading")}
+          </p>
+        )}
+        {historyError && (
+          <div className="ui-feedback error" role="alert">
+            {tr("import.loadError")}
+            <button
+              className="apac-button"
+              disabled={busy}
+              onClick={() => void load()}
+            >
+              {tr("common.retry")}
+            </button>
+          </div>
+        )}
+        {!batches.length && !historyLoading && !historyError ? (
           <p>{tr("import.empty")}</p>
         ) : (
           batches.map((b) => (
             <button
               className="batch-row"
               key={b.id}
+              disabled={busy}
+              aria-pressed={review?.id === b.id}
               onClick={() => {
+                focusReview.current = true;
                 setReview(b);
                 setAck(false);
+                if (review === b) {
+                  focusReview.current = false;
+                  reviewPanel.current?.focus({ preventScroll: true });
+                  reviewPanel.current?.scrollIntoView({
+                    block: "start",
+                    behavior: window.matchMedia(
+                      "(prefers-reduced-motion: reduce)",
+                    ).matches
+                      ? "instant"
+                      : "smooth",
+                  });
+                }
               }}
             >
               <strong>{b.fileName}</strong>
               <span>
-                {b.entityIds.map((id) => id.toUpperCase()).join(", ")}
+                {b.entityIds
+                  .map(
+                    (id) =>
+                      entities.find((entity) => entity.id === id)?.code ??
+                      id.toUpperCase(),
+                  )
+                  .join(", ")}
               </span>
               <span>
                 {display(b.status)}

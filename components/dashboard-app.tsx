@@ -943,7 +943,8 @@ export default function Home() {
     }
   };
   const logout = async () => {
-    await fetch("/api/auth/login", { method: "DELETE" });
+    const response = await fetch("/api/auth/login", { method: "DELETE" });
+    if (!response.ok) throw new Error("Sign out failed");
     setUser(null);
     setData(null);
     router.replace(pagePath(locale, "login"));
@@ -983,7 +984,7 @@ export default function Home() {
             />
           </label>
           <button className="apac-button primary" disabled={loading}>
-            {tr("auth.signIn")}
+            {tr(loading ? "auth.signingIn" : "auth.signIn")}
           </button>
           {error && (
             <p role="alert" className="error-message">
@@ -998,16 +999,16 @@ export default function Home() {
       user={user}
       filters={filters}
       updating={pending}
-      onLogout={() => void logout()}
+      onLogout={logout}
       page={view}
     >
       {view === "home" ? <WorkspaceHome user={user} /> : <main className="page-shell">
-        {error && (
+        {requiresDashboard && error && (
           <p className="apac-notice" role="alert">
             {display(error)}
           </p>
         )}
-        {loading && !data && (
+        {requiresDashboard && loading && !data && (
           <div className="loading-strip" role="status">
             {tr("auth.updating")}
           </div>

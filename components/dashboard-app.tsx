@@ -8,7 +8,9 @@ import {
 } from "@/lib/routes";
 import { useI18n } from "@/components/i18n-provider";
 import { matchesRegion } from "@/lib/entities";
-import { useEffect, useRef, useState, type CSSProperties } from "react";
+import { memo, useEffect, useMemo, useRef, useState, useTransition, type CSSProperties, type Dispatch, type SetStateAction } from "react";
+import { DashboardFilters, DashboardFilterState, Segmented } from "./dashboard-filters";
+import { useDataReveal } from "./use-data-reveal";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { WorkspaceHome } from "@/components/workspace-home";
 import { ReceivablesApp } from "@/components/receivables-app";
@@ -41,42 +43,7 @@ import {
 } from "@/lib/dashboard";
 import type { Dashboard, Metric } from "@/lib/dashboard";
 import type { Amount, Filters, User, Entity } from "@/lib/types";
-function Segmented({
-  label,
-  value,
-  options,
-  onChange,
-  columns,
-}: {
-  label: string;
-  value: string;
-  options: { value: string; label: string }[];
-  onChange: (v: string) => void;
-  columns?: string;
-}) {
-  return (
-    <div className="filter-field">
-      <span className="filter-label">{label}</span>
-      <div
-        className="segmented"
-        style={{ gridTemplateColumns: columns ?? `repeat(${options.length},1fr)` }}
-        role="group"
-        aria-label={label}
-      >
-        {options.map((o) => (
-          <button
-            key={o.value}
-            aria-pressed={value === o.value}
-            className={value === o.value ? "is-active" : ""}
-            onClick={() => onChange(o.value)}
-          >
-            {o.label}
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
+
 function MetricCard({
   label,
   value,
@@ -185,41 +152,19 @@ function MetricsTable({
     </div>
   );
 }
-function DashboardView({
+const DashboardView = memo(function DashboardView({
   data,
-  filters: requestedFilters,
   setFilters,
 }: {
   data: Dashboard;
-  filters: Filters;
-  setFilters: (f: Filters) => void;
+  setFilters: Dispatch<SetStateAction<Filters>>;
 }) {
   const { tr, display, locale } = useI18n();
   const [readiness, setReadiness] = useState(false),
     [frequency, setFrequency] = useState("week"),
     [matrixLevel, setMatrixLevel] = useState("entity");
   const snapshotWrapper = useRef<HTMLDivElement>(null);
-  const filterBar = useRef<HTMLElement>(null);
-  useEffect(() => {
-    const element = filterBar.current;
-    if (!element) return;
-    const measure = () => {
-      if (element.isConnected)
-        document.documentElement.style.setProperty(
-          "--dashboard-filter-height",
-          `${element.getBoundingClientRect().height}px`,
-        );
-    };
-    measure();
-    const observer = new ResizeObserver(measure);
-    observer.observe(element);
-    return () => {
-      observer.disconnect();
-      document.documentElement.style.removeProperty(
-        "--dashboard-filter-height",
-      );
-    };
-  }, []);
+  const customerOrders = useMemo(() => <KeyCustomerOrders data={data} />, [data]);
   useEffect(() => {
     if (!readiness) return;
     const outside = (event: PointerEvent) => {
@@ -251,9 +196,9 @@ function DashboardView({
   const partial = (key: Dashboard["partialKeys"][number]) =>
     data.partialKeys.includes(key) ? tr("metric.partialSource") : "";
   const selectEntity = (id: string) =>
-    setFilters({
-      ...filters,
-      region: filters.region,
+    setFilters((requested) => ({
+      ...requested,
+      region: requested.region,
       bu:
         id === "all"
           ? "all"
@@ -261,7 +206,7 @@ function DashboardView({
       entity: "all",
       salesTeam: "all",
       customer: "all",
-    });
+    }));
   const totalRows = [
     {
       id: filters.region,
@@ -408,111 +353,7 @@ function DashboardView({
           )}
         </div>
       </section>
-      <section
-        className="filter-bar sales-filter-bar"
-        ref={filterBar}
-        aria-label={tr("filters.global")}
-      >
-        <div className="filter-field">
-          <label htmlFor="region">{tr("filters.region")}</label>
-          <select
-            id="region"
-            value={requestedFilters.region}
-            onChange={(e) =>
-              setFilters({
-                ...requestedFilters,
-                region: e.target.value,
-                bu: "all",
-                entity: "all",
-                salesTeam: "all",
-                customer: "all",
-              })
-            }
-          >
-            {data.regions.map((r) => (
-              <option key={r} value={r}>
-                {r === "APAC" ? tr("filters.apac") : display(r)}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-field">
-          <label htmlFor="bu">{tr("filters.businessUnitEntity")}</label>
-          <select
-            id="bu"
-            value={requestedFilters.bu}
-            onChange={(e) =>
-              setFilters({
-                ...requestedFilters,
-                bu: e.target.value,
-                entity: "all",
-                salesTeam: "all",
-                customer: "all",
-              })
-            }
-          >
-            <option value="all">{tr("filters.allBU")}</option>
-            {[
-              ...new Set(
-                data.entities
-                  .filter((e) => matchesRegion(e, requestedFilters.region))
-                  .map((e) => e.businessUnit),
-              ),
-            ].map((b) => (
-              <option key={b}>{b}</option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-field">
-          <label htmlFor="sales-team">{tr("team.label")}</label>
-          <select id="sales-team" value={requestedFilters.salesTeam ?? "all"}
-            onChange={(event) => setFilters({ ...requestedFilters, salesTeam: event.target.value, customer: "all" })}>
-            <option value="all">{tr("team.all")}</option>
-            {data.salesTeams.map((team) => <option key={team} value={team}>{team === "__unassigned__" ? tr("team.unassigned") : team}</option>)}
-          </select>
-        </div>
-        <div className="filter-field">
-          <label htmlFor="customer">{tr("common.customer")}</label>
-          <select id="customer" title={tr("filters.customerSource")} value={requestedFilters.customer ?? "all"}
-            onChange={(event) => setFilters({ ...requestedFilters, customer: event.target.value })}>
-            <option value="all">{tr("filters.allAvailable")}</option>
-            {data.customers.map((customer) => <option key={customer} value={customer}>{customer}</option>)}
-          </select>
-        </div>
-        <Segmented
-          label={tr("filters.years")}
-          value={String(requestedFilters.year)}
-          options={[
-            { value: "2026", label: "2026" },
-            { value: "2027", label: "2027" },
-          ]}
-          onChange={(v) => setFilters({ ...requestedFilters, year: Number(v), salesTeam: "all", customer: "all" })}
-        />
-        <Segmented
-          label={tr("filters.scenario")}
-          columns="minmax(48px,.6fr) minmax(0,1.4fr)"
-          value={requestedFilters.scenario}
-          options={[
-            { value: "Sales", label: tr("metric.sales") },
-            { value: "Sales + Prospect", label: tr(t.prospect !== null && t.prospect !== 0 ? "metric.salesProspectP1" : "metric.salesProspect") },
-          ]}
-          onChange={(v) =>
-            setFilters({ ...requestedFilters, scenario: v as Filters["scenario"] })
-          }
-        />
-        <Segmented
-          label={tr("filters.type")}
-          value={requestedFilters.salesType}
-          options={[
-            { value: "all", label: tr("filters.allSales") },
-            { value: "external", label: tr("common.external") },
-            { value: "group", label: tr("common.group") },
-          ]}
-          onChange={(v) =>
-            setFilters({ ...requestedFilters, salesType: v as Filters["salesType"], salesTeam: "all", customer: "all" })
-          }
-        />
-      </section>
+      <DashboardFilters data={data} />
       <>
           {dimensionScoped && <p className="apac-notice">{tr("filters.dimensionLimitation")}</p>}
           {data.regionRows.length > 0 && (
@@ -814,12 +655,11 @@ function DashboardView({
               </div>
             </div>
               <TeamContributionGraphic
-                key={`${filters.region}:${filters.bu}:${filters.entity}:${filters.year}:${filters.salesType}`}
                 data={data}
               />
           </section>
           <CustomerGraphics filters={filters} revision={data.revision}>
-            <KeyCustomerOrders data={data} />
+            {customerOrders}
           </CustomerGraphics>
           <section className="panel matrix-panel" id="time-matrix">
             <details>
@@ -995,7 +835,7 @@ function DashboardView({
       </>
     </>
   );
-}
+});
 export default function Home() {
   const { tr, display, locale } = useI18n();
   const pathname = usePathname();
@@ -1013,6 +853,12 @@ export default function Home() {
     [loading, setLoading] = useState(false),
     [revision, setRevision] = useState(0),
     [writable, setWritable] = useState(false);
+  const [renderPending, startTransition] = useTransition();
+  const contentRoot = useRef<HTMLDivElement>(null);
+  useDataReveal(contentRoot, data, ".china-strip, .kpi-card");
+  const requiresDashboard = !["home", "login", "ar-aging"].includes(view);
+  const pending = loading || renderPending || !!data && dashboardFilterKey(data.filters) !== dashboardFilterKey(filters);
+  const filterState = useMemo(() => ({ filters, setFilters, pending: pending && !error }), [filters, pending, error]);
   useEffect(() => {
     void fetch("/api/auth/session")
       .then((r) => r.json())
@@ -1030,10 +876,10 @@ export default function Home() {
     }
   }, [sessionChecked, user, view, pathname, locale, router]);
   useEffect(() => {
-    if (!user || view === "home" || view === "login" || view === "ar-aging")
-      return;
+    if (!user || !requiresDashboard) return;
     const controller = new AbortController();
     setLoading(true);
+    setError("");
     const query = new URLSearchParams(
       Object.entries(filters).map(([k, v]) => [k, String(v)]),
     );
@@ -1060,9 +906,11 @@ export default function Home() {
           });
           return;
         }
-        setData(j.data);
-        setWritable(j.storage.writable);
-        setError("");
+        startTransition(() => {
+          setData((previous) => controller.signal.aborted ? previous : j.data);
+          setWritable(j.storage.writable);
+          setError("");
+        });
       })
       .catch((e) => {
         if (!controller.signal.aborted && e.name !== "AbortError")
@@ -1072,7 +920,7 @@ export default function Home() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [user, filters, revision, view]);
+  }, [user, filters, revision, requiresDashboard]);
   const login = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -1149,6 +997,7 @@ export default function Home() {
     <DashboardShell
       user={user}
       filters={filters}
+      updating={pending}
       onLogout={() => void logout()}
       page={view}
     >
@@ -1178,14 +1027,13 @@ export default function Home() {
           hasReceivablesAccess(user) ? <ReceivablesApp /> : <p role="alert">{tr("common.noAccess")}</p>
         ) : data ? (
           <div
-            aria-busy={loading || dashboardFilterKey(data.filters) !== dashboardFilterKey(filters)}
+            ref={contentRoot}
+            aria-busy={pending}
             className={`dashboard-route dashboard-route-${view}`}
           >
-            <DashboardView
-              data={data}
-              filters={filters}
-              setFilters={setFilters}
-            />
+            <DashboardFilterState.Provider value={filterState}>
+              <DashboardView data={data} setFilters={setFilters} />
+            </DashboardFilterState.Provider>
           </div>
         ) : (
           <p>{tr("auth.dashboardLoading")}</p>

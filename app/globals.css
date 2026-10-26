@@ -5223,8 +5223,8 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 .sales-filter-bar .filter-field:has(.segmented) { min-width: 0; }
 .sales-filter-bar .segmented button { padding-inline: 6px; }
 @media (max-width: 640px) {
-  .sales-filter-bar { position: static; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
-  .sales-filter-bar .filter-field:last-child { grid-column: 1 / -1; }
+  .sales-filter-bar { position: relative; top: auto; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
+  .sales-filter-bar .filter-field:last-of-type { grid-column: 1 / -1; }
   .sales-filter-bar .segmented { height: auto; min-height: 40px; }
   .sales-filter-bar .segmented button { min-height: 32px; white-space: normal; overflow-wrap: anywhere; padding: 3px; font-size: 10px; }
 }
@@ -5466,4 +5466,27 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
   .graphics-customer-kpis { grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
   .graphics-customer-kpis > div { padding: 14px; }
   .graphics-entity-details { padding: 12px; }
+}
+/* Updating scopes keep their layout and source labels until the response commits. */
+.scope-update-status { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.customer-graphics > .graphics-section-heading { position: relative; }
+.filter-bar[data-updating="true"]::after,
+.customer-graphics[data-updating="true"] > .graphics-section-heading::after {
+  content: ""; position: absolute; bottom: 0; left: 0; right: 0; height: 2px;
+  pointer-events: none; background: linear-gradient(90deg, transparent, #a77a35, transparent);
+  background-size: 40% 100%; background-repeat: no-repeat;
+  animation: scope-progress 1.3s ease-in-out 160ms infinite both;
+}
+.ar-filter-bar { position: relative; top: auto; }
+@keyframes scope-progress {
+  0% { background-position: -70% 0; opacity: 0; }
+  15%, 80% { opacity: 1; }
+  100% { background-position: 170% 0; opacity: 0; }
+}
+a[aria-disabled="true"] { opacity: .55; cursor: progress; }
+@media (prefers-reduced-motion: reduce) {
+  .filter-bar[data-updating="true"]::after,
+  .customer-graphics[data-updating="true"] > .graphics-section-heading::after {
+    animation: none; background-size: 100% 100%; opacity: .7;
+  }
 }

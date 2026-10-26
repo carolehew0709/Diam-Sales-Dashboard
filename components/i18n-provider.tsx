@@ -4,6 +4,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useMemo,
 } from "react";
 import { usePathname, useRouter } from "next/navigation";
 import { switchLanguagePath } from "@/lib/routes";
@@ -49,8 +50,9 @@ export function I18nProvider({ children }: { children: React.ReactNode }) {
     (value: string) => displayText(locale, value),
     [locale],
   );
+  const value = useMemo(() => ({ locale, setLocale, tr, display }), [locale, setLocale, tr, display]);
   return (
-    <Context.Provider value={{ locale, setLocale, tr, display }}>
+    <Context.Provider value={value}>
       {children}
     </Context.Provider>
   );

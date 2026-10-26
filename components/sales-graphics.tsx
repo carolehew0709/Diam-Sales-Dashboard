@@ -12,7 +12,7 @@ import {
 import { formatK, months, percent, type Dashboard } from "@/lib/dashboard";
 import { ChartWorkbookExport } from "./chart-workbook-export";
 import type { ChartTable } from "@/lib/chart-workbook-types";
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { ChartMark } from "./chart-interaction";
 import { chartAmount } from "@/lib/chart-tooltip";
@@ -20,7 +20,7 @@ import { SalesMonthlyGraphic } from "./sales-monthly-graphic";
 import { businessUnitShares, exploreBusinessUnitRows } from "@/lib/sales-graphics";
 import { firstOpenMonth, teamMonthlyPerformance } from "@/lib/performance-chart";
 
-export function SalesGraphics({
+export const SalesGraphics = memo(function SalesGraphics({
   data,
   exportOnly = false,
 }: {
@@ -224,9 +224,9 @@ export function SalesGraphics({
       <p className="graphics-limitation">{tr("graphics.missingYoY")}</p>
     </section>
   );
-}
+});
 
-export function TeamContributionGraphic({
+export const TeamContributionGraphic = memo(function TeamContributionGraphic({
   data,
   exportOnly = false,
 }: {
@@ -385,7 +385,7 @@ export function TeamContributionGraphic({
       </GraphicCard>
     </div>
   );
-}
+});
 
 function InvoiceProgress({ data }: { data: Dashboard }) {
   const { tr, display } = useI18n();
@@ -438,7 +438,7 @@ function InvoiceProgress({ data }: { data: Dashboard }) {
   );
 }
 
-export function BusinessUnitGraphics({
+export const BusinessUnitGraphics = memo(function BusinessUnitGraphics({
   data,
   exportOnly = false,
 }: {
@@ -601,7 +601,7 @@ export function BusinessUnitGraphics({
       <SalesMixGraphic data={data} context={context} sourceNote={sourceNote} />
     </div>
   );
-}
+});
 
 function SalesMixGraphic({
   data,

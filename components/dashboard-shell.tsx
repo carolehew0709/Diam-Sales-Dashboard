@@ -19,12 +19,14 @@ export function DashboardShell({
   filters,
   onLogout,
   page,
+  updating = false,
   children,
 }: {
   user: User;
   filters: Filters;
   onLogout: () => void;
   page: Page;
+  updating?: boolean;
   children: React.ReactNode;
 }) {
   const { tr, locale } = useI18n();
@@ -134,6 +136,8 @@ export function DashboardShell({
             <a
               className="excel-export"
               href={`/api/export?${query}`}
+              aria-disabled={updating || undefined}
+              onClick={(event) => { if (updating) event.preventDefault(); }}
               title={tr("nav.export")}
               aria-label={tr("nav.export")}
             >

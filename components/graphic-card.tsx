@@ -12,6 +12,7 @@ import { downloadChart } from "@/lib/chart-export";
 import { registerWorkbookChart } from "@/lib/chart-workbook-registry";
 import type { ChartTable } from "@/lib/chart-workbook-types";
 import { useChartTooltip } from "./chart-interaction";
+import { useDataReveal } from "./use-data-reveal";
 
 export function ChartDownloads({
   svg,
@@ -30,7 +31,9 @@ export function ChartDownloads({
 }) {
   const { tr } = useI18n();
   const [busy, setBusy] = useState(false),
-    [error, setError] = useState(false);
+    [error, setError] = useState(false),
+    [waiting, setWaiting] = useState(false);
+  useEffect(() => setWaiting(false), [context, exportTable]);
   useEffect(() => {
     if (!svg.current || !exportTable) return;
     return registerWorkbookChart(svg.current, {
@@ -43,6 +46,11 @@ export function ChartDownloads({
   }, [svg, title, context, note, exportTable, sheetName]);
   const download = async (format: "png" | "svg") => {
     if (!svg.current) return;
+    if (svg.current.closest('[aria-busy="true"], [data-customer-status="loading"]')) {
+      setWaiting(true);
+      return;
+    }
+    setWaiting(false);
     setBusy(true);
     setError(false);
     try {
@@ -73,6 +81,7 @@ export function ChartDownloads({
         </button>
       ))}
       {error && <span role="alert">{tr("graphics.downloadError")}</span>}
+      {waiting && <span role="status">{tr("graphics.workbookWait")}</span>}
     </div>
   );
 }
@@ -101,6 +110,8 @@ export function GraphicCard({
   exportNote?: string;
 }) {
   const svg = useRef<SVGSVGElement>(null);
+  const plot = useRef<HTMLDivElement>(null);
+  useDataReveal(plot, JSON.stringify([context, exportTable]));
   const tooltip = useChartTooltip(svg, exportTable);
   const { tr } = useI18n();
   return (
@@ -117,7 +128,7 @@ export function GraphicCard({
       </div>
       <p className="graphic-context">{context}</p>
       {notice && <p className="graphic-filter-note">{notice}</p>}
-      <div className="graphic-plot">
+      <div className="graphic-plot" ref={plot}>
         <svg
           ref={svg}
           viewBox={`0 0 800 ${height}`}

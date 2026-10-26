@@ -1,10 +1,11 @@
 "use client";
+import { memo } from "react";
 import type { Dashboard } from "@/lib/dashboard";
 import { formatK } from "@/lib/dashboard";
 import { keyCustomerOrderbook } from "@/lib/key-customers";
 import { useI18n } from "./i18n-provider";
 
-export function KeyCustomerOrders({ data }: { data: Dashboard }) {
+export const KeyCustomerOrders = memo(function KeyCustomerOrders({ data }: { data: Dashboard }) {
   const { tr } = useI18n();
   const customerScoped = !!data.filters.customer && data.filters.customer !== "all";
   const rows = keyCustomerOrderbook(data.commercial).filter((row) => !customerScoped || row.sources.length > 0);
@@ -33,4 +34,4 @@ export function KeyCustomerOrders({ data }: { data: Dashboard }) {
       <div className="panel-foot">{tr("commercial.note")}</div>
     </section>
   );
-}
+});

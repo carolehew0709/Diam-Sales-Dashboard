@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useRef, useState, type ReactNode } from "react";
+import { memo, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import { UpdateStatus } from "./update-status";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import { DonutPlot, Legend, graphicColors } from "./graphic-plots";
@@ -29,7 +30,7 @@ const statusKeys: Record<string, MessageKey> = {
   Outperforming: "graphics.outperforming",
 };
 
-export function CustomerGraphics({
+export const CustomerGraphics = memo(function CustomerGraphics({
   filters,
   revision,
   children,
@@ -39,6 +40,7 @@ export function CustomerGraphics({
   children?: ReactNode;
 }) {
   const [month, setMonth] = useState("");
+  const [renderPending, startTransition] = useTransition();
   const selectedMonth = month.startsWith(`${filters.year}-`) ? month : "";
   const query = customerAnalysisQuery(filters, selectedMonth);
   const [response, setResponse] = useState<{
@@ -54,7 +56,7 @@ export function CustomerGraphics({
         const j = await r.json();
         if (!r.ok || !j.ok) throw new Error("Customer analysis unavailable");
         if (!controller.signal.aborted)
-          setResponse({ query, revision, data: j.data });
+          startTransition(() => setResponse((previous) => controller.signal.aborted ? previous : { query, revision, data: j.data }));
       })
       .catch(() => {
         if (!controller.signal.aborted)
@@ -66,11 +68,12 @@ export function CustomerGraphics({
     response?.query === query && response.revision === revision
       ? response
       : undefined;
-  return <CustomerGraphicsView current={current} selectedMonth={selectedMonth} setMonth={setMonth} orderbook={children} />;
-}
+  return <CustomerGraphicsView current={current ?? response} pending={!current || renderPending} selectedMonth={selectedMonth} setMonth={setMonth} orderbook={children} />;
+});
 
-function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = false, orderbook }: {
+function CustomerGraphicsView({ current, pending = false, selectedMonth, setMonth, exportOnly = false, orderbook }: {
   current?: { data?: View; error?: boolean };
+  pending?: boolean;
   selectedMonth: string;
   setMonth: (month: string) => void;
   exportOnly?: boolean;
@@ -201,10 +204,13 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
     <section
       ref={root}
       className="graphics-section customer-graphics"
-      data-customer-status={!current ? "loading" : current.error ? "error" : "ready"}
+      data-customer-status={pending || !current ? "loading" : current.error ? "error" : "ready"}
+      aria-busy={pending}
+      data-updating={pending || undefined}
       aria-labelledby={exportOnly ? undefined : "customer-graphics-title"}
     >
       <div className="graphics-section-heading">
+        <UpdateStatus pending={pending} />
         <div>
           <p className="panel-kicker">{tr("graphics.monthlyKicker")}</p>
           <h2 id={exportOnly ? undefined : "customer-graphics-title"}>{tr("graphics.customerTitle")}</h2>

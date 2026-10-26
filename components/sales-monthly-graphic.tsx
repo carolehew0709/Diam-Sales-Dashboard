@@ -1,5 +1,5 @@
 "use client";
-import { useRef } from "react";
+import { memo, useRef } from "react";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import { ComboPlot } from "./graphic-plots";
@@ -10,7 +10,7 @@ import {
   monthlyPerformanceSeries,
 } from "@/lib/performance-chart";
 
-export function SalesMonthlyGraphic({
+export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
   data,
   index = 0,
   standalone = false,
@@ -181,4 +181,4 @@ export function SalesMonthlyGraphic({
       </GraphicCard>
     </div>
   );
-}
+});

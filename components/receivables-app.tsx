@@ -1,5 +1,7 @@
 "use client";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { UpdateStatus } from "./update-status";
+import { useDataReveal } from "./use-data-reveal";
 import { Download, WalletCards } from "lucide-react";
 import { useI18n } from "./i18n-provider";
 import { agingBuckets, defaultReceivablesFilters } from "@/lib/receivables";
@@ -15,24 +17,34 @@ export function ReceivablesApp() {
   const [data, setData] = useState<ReceivablesView | null>(null);
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
+  const [appliedQuery, setAppliedQuery] = useState("");
+  const [renderPending, startTransition] = useTransition();
+  const root = useRef<HTMLDivElement>(null);
+  useDataReveal(root, data, ".ar-kpi-card, .ar-chart-grid > .panel");
   const [invoicePage, setInvoicePage] = useState(0);
   const query = useMemo(
     () => new URLSearchParams(Object.entries(filters)).toString(),
     [filters],
   );
+  const pending = loading || renderPending || query !== appliedQuery;
   useEffect(() => {
     const controller = new AbortController();
     setLoading(true);
+    setError("");
     void fetch(`/api/receivables?${query}`, { signal: controller.signal })
       .then((r) => r.json())
       .then((result) => {
+        if (controller.signal.aborted) return;
         if (!result.ok) throw new Error(result.error);
-        setData(result.data);
-        setError("");
-        setInvoicePage(0);
+        startTransition(() => {
+          setData((previous) => controller.signal.aborted ? previous : result.data);
+          setAppliedQuery((previous) => controller.signal.aborted ? previous : query);
+          setError("");
+          setInvoicePage(0);
+        });
       })
       .catch((e) => {
-        if (e.name !== "AbortError") setError(e.message);
+        if (!controller.signal.aborted && e.name !== "AbortError") setError(e.message);
       })
       .finally(() => {
         if (!controller.signal.aborted) setLoading(false);
@@ -88,8 +100,9 @@ export function ReceivablesApp() {
   const all = { value: "all", label: tr("ar.all") };
   return (
     <div
-      className={`ar-workspace ${loading ? "dashboard-updating" : ""}`}
-      aria-busy={loading}
+      ref={root}
+      className="ar-workspace"
+      aria-busy={pending}
     >
       <section className="ar-heading panel-heading">
         <div>
@@ -114,6 +127,7 @@ export function ReceivablesApp() {
         <>
           <section
             className="filter-bar ar-filter-bar"
+            data-updating={pending && !error || undefined}
             aria-label={tr("filters.global")}
           >
             {field("region", tr("filters.region"), [
@@ -155,6 +169,7 @@ export function ReceivablesApp() {
                 label: tr(`ar.bucket.${bucket}`),
               })),
             ])}
+            <UpdateStatus pending={pending && !error} />
           </section>
           <p className="ar-context">
             {tr("ar.currencyNote")} {tr("ar.receiptNote")}
@@ -278,6 +293,8 @@ export function ReceivablesApp() {
               <a
                 className="apac-button"
                 href={`/api/receivables/export?${query}`}
+                aria-disabled={pending || undefined}
+                onClick={(event) => { if (pending) event.preventDefault(); }}
               >
                 <Download size={15} />
                 {tr("nav.export")}

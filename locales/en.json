@@ -356,6 +356,7 @@
   "team.unassigned": "Unassigned",
   "team.orderLines": "Order lines",
   "team.limitation": "Team orderbook only. Team invoiced sales, annual budgets, Prospect and completion rates are pending source data.",
+  "team.localScope": "This filter applies only to this team's OB chart, details and chart exports. Other dashboard modules remain unchanged. Shares use the selected teams' OB total.",
   "ar.title": "AR Aging Report",
   "ar.nav": "AR Aging",
   "ar.kicker": "RECEIVABLES · DEHK / DDC",

@@ -11,7 +11,7 @@ import {
 import { formatK, months, percent, type Dashboard } from "@/lib/dashboard";
 import { ChartWorkbookExport } from "./chart-workbook-export";
 import type { ChartTable } from "@/lib/chart-workbook-types";
-import { useRef } from "react";
+import { useRef, useState } from "react";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { ChartMark } from "./chart-interaction";
 import { chartAmount } from "@/lib/chart-tooltip";
@@ -226,21 +226,27 @@ export function SalesGraphics({
 export function TeamContributionGraphic({
   data,
   exportOnly = false,
+  selectedTeam = "all",
 }: {
   data: Dashboard;
   exportOnly?: boolean;
+  selectedTeam?: string;
 }) {
   const { tr, display, locale } = useI18n();
+  const [requestedTeam, setTeam] = useState(selectedTeam);
+  const team = data.graphics.teams.some((row) => row.name === requestedTeam)
+    ? requestedTeam
+    : "all";
   const root = useRef<HTMLDivElement>(null);
   useWorkbookGroup(
     root,
     exportOnly
       ? null
-      : () => <TeamContributionGraphic data={data} exportOnly />,
+      : () => <TeamContributionGraphic data={data} selectedTeam={team} exportOnly />,
   );
   const week =
     data.weeks.map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
-  const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · kEUR`;
+  const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${team === "all" ? tr("team.all") : team === "__unassigned__" ? tr("team.unassigned") : team} · kEUR`;
   const sources = [
     ...new Set(
       data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
@@ -251,7 +257,7 @@ export function TeamContributionGraphic({
     v === null
       ? "—"
       : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  const teams = data.graphics.teams;
+  const teams = data.graphics.teams.filter((row) => team === "all" || row.name === team);
   const teamTotal = teams.reduce((n, r) => n + r.value, 0);
   const teamRows = teams.map((r) => ({
     ...r,
@@ -266,10 +272,28 @@ export function TeamContributionGraphic({
     .filter(({ index }) => teamRows.some((row) => row.monthly[index] !== 0));
   return (
     <div ref={root} className="team-contribution-graphic">
+      {!exportOnly && (
+        <label className="commercial-filter team-local-filter" htmlFor="sales-team">
+          <span>{tr("team.label")}</span>
+          <select
+            id="sales-team"
+            value={team}
+            onChange={(event) => setTeam(event.target.value)}
+          >
+            <option value="all">{tr("team.all")}</option>
+            {data.graphics.teams.map((row) => (
+              <option key={row.name} value={row.name}>
+                {row.name === "__unassigned__" ? tr("team.unassigned") : row.name}
+              </option>
+            ))}
+          </select>
+        </label>
+      )}
       <GraphicCard
         title={tr("graphics.teamContribution")}
         context={context}
         note={`${tr("graphics.teamRule")} ${note}`}
+        notice={tr("team.localScope")}
         exportTable={{
           columns: [
             { label: tr("team.label") },

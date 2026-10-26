@@ -5215,7 +5215,7 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 }
 .sales-filter-bar {
   display: grid;
-  grid-template-columns: minmax(110px,.8fr) minmax(150px,1.1fr) minmax(130px,1fr) minmax(130px,.85fr) minmax(220px,1.35fr) minmax(195px,1.25fr);
+  grid-template-columns: minmax(110px,.8fr) minmax(150px,1.1fr) minmax(130px,.85fr) minmax(220px,1.35fr) minmax(195px,1.25fr);
   overflow: visible;
 }
 .sales-filter-bar .filter-field,
@@ -5398,7 +5398,10 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 .primary-sales-graphic .graphic-plot { max-width: 1100px; margin-inline: auto; }
 .graphics-section > .graphics-entity-details:first-child { margin: 0 0 28px; }
 .team-contribution-graphic { min-width: 0; }
-.team-contribution-graphic > .graphic-card { height: 100%; }
+.team-contribution-graphic { display: flex; flex-direction: column; gap: 12px; }
+.team-contribution-graphic > .graphic-card { flex: 1; }
+.team-local-filter { align-self: flex-start; max-width: 100%; }
+.team-local-filter select { max-width: 100%; }
 .orderbook-grid > .commercial-panel { margin-top: 0; }
 .orderbook-grid .panel-heading { flex-wrap: wrap; }
 .orderbook-grid .commercial-filter { min-width: 180px; max-width: 100%; }

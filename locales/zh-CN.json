@@ -356,6 +356,7 @@
   "team.unassigned": "未分配",
   "team.orderLines": "订单行数",
   "team.limitation": "当前仅展示团队订单簿；团队已开票销售、年度预算、Prospect 及完成率待提供。",
+  "team.localScope": "此筛选仅作用于本模块的团队 OB 图表、明细及图表导出，不影响其他模块。占比以所选团队的 OB 合计为分母。",
   "ar.title": "应收账款账龄报告",
   "ar.nav": "应收账龄",
   "ar.kicker": "应收账款 · DEHK / DDC",

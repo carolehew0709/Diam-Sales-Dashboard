@@ -459,23 +459,6 @@ function DashboardView({
             ))}
           </select>
         </div>
-        <div className="filter-field">
-          <label htmlFor="sales-team">{tr("team.label")}</label>
-          <select
-            id="sales-team"
-            value={requestedFilters.salesTeam ?? "all"}
-            onChange={(e) =>
-              setFilters({ ...requestedFilters, salesTeam: e.target.value })
-            }
-          >
-            <option value="all">{tr("team.all")}</option>
-            {data.salesTeams.map((team) => (
-              <option key={team} value={team}>
-                {team === "__unassigned__" ? tr("team.unassigned") : team}
-              </option>
-            ))}
-          </select>
-        </div>
         <Segmented
           label={tr("filters.years")}
           value={String(requestedFilters.year)}
@@ -510,9 +493,6 @@ function DashboardView({
         />
       </section>
       <>
-          {filters.salesTeam && filters.salesTeam !== "all" && (
-            <p className="apac-notice">{tr("team.limitation")}</p>
-          )}
           {data.regionRows.length > 0 && (
             <section
               className="china-strip"
@@ -812,7 +792,10 @@ function DashboardView({
               </div>
             </div>
             <div className="graphics-grid orderbook-grid">
-              <TeamContributionGraphic data={data} />
+              <TeamContributionGraphic
+                key={`${filters.region}:${filters.bu}:${filters.entity}:${filters.year}:${filters.salesType}`}
+                data={data}
+              />
               <section className="panel commercial-panel">
                 <div className="panel-heading">
                   <div>

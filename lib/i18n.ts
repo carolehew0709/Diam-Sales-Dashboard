@@ -26,6 +26,18 @@ export function translate(
 // Source notes and customer names are evidence, not interface copy. Unknown text stays intact.
 export function displayText(locale: Locale, value: string): string {
   const codes: Record<string, MessageKey> = {
+    "Coverage and annual gap require complete comparable budgets and Sales + OB for all selected entities; Prospect is excluded. FY2027 pending budgets count as 0 for provisional calculations.": "checks.note",
+    "2027 Prospect": "validation.nextProspect",
+    "Prospect not supplied": "validation.prospect",
+    "Prospect monthly phasing not supplied": "validation.phasing",
+    "Intercompany orderbook excluded; invoiced sales unchanged": "validation.intercompany",
+    "Approved next-year orderbook has no supplied monthly or sales-type allocation": "checks.nextOrderbookUnallocated",
+    "DDC reporting uses External row only: H10 sales, O10 annual total, K17 orderbook": "checks.ddcExternal",
+    "DCP reporting uses H10 sales and L10 orderbook; Group values excluded": "checks.dcpExternal",
+    "External reporting uses H10 sales and K17 orderbook": "checks.externalCells",
+    "Orderbook movement bridge has an unexplained difference; source amounts retained": "checks.orderbookMovement",
+    "Customer invoices and budget not supplied; only customer orderbook is available": "checks.customerMissing",
+    "Team invoices and budget not supplied; only team orderbook is available": "checks.teamMissing",
     superadmin: "roles.superadmin",
     region_admin: "roles.region_admin",
     editor: "roles.editor",

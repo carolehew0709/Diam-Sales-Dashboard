@@ -3,7 +3,7 @@ import { applyApprovedBudget, approvedAnnualBudget, pending2027Budgets } from ".
 import { applyReportingOverrides } from "./reporting-overrides";
 import { entities, regions, matchesRegion } from "./entities";
 import { canView } from "./permissions";
-import { salesTeamState, teamName, customerName, teamOrderbookSummary } from "./sales-teams";
+import { salesTeamState, teamName, orderCustomerName, orderCustomerKey, teamOrderbookSummary } from "./sales-teams";
 import { salesGraphicSeries } from "./sales-graphics";
 import type {
   Amount,
@@ -279,7 +279,14 @@ export function getDashboardSnapshot(
     (filters.salesType === "all" || line.customerType.toLowerCase() === filters.salesType) &&
     line.week === Math.max(...state.snapshots.filter(s => s.entityId === line.entityId && s.year === 2026).map(s => s.week)));
   const salesTeams = [...new Set(dimensionLines.map(line => teamName(line.salesTeam)))].sort();
-  const customers = [...new Set(dimensionLines.filter(line => !filters.salesTeam || filters.salesTeam === "all" || teamName(line.salesTeam) === filters.salesTeam).map(line => customerName(line.customer)))].sort();
+  const customerLabels = new Map<string, string>();
+  for (const line of [...dimensionLines].sort((a, b) => Number(b.entityId === "dhk") - Number(a.entityId === "dhk"))) {
+    if (line.customerType.toLowerCase() !== "external") continue;
+    if (filters.salesTeam && filters.salesTeam !== "all" && teamName(line.salesTeam) !== filters.salesTeam) continue;
+    const name = orderCustomerName(line);
+    if (!customerLabels.has(orderCustomerKey(name))) customerLabels.set(orderCustomerKey(name), name);
+  }
+  const customers = [...customerLabels.values()].sort();
   state = salesTeamState(state, filters.salesTeam, filters.customer);
   const latest = (id: string) =>
     state.snapshots

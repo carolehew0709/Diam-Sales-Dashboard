@@ -233,7 +233,7 @@ function CustomerGraphicsView({ current, selectedMonth, setMonth, exportOnly = f
             : current.error
               ? tr("graphics.loadError")
               : !view?.permitted || !view.scopeMatches
-                ? tr("graphics.customerScope")
+                ? tr(view?.customerScoped ? "graphics.customerExternalUnavailable" : "graphics.customerScope")
                 : tr("graphics.customerMissing")}
         </div>
       ) : (

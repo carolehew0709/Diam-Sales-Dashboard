@@ -61,9 +61,9 @@ export async function GET(request: Request) {
         "Entity",
         translate("en", "metric.budget"),
         "Sales to date",
-        "Orderbook",
-        "Sales & Dashboard",
-        "Prospect",
+        translate("en", "metric.ob"),
+        translate("en", "metric.base"),
+        translate("en", "metric.prospect"),
         "Selected scenario",
         "Coverage",
         "Residual gap",
@@ -98,7 +98,7 @@ export async function GET(request: Request) {
         d.totals.remaining,
       ],
       [
-        "Missing values remain blank. Totals with unavailable entity inputs are partial; coverage and gap require complete comparable Sales + OB. FY2027 pending budgets count as 0 for provisional comparisons; a zero denominator leaves coverage blank.",
+        translate("en", "export.missingNote"),
       ],
       ...(!d.totals.budgetComplete && d.totals.budget !== null ? [[
         `Annual budget includes confirmed budgets: ${d.rows.filter(r => r.metrics.budgetComplete).map(r => r.entity.code).join(" + ") || "none"}; pending FY2027 budgets counted as 0 for provisional Coverage/Gap, not approved.`,
@@ -119,9 +119,9 @@ export async function GET(request: Request) {
         "YTD group",
         "MTD external",
         "MTD group",
-        "OB external",
-        "OB group",
-        "Prospect",
+        `${translate("en", "metric.ob")} external`,
+        `${translate("en", "metric.ob")} group`,
+        translate("en", "metric.prospect"),
         "Source",
         "Sheet",
       ],
@@ -142,12 +142,12 @@ export async function GET(request: Request) {
           s.sourceSheet,
         ]),
     ]);
-    add("Orderbook Detail", [
+    add(translate("en", "export.prospectDetail"), [
       [
         "Entity",
         "Week",
-        "Product",
-        "Customer",
+        translate("en", "order.product"),
+        translate("en", "export.originalCustomer"),
         "Type",
         "Sales Team",
         "2026 total",
@@ -227,9 +227,9 @@ export async function GET(request: Request) {
         "MTD group",
         "Estimate external",
         "Estimate group",
-        "OB 2027 external",
-        "OB 2027 group",
-        "Prospect",
+        `${translate("en", "metric.ob")} 2027 external`,
+        `${translate("en", "metric.ob")} 2027 group`,
+        translate("en", "metric.prospect"),
         "Source note",
       ],
       ...d.rows
@@ -258,8 +258,8 @@ export async function GET(request: Request) {
       ...d.rows.flatMap((r) =>
         [
           ["Budget", "budget"],
-          ["Sales & Dashboard", "base"],
-          ["Prospect", "prospect"],
+          [translate("en", "metric.base"), "base"],
+          [translate("en", "metric.prospect"), "prospect"],
           ["Selected scenario", "scenario"],
         ].map(([label, key]) => [
           r.entity.code,
@@ -275,10 +275,10 @@ export async function GET(request: Request) {
       [
         "Month",
         "Monthly budget",
-        "Monthly Sales & Dashboard",
+        translate("en", "graphics.monthlyConfirmed"),
         "Monthly scenario",
         "Cumulative budget",
-        "Cumulative Sales & Dashboard",
+        translate("en", "graphics.cumulativeConfirmed"),
         "Cumulative scenario",
       ],
       ...d.totals.monthly.map((m, i) => [

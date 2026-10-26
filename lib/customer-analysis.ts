@@ -1,7 +1,7 @@
 import { entities } from "./entities";
 import { canView } from "./permissions";
 import type { Store, User, Filters } from "./types";
-import { customerName } from "./sales-teams";
+import { orderCustomerKey } from "./sales-teams";
 
 export function customerAnalysisView(
   state: Store,
@@ -17,7 +17,8 @@ export function customerAnalysisView(
     filters.bu === "all" &&
     filters.entity === "all" &&
     filters.salesType === "all" &&
-    (!filters.salesTeam || filters.salesTeam === "all");
+    (!filters.salesTeam || filters.salesTeam === "all") &&
+    (!filters.customer || filters.customer === "all");
   const records =
     permitted && scopeMatches
       ? (state.customerAnalyses ?? []).filter(
@@ -31,7 +32,7 @@ export function customerAnalysisView(
   const selected = month || months[0];
   const source = records.find((r) => r.month === selected);
   const customerScoped = !!filters.customer && filters.customer !== "all";
-  const customers = source?.customers.filter((row) => !customerScoped || customerName(row.name) === customerName(filters.customer));
+  const customers = source?.customers.filter((row) => !customerScoped || orderCustomerKey(row.name) === orderCustomerKey(filters.customer!));
   const analysis = source && customers?.length
     ? { ...source, customers, breakdown: customerScoped ? [] : source.breakdown }
     : null;

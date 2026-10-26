@@ -5215,15 +5215,13 @@ html { scroll-padding-top: calc(var(--dashboard-header-height) + var(--dashboard
 }
 .sales-filter-bar {
   display: grid;
-  grid-template-columns: repeat(4,minmax(0,1fr));
-  overflow: visible;
+  grid-template-columns: minmax(90px,.8fr) minmax(125px,1.05fr) minmax(145px,1.15fr) minmax(145px,1.15fr) minmax(110px,.8fr) minmax(220px,1.5fr) minmax(195px,1.3fr);
+  overflow-x: auto;
+  scrollbar-width: thin;
 }
 .sales-filter-bar .filter-field,
 .sales-filter-bar .filter-field:has(.segmented) { min-width: 0; }
 .sales-filter-bar .segmented button { padding-inline: 6px; }
-@media (max-width: 1100px) {
-  .sales-filter-bar { grid-template-columns: repeat(3,minmax(0,1fr)); }
-}
 @media (max-width: 640px) {
   .sales-filter-bar { position: static; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; }
   .sales-filter-bar .filter-field:last-child { grid-column: 1 / -1; }

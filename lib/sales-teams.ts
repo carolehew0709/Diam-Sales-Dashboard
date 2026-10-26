@@ -5,9 +5,14 @@ export const teamName = (value?: string) =>
   value?.replace(/\s+/g, " ").trim() || "__unassigned__";
 export const customerName = (value?: string) =>
   keyCustomerName(value ?? "") ?? (value?.replace(/\s+/g, " ").trim() || "Unspecified customer");
+/** User-facing Customer follows source column E; column G remains raw bill-to evidence. */
+export const orderCustomerName = (line: Pick<OrderBookLine, "product" | "customer">) =>
+  line.product?.replace(/\s+/g, " ").trim() || "Unspecified customer";
+export const orderCustomerKey = (name: string) =>
+  name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[‘’']/g, "").replace(/\s+/g, " ").trim().toLowerCase();
 export const matchesOrderDimensions = (line: OrderBookLine, salesTeam = "all", customer = "all") =>
   (salesTeam === "all" || teamName(line.salesTeam) === salesTeam) &&
-  (customer === "all" || customerName(line.customer) === customer);
+  (customer === "all" || (line.customerType.toLowerCase() === "external" && orderCustomerKey(orderCustomerName(line)) === orderCustomerKey(customer)));
 
 /** Receives only latest, authorized reporting lines, after exclusions and filters. */
 export function teamOrderbookSummary(lines: OrderBookLine[], year: number) {

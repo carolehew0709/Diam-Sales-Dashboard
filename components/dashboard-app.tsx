@@ -46,18 +46,20 @@ function Segmented({
   value,
   options,
   onChange,
+  columns,
 }: {
   label: string;
   value: string;
   options: { value: string; label: string }[];
   onChange: (v: string) => void;
+  columns?: string;
 }) {
   return (
     <div className="filter-field">
       <span className="filter-label">{label}</span>
       <div
         className="segmented"
-        style={{ gridTemplateColumns: `repeat(${options.length},1fr)` }}
+        style={{ gridTemplateColumns: columns ?? `repeat(${options.length},1fr)` }}
         role="group"
         aria-label={label}
       >
@@ -471,7 +473,7 @@ function DashboardView({
         </div>
         <div className="filter-field">
           <label htmlFor="customer">{tr("common.customer")}</label>
-          <select id="customer" value={requestedFilters.customer ?? "all"}
+          <select id="customer" title={tr("filters.customerSource")} value={requestedFilters.customer ?? "all"}
             onChange={(event) => setFilters({ ...requestedFilters, customer: event.target.value })}>
             <option value="all">{tr("filters.allAvailable")}</option>
             {data.customers.map((customer) => <option key={customer} value={customer}>{customer}</option>)}
@@ -488,10 +490,11 @@ function DashboardView({
         />
         <Segmented
           label={tr("filters.scenario")}
+          columns="minmax(48px,.6fr) minmax(0,1.4fr)"
           value={requestedFilters.scenario}
           options={[
             { value: "Sales", label: tr("metric.sales") },
-            { value: "Sales + Prospect", label: tr("metric.salesProspect") },
+            { value: "Sales + Prospect", label: tr(t.prospect !== null && t.prospect !== 0 ? "metric.salesProspectP1" : "metric.salesProspect") },
           ]}
           onChange={(v) =>
             setFilters({ ...requestedFilters, scenario: v as Filters["scenario"] })
@@ -671,7 +674,7 @@ function DashboardView({
             </MetricCard>
             {showForecast && (
               <MetricCard
-                label={tr("metric.salesProspect")}
+                label={tr("metric.salesProspectP1")}
                 value={formatK(t.scenario)}
                 accent
                 period={

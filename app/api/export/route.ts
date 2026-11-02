@@ -1,3 +1,4 @@
+import { teamReportingState } from "@/lib/team-reporting";
 import { reportingState } from "@/lib/intercompany";
 import { salesTeamState, matchesOrderDimensions } from "@/lib/sales-teams";
 import * as XLSX from "xlsx-js-style";
@@ -10,7 +11,7 @@ export async function GET(request: Request) {
   try {
     const user = await currentUser();
     const filters = filtersFrom(new URL(request.url));
-    const rawState = reportingState(await repository.read(), filters.salesType);
+    const rawState = reportingState(teamReportingState(await repository.read(), filters), filters.salesType);
     const state = { ...salesTeamState(rawState, filters.salesTeam, filters.customer), intercompanyExcluded: rawState.intercompanyExcluded.filter(line => matchesOrderDimensions(line, filters.salesTeam, filters.customer)) };
     const d = getDashboardSnapshot(state, user, filters);
     const wb = XLSX.utils.book_new();

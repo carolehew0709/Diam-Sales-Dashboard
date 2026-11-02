@@ -655,5 +655,6 @@
   "ar.allAging": "全部账龄",
   "ar.noMatches": "没有符合当前筛选条件的记录。",
   "ar.allCustomers": "全部客户",
-  "ar.allGroups": "全部客户分组"
+  "ar.allGroups": "全部客户分组",
+  "team.retainedSource": "团队数据沿用 {week}，团队更新已暂停。"
 }

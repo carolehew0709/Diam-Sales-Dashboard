@@ -1,3 +1,4 @@
+import { selectImportWeeks } from "@/lib/import-scope";
 import { randomUUID } from "node:crypto";
 import { api, ApiError, currentUser, sameOrigin } from "@/lib/auth";
 import { repository } from "@/lib/repository";
@@ -32,6 +33,7 @@ export async function POST(request: Request) {
     } catch {
       throw new ApiError(400, "Workbook could not be parsed");
     }
+    parsed = selectImportWeeks(parsed, form.get("weeks"));
     const batch = await repository.createImportBatch(
       {
         id: randomUUID(),

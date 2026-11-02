@@ -1,3 +1,4 @@
+import { teamReportingState, retainedTeamView } from "./team-reporting";
 import { reportingState } from "./intercompany";
 import { applyApprovedBudget, approvedAnnualBudget, pending2027Budgets } from "./annual-budgets";
 import { applyReportingOverrides } from "./reporting-overrides";
@@ -271,6 +272,8 @@ export function getDashboardSnapshot(
   user: User,
   filters: Filters,
 ) {
+  const retainedTeams = retainedTeamView(state,user,filters);
+  state = teamReportingState(state,filters);
   state = reportingState(state, filters.salesType);
   const allowed = entities.filter((e) => canView(user, e));
   const dimensionLines = state.lines.filter(line => allowed.some(e => e.id === line.entityId &&
@@ -373,9 +376,10 @@ export function getDashboardSnapshot(
     filters,
     graphics: {
       series: salesGraphicSeries(state, selected.map(r => r.entity), filters),
-      teams: teamOrderbookSummary(visibleLines, filters.year),
+      teams: retainedTeams?.teams ?? teamOrderbookSummary(visibleLines, filters.year),
+      teamSource: retainedTeams?.source,
     },
-    salesTeams,
+    salesTeams: retainedTeams?.names ?? salesTeams,
     customers,
     entities: allowed,
     regions: regions.filter(region => allowed.some(entity => matchesRegion(entity, region))),

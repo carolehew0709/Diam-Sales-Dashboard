@@ -1,3 +1,4 @@
+import { retainTeamSource } from "./team-reporting";
 import { randomUUID } from "node:crypto";
 import { storage, storageStatus } from "./storage";
 import { entities } from "./entities";
@@ -65,6 +66,7 @@ export const repository = {
         batch.snapshots.map((s) => `${s.entityId}:${s.year}:${s.week}`),
       );
       const now = new Date().toISOString();
+      if (batch.snapshots.length) retainTeamSource(state,now);
       if (batch.customerAnalysis) {
         state.customerAnalyses = (state.customerAnalyses ?? customerAnalyses).filter(r => r.month !== batch.customerAnalysis!.month)
           .concat(batch.customerAnalysis);

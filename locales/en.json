@@ -655,5 +655,6 @@
   "ar.allAging": "All aging buckets",
   "ar.noMatches": "No records match the selected filters.",
   "ar.allCustomers": "All customers",
-  "ar.allGroups": "All customer groups"
+  "ar.allGroups": "All customer groups",
+  "team.retainedSource": "Team data retained from {week}; team updates paused."
 }

@@ -112,6 +112,7 @@ export type AuditEvent = {
   subject: string;
 };
 export type Store = {
+  retainedTeamSource?: { snapshots: Snapshot[]; lines: OrderBookLine[]; retainedAt: string };
   customerAnalyses?: CustomerAnalysis[];
   receivables?: ReceivableRecord[];
   receivablesUpdatedAt?: string;

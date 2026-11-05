@@ -1,3 +1,4 @@
+import {teamNamesState, teamActualView} from "./team-actuals";
 import { teamReportingState, retainedTeamView } from "./team-reporting";
 import { reportingState } from "./intercompany";
 import { applyApprovedBudget, approvedAnnualBudget, pending2027Budgets } from "./annual-budgets";
@@ -272,6 +273,8 @@ export function getDashboardSnapshot(
   user: User,
   filters: Filters,
 ) {
+  state = teamNamesState(state);
+  const actualTeams = teamActualView(state,user,filters);
   const retainedTeams = retainedTeamView(state,user,filters);
   state = teamReportingState(state,filters);
   state = reportingState(state, filters.salesType);
@@ -378,8 +381,9 @@ export function getDashboardSnapshot(
       series: salesGraphicSeries(state, selected.map(r => r.entity), filters),
       teams: retainedTeams?.teams ?? teamOrderbookSummary(visibleLines, filters.year),
       teamSource: retainedTeams?.source,
+      teamActuals: actualTeams,
     },
-    salesTeams: retainedTeams?.names ?? salesTeams,
+    salesTeams: [...new Set([...(retainedTeams?.names ?? salesTeams), ...(actualTeams?.names ?? [])])].sort(),
     customers,
     entities: allowed,
     regions: regions.filter(region => allowed.some(entity => matchesRegion(entity, region))),

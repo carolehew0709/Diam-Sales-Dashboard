@@ -398,7 +398,7 @@ export function ImportPortal({
         >
           <p className="panel-kicker">{tr("import.reviewStep")}</p>
           <h2>{review.fileName}</h2>
-          {!review.customerAnalysis && (
+          {!review.customerAnalysis && !review.teamActualData && (
             <p>
               {tr("import.summary", {
                 snapshots: review.snapshots.length,
@@ -407,6 +407,7 @@ export function ImportPortal({
               })}
             </p>
           )}
+          {review.teamActualData && <p>{review.teamActualData.reportingWeek ? `W${review.teamActualData.reportingWeek} · ` : ""}{tr("teamActual.importSummary", {year:review.teamActualData.year,month:review.teamActualData.month,count:review.teamActualData.rows.length})}</p>}
           {review.receivables?.length ? (
             <p>
               {tr("ar.reviewRows", { count: review.receivables.length })} ·{" "}

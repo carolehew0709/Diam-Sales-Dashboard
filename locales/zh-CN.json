@@ -656,5 +656,17 @@
   "ar.noMatches": "没有符合当前筛选条件的记录。",
   "ar.allCustomers": "全部客户",
   "ar.allGroups": "全部客户分组",
-  "team.retainedSource": "团队数据沿用 {week}，团队更新已暂停。"
+  "team.retainedSource": "团队数据沿用 {week}，团队更新已暂停。",
+  "teamActual.title": "团队实际 Sales · 月度及累计趋势",
+  "teamActual.budgetTitle": "团队年度预算及销售完成率",
+  "teamActual.sales": "实际 Sales",
+  "teamActual.cumulative": "累计实际 Sales",
+  "teamActual.budget": "团队年度预算",
+  "teamActual.attainment": "实际 Sales / 团队年度预算",
+  "teamActual.period": "实际销售截至 {year}-{month}",
+  "teamActual.rule": "独立团队月报来源（DEHK/DDC）。EUR 转为 kEUR，排除 DDC Group。团队预算按本表分配，不覆盖 Entity 正式预算；空白预算分配不增加预算，不估算月度预算及未来实际销售。周报 Prospect 单独保留，其他看板图表继续采用周报 Prospect 来源。",
+  "teamActual.unavailable": "当前年份或所选 Customer 暂无团队实际销售分配。本表提供 Bill-to 客户，没有周报品牌列的对应分配，不推算数值。",
+  "teamActual.importSummary": "团队实际销售 · {year}-{month} · {count} 条明细 · EUR → kEUR · 仅替换团队月报数据及名称映射，周报及 Entity 预算不变。",
+  "teamActual.sectionTitle": "销售团队 · Sales、预算与 Prospect",
+  "teamActual.sectionKicker": "实际 Sales 与独立周报 Prospect · kEUR"
 }

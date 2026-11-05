@@ -53,7 +53,7 @@ export const repository = {
       if (batch.status === "published") return batch;
       if (
         batch.status !== "review" ||
-        (!batch.snapshots.length && !batch.receivables?.length && !batch.customerAnalysis) ||
+        (!batch.snapshots.length && !batch.receivables?.length && !batch.customerAnalysis && !batch.teamActualData) ||
         batch.findings.some((f) => f.severity === "error")
       )
         throw new ApiError(409, "Resolve validation errors before publishing.");
@@ -67,6 +67,7 @@ export const repository = {
       );
       const now = new Date().toISOString();
       if (batch.snapshots.length) retainTeamSource(state,now);
+      if (batch.teamActualData) state.teamActualData = batch.teamActualData;
       if (batch.customerAnalysis) {
         state.customerAnalyses = (state.customerAnalyses ?? customerAnalyses).filter(r => r.month !== batch.customerAnalysis!.month)
           .concat(batch.customerAnalysis);

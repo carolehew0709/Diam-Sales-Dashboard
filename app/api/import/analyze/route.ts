@@ -1,3 +1,4 @@
+import {parseTeamActualWorkbook} from "@/lib/team-actual-parser";
 import { selectImportWeeks } from "@/lib/import-scope";
 import { randomUUID } from "node:crypto";
 import { api, ApiError, currentUser, sameOrigin } from "@/lib/auth";
@@ -22,17 +23,18 @@ export async function POST(request: Request) {
       file.size > 12 * 1024 * 1024
     )
       throw new ApiError(400, "Choose an .xlsx workbook up to 12 MB");
-    let parsed: Pick<ImportBatch, "snapshots" | "lines" | "sheets" | "findings" | "receivables" | "receivablesKind" | "customerAnalysis">;
+    let parsed: Pick<ImportBatch, "snapshots" | "lines" | "sheets" | "findings" | "receivables" | "receivablesKind" | "customerAnalysis" | "teamActualData">;
     try {
       const bytes = Buffer.from(await file.arrayBuffer());
-      parsed = parseCustomerAnalysisWorkbook(bytes, file.name) ?? parseDashboardWorkbook(bytes, file.name);
-      if (!parsed.customerAnalysis && !parsed.snapshots.length) {
+      parsed = parseTeamActualWorkbook(bytes, file.name) ?? parseCustomerAnalysisWorkbook(bytes, file.name) ?? parseDashboardWorkbook(bytes, file.name);
+      if (!parsed.teamActualData && !parsed.customerAnalysis && !parsed.snapshots.length) {
         const ar = parseReceivablesWorkbook(bytes, file.name, { paymentEntityId: "china-payments" });
         parsed = { snapshots: [], lines: [], sheets: ar.sheets, findings: ar.findings, receivables: ar.records, receivablesKind: ar.sourceKind };
       }
     } catch {
       throw new ApiError(400, "Workbook could not be parsed");
     }
+    if (parsed.teamActualData && form.get("weeks") !== null) throw new ApiError(400,"Week selection is not available for monthly team actuals");
     parsed = selectImportWeeks(parsed, form.get("weeks"));
     const batch = await repository.createImportBatch(
       {
@@ -40,7 +42,7 @@ export async function POST(request: Request) {
         fileName: file.name,
         sourceType: "Excel",
         status: "review",
-        entityIds: parsed.customerAnalysis ? parsed.customerAnalysis.entityIds : parsed.receivables ? ["dhk", "ddc"] : [...new Set(parsed.snapshots.map((s) => s.entityId))],
+        entityIds: parsed.teamActualData ? [...new Set(parsed.teamActualData.rows.map(r=>r.entityId))] : parsed.customerAnalysis ? parsed.customerAnalysis.entityIds : parsed.receivables ? ["dhk", "ddc"] : [...new Set(parsed.snapshots.map((s) => s.entityId))],
         submittedBy: user.id,
         submittedAt: new Date().toISOString(),
         ...parsed,

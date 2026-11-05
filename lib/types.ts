@@ -1,3 +1,4 @@
+import type { TeamActualData } from "./team-actual-types";
 import type { ReceivableRecord } from "./receivables-types";
 import type { CustomerAnalysis } from "./graphics-types";
 export type Role =
@@ -86,6 +87,7 @@ export type Snapshot = {
 };
 export type Finding = { severity: "error" | "review"; message: string; code?: string; params?: Record<string, string | number> };
 export type ImportBatch = {
+  teamActualData?: TeamActualData;
   customerAnalysis?: CustomerAnalysis;
   receivables?: ReceivableRecord[];
   receivablesKind?: "aging" | "payments";
@@ -112,6 +114,7 @@ export type AuditEvent = {
   subject: string;
 };
 export type Store = {
+  teamActualData?: TeamActualData;
   retainedTeamSource?: { snapshots: Snapshot[]; lines: OrderBookLine[]; retainedAt: string };
   customerAnalyses?: CustomerAnalysis[];
   receivables?: ReceivableRecord[];

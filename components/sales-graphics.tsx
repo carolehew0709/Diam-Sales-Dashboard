@@ -1,4 +1,5 @@
 "use client";
+import {TeamActualGraphics} from "./team-actual-graphics";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import {
@@ -278,6 +279,7 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
     .filter(({ index }) => teamRows.some((row) => row.monthly[index] !== 0));
   return (
     <div ref={root} className="team-contribution-graphic">
+      <TeamActualGraphics data={data} />
       <GraphicCard
         className="team-monthly-graphic-card"
         title={trendTitle}

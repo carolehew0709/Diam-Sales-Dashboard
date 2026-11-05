@@ -656,5 +656,17 @@
   "ar.noMatches": "No records match the selected filters.",
   "ar.allCustomers": "All customers",
   "ar.allGroups": "All customer groups",
-  "team.retainedSource": "Team data retained from {week}; team updates paused."
+  "team.retainedSource": "Team data retained from {week}; team updates paused.",
+  "teamActual.title": "Team actual Sales · monthly & cumulative",
+  "teamActual.budgetTitle": "Team annual budget & sales attainment",
+  "teamActual.sales": "Actual Sales",
+  "teamActual.cumulative": "Cumulative actual Sales",
+  "teamActual.budget": "Team Annual Budget",
+  "teamActual.attainment": "Sales / Team Annual Budget",
+  "teamActual.period": "Actual Sales through {year}-{month}",
+  "teamActual.rule": "Independent monthly team source (DEHK/DDC). EUR converted to kEUR; DDC Group excluded. Team budgets follow this workbook allocation and do not replace approved Entity budgets. Blank budget allocations contribute no additional budget; no monthly budget or future actuals are estimated. Weekly Prospect remains separate. Other dashboard charts retain their weekly Prospect source.",
+  "teamActual.unavailable": "Team actuals unavailable for this year or selected Customer. This source has Bill-to customers, without the weekly source brand-column allocation. No values are inferred.",
+  "teamActual.importSummary": "Team actuals · {year}-{month} · {count} detail rows · EUR → kEUR · replaces only the monthly team dataset and name mapping; weekly data and Entity budgets stay unchanged.",
+  "teamActual.sectionTitle": "Sales team · Sales, budgets & Prospect",
+  "teamActual.sectionKicker": "Actual Sales & separate weekly Prospect · kEUR"
 }

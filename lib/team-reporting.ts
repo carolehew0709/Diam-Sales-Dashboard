@@ -1,3 +1,4 @@
+import { teamNamesState } from "./team-actuals";
 import { reportingState } from "./intercompany";
 import { salesTeamState, teamName, teamOrderbookSummary } from "./sales-teams";
 import { entities, matchesRegion } from "./entities";
@@ -14,6 +15,7 @@ export function retainTeamSource(state: Store, at: string) {
   };
 }
 export function teamReportingState(state: Store, filters: Filters): Store {
+  state = teamNamesState(state);
   if (
     !state.retainedTeamSource ||
     !filters.salesTeam ||
@@ -27,6 +29,7 @@ export function teamReportingState(state: Store, filters: Filters): Store {
   };
 }
 export function retainedTeamView(state: Store, user: User, filters: Filters) {
+  state = teamNamesState(state);
   const retained = state.retainedTeamSource;
   if (!retained) return null;
   const allowed = entities.filter(

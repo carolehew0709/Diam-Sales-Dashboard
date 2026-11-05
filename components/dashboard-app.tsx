@@ -650,8 +650,8 @@ const DashboardView = memo(function DashboardView({
           >
             <div className="graphics-section-heading">
               <div>
-                <p className="panel-kicker">{tr("graphics.obKicker")}</p>
-                <h2 id="orderbook-graphics-title">{tr("graphics.obTitle")}</h2>
+                <p className="panel-kicker">{tr(data.graphics.teamActuals ? "teamActual.sectionKicker" : "graphics.obKicker")}</p>
+                <h2 id="orderbook-graphics-title">{tr(data.graphics.teamActuals ? "teamActual.sectionTitle" : "graphics.obTitle")}</h2>
               </div>
             </div>
               <TeamContributionGraphic

@@ -163,3 +163,7 @@ The owner's supplied customer list identifies DEHK source column **E**, stored a
 ## Owner presentation decision 2026-10-26
 
 Use Entity / Entities (实体 in Chinese) for all interface and export labels previously described as BU / Business Unit. Keep internal entity IDs, `bu` API/query fields and original workbook/sheet evidence unchanged.
+
+## Owner team actuals decision 2026-11-05
+
+The separate monthly team workbook supplies actual Sales and team annual budget allocations in EUR. Use its `Sheet1` SALES TEAM2 mapping for China team reporting (including the combined Panny Team) and convert once to kEUR. Team monthly/cumulative actual Sales and budget attainment are independent of the retained weekly Prospect dataset and approved Entity budgets. Apply existing Entity permissions, global team/Entity/sales-type filters and the FY2026 DDC Group exclusion. Do not infer future actuals, monthly budgets, or a join from the source Bill-to column to the weekly Customer brand column. Original weekly rows and original team names remain preserved; only reporting names are mapped. This supersedes the earlier missing-team-invoices/budget limitation only for the independently supplied monthly team module. Weekly metrics retain their existing source. See `docs/team-actuals.md` for the supported import, publication and export contract.

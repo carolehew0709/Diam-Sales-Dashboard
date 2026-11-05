@@ -127,4 +127,3 @@ Chart titles, filter descriptions, download context and workbook labels use Enti
 Native select scroll regression: global scroll padding now reserves only the fixed header. The additional sticky-filter offset applies to dashboard section anchors through scroll margins. Reserving the filter itself globally caused Chromium to scroll upward on each click/focus of a sticky native select; pointer-based browser checks confirmed repeated opens now retain scroll position. Mobile section offsets omit the non-sticky filter height.
 
 Team actual Sales and source team budgets are provided by a separate monthly dataset. The charts, Sales Team2 mapping, permissions, missing allocations and exports are defined in [team-actuals.md](team-actuals.md); weekly Prospect remains separate.
-

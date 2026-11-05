@@ -1,4 +1,4 @@
-import type { Store, Filters, User } from "./types";
+import type { Store, Filters, User, Snapshot } from "./types";
 import { entities, matchesRegion } from "./entities";
 import { canView } from "./permissions";
 /** Rename reporting copies only, preserving raw weekly and retained-source evidence. */
@@ -101,6 +101,101 @@ export function teamActualView(state: Store, user: User, filters: Filters) {
       groups.length && i < data.month
         ? groups.reduce((a, r) => a + r.monthly[i]!, 0)
         : null,
+    ),
+  };
+}
+
+/** Latest reporting copy only: never attach the October YTD to earlier weekly history. */
+export function projectTeamActuals(
+  state: Store,
+  snapshot: Snapshot,
+  team: string,
+  customer: string,
+): Snapshot {
+  const data = state.teamActualData;
+  if (
+    !data ||
+    team === "all" ||
+    customer !== "all" ||
+    snapshot.year !== data.year ||
+    !Object.values(data.mappings).includes(team) ||
+    !data.rows.some((r) => r.entityId === snapshot.entityId) ||
+    snapshot.week !==
+      Math.max(
+        ...state.snapshots
+          .filter(
+            (s) => s.entityId === snapshot.entityId && s.year === snapshot.year,
+          )
+          .map((s) => s.week),
+      )
+  )
+    return snapshot;
+  const rows = data.rows.filter(
+    (r) =>
+      r.entityId === snapshot.entityId &&
+      r.team === team &&
+      !(r.entityId === "ddc" && r.salesType === "group"),
+  );
+  const sum = (type: string, kind: "sales" | "budget", month?: number) =>
+    rows
+      .filter((r) => r.salesType === type)
+      .reduce(
+        (n, r) =>
+          n +
+          (month !== undefined
+            ? r.monthly[month]!
+            : kind === "sales"
+              ? r.ytd
+              : (r.budget ?? 0)),
+        0,
+      );
+  const turnover = {
+    external: sum("external", "sales"),
+    group: sum("group", "sales"),
+  };
+  const budget = {
+    external: sum("external", "budget"),
+    group: sum("group", "budget"),
+  };
+  const current = {
+    external: sum("external", "sales", data.month - 1),
+    group: sum("group", "sales", data.month - 1),
+  };
+  return {
+    ...snapshot,
+    month: data.month,
+    turnover,
+    monthTurnover: current,
+    monthEstimate: current,
+    annualBudget: budget.external + budget.group,
+    monthlySales: {
+      external: Array.from({ length: 12 }, (_, i) =>
+        i < data.month ? sum("external", "sales", i) : null,
+      ),
+      group: Array.from({ length: 12 }, (_, i) =>
+        i < data.month ? sum("group", "sales", i) : null,
+      ),
+    },
+    teamActualSource: {
+      year: data.year,
+      month: data.month,
+      week: data.reportingWeek,
+      sourceFile: data.sourceFile,
+      sourceSheet: data.sourceSheet,
+      budget,
+    },
+    sourceCells: {
+      ...snapshot.sourceCells,
+      teamActuals:
+        data.sourceFile +
+        " · " +
+        data.sourceSheet +
+        " · Sales/Team Annual Budget · EUR converted to kEUR",
+    },
+    findings: snapshot.findings.filter(
+      (f) =>
+        f !==
+        "Team invoices and budget not supplied; only team orderbook is available",
     ),
   };
 }

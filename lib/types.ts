@@ -50,6 +50,7 @@ export type OrderBookLine = {
   sourceRow: number;
 };
 export type Snapshot = {
+  teamActualSource?: {year:number;month:number;week?:number;sourceFile:string;sourceSheet:string;budget:Split};
   teamScope?: boolean;
   entityId: string;
   year: number;

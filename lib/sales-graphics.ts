@@ -42,6 +42,8 @@ export function salesGraphicSeries(
     const snapshots = state.snapshots.filter(
       (s) => s.entityId === entity.id && s.year === filters.year,
     );
+    const actual = [...snapshots].sort((a,b)=>b.week-a.week).find(s=>s.teamActualSource?.year===filters.year);
+    if(actual){const amounts=Array.from({length:12},(_,i)=>i<actual.teamActualSource!.month ? filters.salesType==='all'?complete([actual.monthlySales.external[i],actual.monthlySales.group[i]]):actual.monthlySales[filters.salesType][i] : null);return {id:entity.id,name:entity.code,points:amounts.map((monthly,i)=>({month:i+1,monthly,ytd:monthly===null?null:complete(amounts.slice(0,i+1)),week:actual.teamActualSource!.week??null,sourceFile:actual.teamActualSource!.sourceFile,sourceSheet:actual.teamActualSource!.sourceSheet}))};}
     const byMonth = Array.from(
       { length: 12 },
       (_, i) =>

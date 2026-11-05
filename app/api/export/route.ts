@@ -72,6 +72,7 @@ export async function GET(request: Request) {
         "Source week",
         "Source status",
       ],
+      ...(d.graphics.teamKpiSource ? [[translate("en","teamKpi.scope",d.graphics.teamKpiSource)]] : []),
       ...d.rows.map((r) => [
         r.entity.code,
         r.metrics.budget,
@@ -83,7 +84,7 @@ export async function GET(request: Request) {
         r.metrics.coverage,
         r.metrics.gap,
         r.metrics.remaining,
-        r.snapshot?.week ?? null,
+        d.graphics.teamKpiSource ? r.snapshot?.teamActualSource?.week ?? r.snapshot?.week ?? null : r.snapshot?.week ?? null,
         r.snapshot ? "Review" : "Missing",
       ]),
       [
@@ -140,8 +141,8 @@ export async function GET(request: Request) {
           s.orderbook.external,
           s.orderbook.group,
           s.prospect,
-          s.sourceFile,
-          s.sourceSheet,
+          s.teamActualSource ? `${s.teamActualSource.sourceFile} / Prospect: ${s.sourceFile}` : s.sourceFile,
+          s.teamActualSource ? `Actual W${s.teamActualSource.week??"—"} · ${s.teamActualSource.sourceSheet} / Prospect W${s.week} · ${s.sourceSheet}` : s.sourceSheet,
         ]),
     ]);
     add(translate("en", "export.prospectDetail"), [

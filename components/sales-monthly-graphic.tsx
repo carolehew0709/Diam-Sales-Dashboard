@@ -49,29 +49,32 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
     data.filters.year,
     selectedRows.map((r) => r.snapshot),
   );
+  const actualScoped = !!data.graphics.teamKpiSource && selectedRows.length>0 && selectedRows.every(r=>r.snapshot?.teamActualSource);
+  const actualMonthly = actualScoped ? months.map((_,i)=> selectedRows.length && selectedRows.every(r=>r.snapshot!.monthlySales.external[i]!==null&&r.snapshot!.monthlySales.group[i]!==null) ? selectedRows.reduce((n,r)=>n+(data.filters.salesType==='all'?r.snapshot!.monthlySales.external[i]!+r.snapshot!.monthlySales.group[i]!:r.snapshot!.monthlySales[data.filters.salesType][i]!),0):null) : undefined;
   const view = monthlyPerformanceSeries(
     metrics,
     data.filters.scenario,
     data.filters.customer && data.filters.customer !== "all" ? "selection" : data.filters.salesTeam,
+    actualMonthly,
   );
   const teamScoped =
-    (!!data.filters.salesTeam && data.filters.salesTeam !== "all") || (!!data.filters.customer && data.filters.customer !== "all");
+    !actualScoped && ((!!data.filters.salesTeam && data.filters.salesTeam !== "all") || (!!data.filters.customer && data.filters.customer !== "all"));
   const monthlyLabel = tr(
-    teamScoped
+    actualScoped && data.filters.scenario === "Sales" ? "teamActual.sales" : teamScoped
       ? "graphics.monthlyScopedOB"
       : view.key === "scenario"
         ? "graphics.monthlyScenario"
         : "graphics.monthlyConfirmed",
   );
   const cumulativeLabel = tr(
-    teamScoped
+    actualScoped && data.filters.scenario === "Sales" ? "teamActual.cumulative" : teamScoped
       ? "graphics.cumulativeScopedOB"
       : view.key === "scenario"
         ? "graphics.cumulativeScenario"
         : "graphics.cumulativeConfirmed",
   );
   const week =
-    [...new Set(selectedRows.flatMap((row) => row.snapshot ? [row.snapshot.week] : []))].sort((a, b) => a - b).map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
+    [...new Set(selectedRows.flatMap((row) => row.snapshot ? [actualScoped ? row.snapshot.teamActualSource?.week ?? row.snapshot.week : row.snapshot.week] : []))].sort((a, b) => a - b).map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
   const filters = comparisonRow ? { ...data.filters, bu: comparisonRow.entity.businessUnit, entity: comparisonRow.entity.id } : data.filters;
   const context = `${tr("graphics.weekly", { week })} · ${filters.year} · ${display(filters.region)} · ${filters.bu === "all" ? tr("filters.allBU") : filters.bu} · ${filters.salesType === "all" ? tr("filters.allSales") : display(filters.salesType)} · ${teamScoped ? "" : `${display(filters.scenario)} · `}${filters.salesTeam === "all" || !filters.salesTeam ? tr("team.all") : filters.salesTeam} · ${filters.customer && filters.customer !== "all" ? filters.customer + " · " : ""}kEUR`;
   const sources = [
@@ -83,7 +86,7 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
     selectedRows
       .map(
         (r) =>
-          `${r.entity.code}: ${r.snapshot ? `W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}` : "—"}`,
+          `${r.entity.code}: ${r.snapshot?.teamActualSource ? `Actual W${r.snapshot.teamActualSource.week??"—"} · ${r.snapshot.teamActualSource.sourceFile} · ${r.snapshot.teamActualSource.sourceSheet}; Prospect ` : ""}${r.snapshot ? `W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}` : "—"}`,
       )
       .join("; ");
   const scopeName =
@@ -106,7 +109,7 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
             : "graphics.partialPlanning",
         )
       : "";
-  const note = `${teamScoped ? tr("graphics.scopedOBRule") : `${tr("graphics.planningRule")} ${tr("graphics.periodColorsRule")}`} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
+  const note = `${actualScoped ? tr("teamKpi.scope",data.graphics.teamKpiSource!) : ""} ${teamScoped ? tr("graphics.scopedOBRule") : `${tr("graphics.planningRule")} ${tr("graphics.periodColorsRule")}`} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
   const exact = (v: number | null) =>
     v === null
       ? "—"
@@ -168,7 +171,7 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
           points={view.points.map((p, i) => ({
             ...p,
             label: display(months[i]),
-            estimated: openMonth === null ? null : i >= openMonth,
+            estimated: actualScoped && data.filters.scenario === "Sales" ? i >= data.graphics.teamKpiSource!.month : openMonth === null ? null : i >= openMonth,
           }))}
           monthlyLabel={monthlyLabel}
           ytdLabel={cumulativeLabel}

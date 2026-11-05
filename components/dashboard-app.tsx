@@ -210,7 +210,7 @@ const DashboardView = memo(function DashboardView({
   const totalRows = [
     {
       id: filters.region,
-      name: tr("strip.total", { region: display(filters.region) }),
+      name: tr(data.graphics.teamKpiSource ? "teamKpi.subtotal" : "strip.total", { region: display(filters.region) }),
       description: tr("notes.sources", {
         count: data.regionRows.filter((r) => r.snapshot).length,
         total: data.regionRows.length,
@@ -222,7 +222,7 @@ const DashboardView = memo(function DashboardView({
       name: r.entity.code,
       description: r.entity.description,
       metrics: r.metrics,
-      week: r.snapshot?.week,
+      week: data.graphics.teamKpiSource ? r.snapshot?.teamActualSource?.week ?? r.snapshot?.week : r.snapshot?.week,
     })),
   ];
   const matrixRows =
@@ -230,9 +230,9 @@ const DashboardView = memo(function DashboardView({
       ? data.rows.map((r) => ({ name: r.entity.code, metrics: r.metrics }))
       : data.buGroups;
   const dimensionScoped = (!!filters.salesTeam && filters.salesTeam !== "all") || (!!filters.customer && filters.customer !== "all");
-  const monthlyView = monthlyPerformanceSeries(t, filters.scenario, dimensionScoped ? "selection" : "all");
+  const monthlyView = monthlyPerformanceSeries(t, filters.scenario, dimensionScoped ? "selection" : "all", data.graphics.teamKpiSource ? data.graphics.teamActuals?.monthly : undefined);
   const monthlyMatrixKey = monthlyView.key;
-  const monthlyMatrixLabel = dimensionScoped ? tr("metric.ob") : tr(
+  const monthlyMatrixLabel = data.graphics.teamKpiSource ? (filters.scenario === "Sales" ? tr("teamActual.sales") : tr("metric.baseOB")) : dimensionScoped ? tr("metric.ob") : tr(
     monthlyMatrixKey === "scenario" ? "chart.salesOBProspect" : "chart.salesOB",
   );
   const weeks = [
@@ -355,7 +355,7 @@ const DashboardView = memo(function DashboardView({
       </section>
       <DashboardFilters data={data} />
       <>
-          {dimensionScoped && <p className="apac-notice">{tr("filters.dimensionLimitation")}</p>}
+          {dimensionScoped && <p className="apac-notice">{tr(data.graphics.teamKpiSource ? "teamKpi.scope" : "filters.dimensionLimitation",data.graphics.teamKpiSource ?? {})}</p>}
           {data.regionRows.length > 0 && (
             <section
               className="china-strip"
@@ -377,7 +377,7 @@ const DashboardView = memo(function DashboardView({
                 }
               >
                 <small>
-                  {tr("strip.total", { region: display(filters.region) })}
+                  {tr(data.graphics.teamKpiSource ? "teamKpi.subtotal" : "strip.total", { region: display(filters.region) })}
                   {filters.year}
                 </small>
                 <strong>
@@ -433,7 +433,7 @@ const DashboardView = memo(function DashboardView({
                         </>
                       )}
                       {r.snapshot
-                        ? `W${r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`
+                        ? `W${data.graphics.teamKpiSource ? r.snapshot.teamActualSource?.week ?? r.snapshot.week : r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`
                         : tr("china.pending")}
                     </span>
                   </button>
@@ -449,7 +449,7 @@ const DashboardView = memo(function DashboardView({
             id="analysis"
           >
             <MetricCard
-              label={tr("metric.budget")}
+              label={tr(data.graphics.teamKpiSource ? "teamActual.budget" : "metric.budget")}
               value={formatK(t.budget)}
               period={
                 t.budget !== null && !t.budgetComplete
@@ -461,7 +461,7 @@ const DashboardView = memo(function DashboardView({
                   : undefined
               }
               note={
-                t.budget === 0 && !t.budgetComplete
+                data.graphics.teamKpiSource ? tr("teamKpi.budgetNote",data.graphics.teamKpiSource) : t.budget === 0 && !t.budgetComplete
                   ? tr("notes.pendingBudget")
                   : tr("notes.budget", {
                       year: filters.year,
@@ -538,7 +538,7 @@ const DashboardView = memo(function DashboardView({
               unit="FY"
               value={display(percent(t.coverage))}
               note={
-                tr("notes.coverage", { year: filters.year }) +
+                tr(data.graphics.teamKpiSource ? "teamKpi.coverageNote" : "notes.coverage", { year: filters.year }) +
                 (t.coverage !== null && !t.budgetComplete
                   ? tr("notes.provisionalBudgetCalculation")
                   : "")
@@ -557,7 +557,7 @@ const DashboardView = memo(function DashboardView({
               period={tr("metric.byYear")}
               periodDetail={String(filters.year)}
               value={formatK(t.gap)}
-              note={tr("notes.gap", {
+              note={tr(data.graphics.teamKpiSource ? "teamKpi.gapNote" : "notes.gap", {
                 year: filters.year,
                 note:
                   t.gap === null

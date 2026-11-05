@@ -44,7 +44,7 @@ export const SalesGraphics = memo(function SalesGraphics({
       data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
     ),
   ].join("; ");
-  const note = `${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
+  const note = `${data.graphics.teamKpiSource ? tr("teamKpi.scope",data.graphics.teamKpiSource) : ""} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
   const exact = (v: number | null) =>
     v === null
       ? "—"

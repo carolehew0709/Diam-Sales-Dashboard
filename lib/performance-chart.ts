@@ -5,7 +5,9 @@ import { reportingMonthClosed, type ReportingPeriod } from "./reporting-period";
 export type PerformanceSeriesKey = "base" | "scenario";
 
 /** Sum the selected snapshot's team delivery allocations, never weekly snapshots. */
-export function teamMonthlyPerformance(teams: readonly { monthly: Amount[] }[]) {
+export function teamMonthlyPerformance(
+  teams: readonly { monthly: Amount[] }[],
+) {
   const monthly = Array.from({ length: 12 }, (_, index): Amount =>
     teams.length && teams.every((team) => team.monthly[index] != null)
       ? teams.reduce((sum, team) => sum + team.monthly[index]!, 0)
@@ -14,7 +16,9 @@ export function teamMonthlyPerformance(teams: readonly { monthly: Amount[] }[]) 
   return monthly.map((value, index) => ({
     monthly: value,
     ytd: monthly.slice(0, index + 1).every((amount) => amount !== null)
-      ? monthly.slice(0, index + 1).reduce<number>((sum, amount) => sum + amount!, 0)
+      ? monthly
+          .slice(0, index + 1)
+          .reduce<number>((sum, amount) => sum + amount!, 0)
       : null,
   }));
 }
@@ -42,7 +46,9 @@ export function firstOpenMonth(
       12,
       ...reports.map(
         (s) =>
-          (s!.year - year) * 12 + s!.month - 1 +
+          (s!.year - year) * 12 +
+          s!.month -
+          1 +
           (reportingMonthClosed(s!) ? 1 : 0),
       ),
     ),
@@ -54,8 +60,28 @@ export function monthlyPerformanceSeries(
   metrics: Pick<Metric, "monthly" | "cumulative">,
   scenario: Scenario,
   salesTeam = "all",
+  actualMonthly?: Amount[],
 ) {
   const teamScoped = salesTeam !== "all";
+  if (actualMonthly)
+    return {
+      key: "base" as const,
+      partial: false,
+      points: metrics.monthly.map((m, i) => ({
+        label: m.label,
+        monthly: scenario === "Sales" ? actualMonthly[i] : m.base,
+        ytd:
+          scenario === "Sales"
+            ? actualMonthly[i] === null
+              ? null
+              : actualMonthly.slice(0, i + 1).every((v) => v !== null)
+                ? actualMonthly
+                    .slice(0, i + 1)
+                    .reduce<number>((a, b) => a + b!, 0)
+                : null
+            : metrics.cumulative[i].base,
+      })),
+    };
   if (teamScoped)
     return {
       key: "base" as const,

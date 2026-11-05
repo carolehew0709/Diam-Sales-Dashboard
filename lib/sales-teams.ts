@@ -1,3 +1,4 @@
+import {projectTeamActuals} from "./team-actuals";
 import type { Snapshot, Store, OrderBookLine } from "./types";
 import { keyCustomerName } from "./key-customers";
 
@@ -81,7 +82,7 @@ export function salesTeamState(state: Store, salesTeam = "all", customer = "all"
       return matching.reduce((n, line) => n + (month === undefined ? line[`total${year}`] : line[`monthly${year}`][month]!), 0);
     };
     const empty = () => Array<null>(12).fill(null);
-    return {
+    return projectTeamActuals(state, {
       ...s,
       teamScope: true,
       turnover: { external: null, group: null },
@@ -124,7 +125,7 @@ export function salesTeamState(state: Store, salesTeam = "all", customer = "all"
           customer !== "all" ? "Customer invoices and budget not supplied; only customer orderbook is available" : "Team invoices and budget not supplied; only team orderbook is available",
         ]),
       ],
-    };
+    }, salesTeam, customer);
   });
   return { ...state, snapshots, lines };
 }

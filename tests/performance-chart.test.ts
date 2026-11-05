@@ -67,6 +67,28 @@ test("current reporting month stays unfinished alongside future months", () => {
   assert.equal(firstOpenMonth(2026, [{ year: 2026, month: 12 }]), 11);
 });
 
+test("owner-confirmed China W44 closes October without changing retained W43 or other entities", () => {
+  for (const entityId of ["dhk", "ddc", "dcp"]) {
+    const report = { entityId, year: 2026, month: 10, week: 44 };
+    assert.equal(firstOpenMonth(2026, [report]), 10);
+    assert.equal(firstOpenMonth(2027, [report]), 0);
+    assert.equal(firstOpenMonth(2025, [report]), 12);
+    assert.equal(firstOpenMonth(2026, [{ ...report, week: 43 }]), 9);
+    assert.equal(firstOpenMonth(2026, [{ ...report, week: 45 }]), 9);
+    assert.equal(firstOpenMonth(2026, [{ ...report, year: 2027 }]), 12);
+    assert.equal(firstOpenMonth(2026, [{ ...report, month: 9 }]), 8);
+  }
+  assert.equal(firstOpenMonth(2026, [{ entityId: "ddi", year: 2026, month: 10, week: 44 }]), 9);
+  assert.equal(firstOpenMonth(2026, [{ year: 2026, month: 10, week: 44 }]), 9);
+});
+
+test("mixed scopes preserve the earliest unclosed month after an explicit month close", () => {
+  const china = ["dhk", "ddc", "dcp"].map((entityId) => ({ entityId, year: 2026, month: 10, week: 44 }));
+  assert.equal(firstOpenMonth(2026, china), 10);
+  assert.equal(firstOpenMonth(2026, [...china, { entityId: "ddi", year: 2026, month: 10, week: 43 }]), 9);
+  assert.equal(firstOpenMonth(2026, [...china, undefined]), null);
+});
+
 test("mixed reporting months use the earliest; future-year planning is entirely open", () => {
   const reports = [
     { year: 2026, month: 10 },

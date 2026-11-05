@@ -1,5 +1,6 @@
-import type { Amount, Scenario, Snapshot } from "./types";
+import type { Amount, Scenario } from "./types";
 import type { Metric } from "./dashboard";
+import { reportingMonthClosed, type ReportingPeriod } from "./reporting-period";
 
 export type PerformanceSeriesKey = "base" | "scenario";
 
@@ -18,10 +19,10 @@ export function teamMonthlyPerformance(teams: readonly { monthly: Amount[] }[]) 
   }));
 }
 
-/** Zero-based first unfinished month; mixed scopes use the earliest reporting period. */
+/** Zero-based first unfinished month; mixed scopes use the earliest unclosed boundary. */
 export function firstOpenMonth(
   year: number,
-  reports: (Pick<Snapshot, "year" | "month"> | undefined)[],
+  reports: (ReportingPeriod | undefined)[],
 ): number | null {
   if (
     !reports.length ||
@@ -37,7 +38,14 @@ export function firstOpenMonth(
     return null;
   return Math.max(
     0,
-    Math.min(12, ...reports.map((s) => (s!.year - year) * 12 + s!.month - 1)),
+    Math.min(
+      12,
+      ...reports.map(
+        (s) =>
+          (s!.year - year) * 12 + s!.month - 1 +
+          (reportingMonthClosed(s!) ? 1 : 0),
+      ),
+    ),
   );
 }
 

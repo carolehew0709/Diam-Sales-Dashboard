@@ -106,7 +106,7 @@ export async function GET(request: Request) {
         `Annual budget includes confirmed budgets: ${d.rows.filter(r => r.metrics.budgetComplete).map(r => r.entity.code).join(" + ") || "none"}; pending FY2027 budgets counted as 0 for provisional Coverage/Gap, not approved.`,
       ]] : []),
     ]);
-    if(d.graphics.teamActuals){ const t=d.graphics.teamActuals; add("Team actual Sales",[["Team actual Sales / 团队实际销售 · kEUR"],[`${t.reportingWeek ? `W${t.reportingWeek} · ` : ""}${t.year}-${String(t.month).padStart(2,"0")} · ${t.sourceFile} · ${t.sourceSheet}`],["Team / 团队","Sales / 实际销售","Team annual budget / 团队年度预算","Attainment / 完成率",...months,"Entities / 实体"],...t.groups.map(r=>[r.name,r.sales,r.budget,r.attainment,...r.monthly,r.entityIds.join(" / ")]),["TOTAL",t.sales,t.budget,t.attainment,...t.monthly],[translate("en",t.unavailable?"teamActual.unavailable":"teamActual.rule")]]); }
+    if(d.graphics.teamActuals){ const t=d.graphics.teamActuals; add("Team actual Sales",[["Team actual Sales / 团队实际销售 · kEUR"],[`${t.reportingWeek ? `W${t.reportingWeek} · ` : ""}${t.year}-${String(t.month).padStart(2,"0")} · ${t.sourceFile} · ${t.sourceSheet}`],["Team / 团队","Sales / 实际销售","Team annual budget / 团队年度预算","Attainment / 完成率",...months,"Entities / 实体"],...t.groups.map(r=>[r.name,r.sales,r.budget,r.attainment,...r.monthly,r.entityIds.join(" / ")]),["TOTAL",t.sales,t.budget,t.attainment,...t.monthly],[translate("en","teamActual.sourceYtd"),t.sourceSales],[translate("en","teamActual.excludedGroup"),t.excludedDdcGroup],[translate("en",t.unavailable?"teamActual.unavailable":"teamActual.rule")]]); }
     add("Weekly Review", [
       ["Entity", "Week", "Selected annual scenario (kEUR)"],
       ...d.history.flatMap((r) =>

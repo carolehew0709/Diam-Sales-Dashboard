@@ -356,6 +356,7 @@ const DashboardView = memo(function DashboardView({
       <DashboardFilters data={data} />
       <>
           {dimensionScoped && <p className="apac-notice">{tr(data.graphics.teamKpiSource ? "teamKpi.scope" : "filters.dimensionLimitation",data.graphics.teamKpiSource ?? {})}</p>}
+          {data.graphics.teamActuals?.excludedDdcGroup && data.graphics.teamActuals.sales!==null ? <p className="apac-notice">{tr("teamActual.reconciliation",{source:data.graphics.teamActuals.sourceSales!.toLocaleString(undefined,{maximumFractionDigits:3}),excluded:data.graphics.teamActuals.excludedDdcGroup.toLocaleString(undefined,{maximumFractionDigits:3}),reported:data.graphics.teamActuals.sales.toLocaleString(undefined,{maximumFractionDigits:3})})}</p> : null}
           {data.regionRows.length > 0 && (
             <section
               className="china-strip"

@@ -41,11 +41,13 @@ export function teamActualView(state: Store, user: User, filters: Filters) {
         (filters.bu === "DHK" && e.id === "dhk")) &&
       (filters.entity === "all" || filters.entity === e.id),
   );
-  const scoped = data.rows.filter(
+  const rawScoped = data.rows.filter(
     (r) =>
       allowed.some((e) => e.id === r.entityId) &&
-      !(r.entityId === "ddc" && r.salesType === "group") &&
       (filters.salesType === "all" || filters.salesType === r.salesType),
+  );
+  const scoped = rawScoped.filter(
+    (r) => !(r.entityId === "ddc" && r.salesType === "group"),
   );
   if (!allowed.some((e) => ["dhk", "ddc"].includes(e.id))) return null;
   const names = [...new Set(scoped.map((r) => r.team))].sort();
@@ -63,6 +65,22 @@ export function teamActualView(state: Store, user: User, filters: Filters) {
           filters.salesTeam === "all" ||
           r.team === filters.salesTeam,
       );
+  const rawSelected = unavailable
+    ? []
+    : rawScoped.filter(
+        (r) =>
+          !filters.salesTeam ||
+          filters.salesTeam === "all" ||
+          r.team === filters.salesTeam,
+      );
+  const sourceSales = rawSelected.length
+    ? rawSelected.reduce((n, r) => n + r.ytd, 0)
+    : null;
+  const excludedDdcGroup = unavailable
+    ? null
+    : rawSelected
+        .filter((r) => r.entityId === "ddc" && r.salesType === "group")
+        .reduce((n, r) => n + r.ytd, 0);
   const groups = [...new Set(rows.map((r) => r.team))]
     .map((name) => {
       const selected = rows.filter((r) => r.team === name),
@@ -85,6 +103,8 @@ export function teamActualView(state: Store, user: User, filters: Filters) {
   const sales = groups.length ? groups.reduce((a, r) => a + r.sales, 0) : null,
     budget = groups.length ? groups.reduce((a, r) => a + r.budget, 0) : null;
   return {
+    sourceSales,
+    excludedDdcGroup,
     reportingWeek: data.reportingWeek,
     year: data.year,
     month: data.month,

@@ -1,3 +1,4 @@
+import {orderDimensionColumns} from "./order-dimensions";
 import { applyApprovedBudget } from "./annual-budgets";
 import * as XLSX from "xlsx";
 import { resolveEntity } from "./entities";
@@ -163,6 +164,8 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
       return matches.filter(m => Number(m[1]) === firstOrderRow).map(m => Number(m[2]));
     });
     const lastOrderRow = detailEnds.length ? Math.max(...detailEnds) : rows.length + range.s.r;
+    const dimensions=orderDimensionColumns(ws,range.s.r+22,range.s.c);
+    s.sourceCells.teamNames = `${XLSX.utils.encode_col(dimensions.team)} / source product ${XLSX.utils.encode_col(dimensions.product)}`;
     s.sourceCells.orderDetail = `${cell(23, 1)}:${XLSX.utils.encode_cell({ r: lastOrderRow - 1, c: range.s.c + 34 })}`;
     if (entity.id === "ddi") {
       const movementDifference = rows.find(r => text(r[1]).toLowerCase() === "difference");
@@ -184,11 +187,11 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
         entityId: entity.id,
         year,
         week,
-        product: text(r[1]),
+        product: text(ws[XLSX.utils.encode_cell({r:i+range.s.r,c:dimensions.product})]?.v),
         customer: text(r[3]),
         customerType,
         dgc: text(r[5]),
-        salesTeam: text(r[0]).toUpperCase() === "X" ? "" : text(r[0]).replace(/\s+/g, " "),
+        salesTeam: text(ws[XLSX.utils.encode_cell({r:i+range.s.r,c:dimensions.team})]?.v).toUpperCase() === "X" ? "" : text(ws[XLSX.utils.encode_cell({r:i+range.s.r,c:dimensions.team})]?.v).replace(/\s+/g, " "),
         quantity: number(r[4]),
         total2026: number(r[7]) ?? 0,
         total2027: number(r[8]) ?? 0,

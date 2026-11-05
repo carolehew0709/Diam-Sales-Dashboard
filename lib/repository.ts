@@ -1,4 +1,4 @@
-import { retainTeamSource } from "./team-reporting";
+import { retainTeamSource, publishTeamReference } from "./team-reporting";
 import { randomUUID } from "node:crypto";
 import { storage, storageStatus } from "./storage";
 import { entities } from "./entities";
@@ -84,6 +84,7 @@ export const repository = {
       state.lines = state.lines
         .filter((l) => !keys.has(`${l.entityId}:${l.year}:${l.week}`))
         .concat(batch.lines);
+      publishTeamReference(state,batch,now);
       batch.status = "published";
       batch.publishedBy = user.id;
       batch.publishedAt = now;

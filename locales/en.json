@@ -673,5 +673,11 @@
   "teamKpi.budgetNote": "Team source Annual Budget · {year} · W{week}; approved Entity budgets remain unchanged.",
   "teamKpi.subtotal": "{region} · Team subtotal · ",
   "teamKpi.coverageNote": "Annual Sales + retained Prospect / Team Annual Budget {year}; excludes additional P1.",
-  "teamKpi.gapNote": "Annual Sales + retained Prospect less Team Annual Budget {year}; positive above budget, negative below.{note}"
+  "teamKpi.gapNote": "Annual Sales + retained Prospect less Team Annual Budget {year}; positive above budget, negative below.{note}",
+  "team.reviewUpload": "Use this reviewed batch for team Prospect too (weekly sales workbooks only). Later imports keep the pinned source unless explicitly selected again.",
+  "team.reviewPublish": "Publishing this batch also updates team Prospect for its reviewed Entity / year / weeks. Actual team Sales and budgets remain separate.",
+  "team.reviewedSource": "Team Prospect uses reviewed source {week}.",
+  "teamActual.reconciliation": "Excel source YTD {source} − excluded DDC Group {excluded} = reported YTD {reported} kEUR.",
+  "teamActual.sourceYtd": "Excel source YTD (kEUR)",
+  "teamActual.excludedGroup": "Excluded DDC Group YTD (kEUR)"
 }

@@ -55,6 +55,7 @@ export function ImportPortal({
     [ack, setAck] = useState(false);
   const [historyLoading, setHistoryLoading] = useState(true);
   const [historyError, setHistoryError] = useState(false);
+  const [updateTeams,setUpdateTeams]=useState(false);
   const [fileName, setFileName] = useState("");
   const [operation, setOperation] = useState<"analyze" | "publish">("analyze");
   const requestRunning = useRef(false);
@@ -164,6 +165,7 @@ export function ImportPortal({
           <h2>{tr("import.upload")}</h2>
           <p className="muted">{tr("import.workbookNote")}</p>
           <p className="muted">{tr("graphics.importNote")}</p>
+          <label><input type="checkbox" checked={updateTeams} onChange={e=>setUpdateTeams(e.target.checked)} disabled={busy}/>{tr("team.reviewUpload")}</label>
           <label className="upload-zone">
             {tr("import.choose")}
             <input
@@ -176,6 +178,7 @@ export function ImportPortal({
                   setFileName(f.name);
                   const body = new FormData();
                   body.append("file", f);
+                  if(updateTeams)body.append("teamReporting","selected");
                   void request("/api/import/analyze", { method: "POST", body });
                 }
                 e.target.value = "";
@@ -398,6 +401,7 @@ export function ImportPortal({
         >
           <p className="panel-kicker">{tr("import.reviewStep")}</p>
           <h2>{review.fileName}</h2>
+          {review.updateTeamReporting && <p>{tr("team.reviewPublish")}</p>}
           {!review.customerAnalysis && !review.teamActualData && (
             <p>
               {tr("import.summary", {

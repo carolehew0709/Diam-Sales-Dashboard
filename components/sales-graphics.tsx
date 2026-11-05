@@ -247,7 +247,7 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
     (data.graphics.teamSource?.weeks ?? data.weeks).map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
   const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${team === "all" ? tr("team.all") : team === "__unassigned__" ? tr("team.unassigned") : team} · ${data.filters.customer && data.filters.customer !== "all" ? data.filters.customer + " · " : ""}kEUR`;
   const sources = data.graphics.teamSource?.files.join("; ") ?? [...new Set(data.rows.flatMap(r=>r.snapshot ? [r.snapshot.sourceFile] : []))].join("; ");
-  const note = `${data.graphics.teamSource ? tr("team.retainedSource", {week:(data.graphics.teamSource.weeks.map(w=>`W${w}`).join(" / "))}) + " " : ""}${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
+  const note = `${data.graphics.teamSource ? tr(data.graphics.teamSource.reviewed ? "team.reviewedSource" : "team.retainedSource", {week:(data.graphics.teamSource.weeks.map(w=>`W${w}`).join(" / "))}) + " " : ""}${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
   const exact = (v: number | null) =>
     v === null
       ? "—"

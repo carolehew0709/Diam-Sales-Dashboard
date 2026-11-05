@@ -14,7 +14,8 @@ export function TeamActualGraphics({ data }: { data: Dashboard }) {
       ? "—"
       : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
   const context = `${source.reportingWeek ? `W${source.reportingWeek} · ` : ""}${tr("teamActual.period", { year: source.year, month: String(source.month).padStart(2, "0") })} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" ? tr("team.all") : data.filters.salesTeam} · ${tr("teamActual.sales")} ${exact(source.sales)} / ${tr("teamActual.budget")} ${exact(source.budget)} kEUR`;
-  const note = `${tr(source.unavailable ? "teamActual.unavailable" : "teamActual.rule")} ${source.sourceFile} · ${source.sourceSheet}`;
+  const reconciliation=source.excludedDdcGroup && source.sales!==null ? tr("teamActual.reconciliation",{source:source.sourceSales!.toLocaleString(undefined,{maximumFractionDigits:3}),excluded:source.excludedDdcGroup.toLocaleString(undefined,{maximumFractionDigits:3}),reported:source.sales.toLocaleString(undefined,{maximumFractionDigits:3})}):"";
+  const note = `${reconciliation} ${tr(source.unavailable ? "teamActual.unavailable" : "teamActual.rule")} ${source.sourceFile} · ${source.sourceSheet}`;
   const points = source.monthly.map((monthly, i) => ({
     label: display(months[i]),
     monthly,

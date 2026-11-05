@@ -673,5 +673,11 @@
   "teamKpi.budgetNote": "团队来源年度预算 · {year} · W{week}；实体正式预算不变。",
   "teamKpi.subtotal": "{region} · 团队小计 · ",
   "teamKpi.coverageNote": "年度 Sales + 保留的 Prospect / {year} 团队年度预算，不含额外 P1。",
-  "teamKpi.gapNote": "年度 Sales + 保留的 Prospect 减去 {year} 团队年度预算；正数为超预算，负数为差额。{note}"
+  "teamKpi.gapNote": "年度 Sales + 保留的 Prospect 减去 {year} 团队年度预算；正数为超预算，负数为差额。{note}",
+  "team.reviewUpload": "同时采用本批审核周次的团队 Prospect（仅销售周报）；后续导入仍需明确勾选才更新团队来源。",
+  "team.reviewPublish": "发布本批次时，同时更新对应实体／年份／周次的团队 Prospect，团队实际 Sales 和预算保持独立。",
+  "team.reviewedSource": "团队 Prospect 采用已审核的 {week} 来源。",
+  "teamActual.reconciliation": "Excel 原始 YTD {source} − 排除的 DDC Group {excluded} = 报表 YTD {reported} kEUR。",
+  "teamActual.sourceYtd": "Excel 原始 YTD（kEUR）",
+  "teamActual.excludedGroup": "排除的 DDC Group YTD（kEUR）"
 }

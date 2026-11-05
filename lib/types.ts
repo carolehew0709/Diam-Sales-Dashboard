@@ -88,6 +88,7 @@ export type Snapshot = {
 };
 export type Finding = { severity: "error" | "review"; message: string; code?: string; params?: Record<string, string | number> };
 export type ImportBatch = {
+  updateTeamReporting?: boolean;
   teamActualData?: TeamActualData;
   customerAnalysis?: CustomerAnalysis;
   receivables?: ReceivableRecord[];
@@ -116,7 +117,7 @@ export type AuditEvent = {
 };
 export type Store = {
   teamActualData?: TeamActualData;
-  retainedTeamSource?: { snapshots: Snapshot[]; lines: OrderBookLine[]; retainedAt: string };
+  retainedTeamSource?: { snapshots: Snapshot[]; lines: OrderBookLine[]; retainedAt: string; reviewedScopes?: string[]; reviewedAt?: string };
   customerAnalyses?: CustomerAnalysis[];
   receivables?: ReceivableRecord[];
   receivablesUpdatedAt?: string;

@@ -36,9 +36,13 @@ export async function POST(request: Request) {
     }
     if (parsed.teamActualData && form.get("weeks") !== null) throw new ApiError(400,"Week selection is not available for monthly team actuals");
     parsed = selectImportWeeks(parsed, form.get("weeks"));
+    const teamSelection=form.get('teamReporting');
+    if(teamSelection==='selected' && parsed.lines.some(l=>l.salesTeam && (/^[-+]?\d+(\.\d+)?$/.test(l.salesTeam) || /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)$/i.test(l.salesTeam))))throw new ApiError(400,'Team column contains amounts or month headers; review the workbook layout before publishing');
+    if(teamSelection!==null && (teamSelection!=='selected'||!parsed.snapshots.length||parsed.customerAnalysis||parsed.receivables||parsed.teamActualData))throw new ApiError(400,'Team Prospect review requires weekly sales data');
     const batch = await repository.createImportBatch(
       {
         id: randomUUID(),
+        updateTeamReporting:teamSelection==='selected',
         fileName: file.name,
         sourceType: "Excel",
         status: "review",

@@ -3,7 +3,7 @@ import { reportingState } from "./intercompany";
 import { salesTeamState, teamName, teamOrderbookSummary } from "./sales-teams";
 import { entities, matchesRegion } from "./entities";
 import { canView } from "./permissions";
-import type { Store, Filters, User } from "./types";
+import type { Store, Filters, User, ImportBatch } from "./types";
 
 /** Owner 2026-11-02: retain the last published team dataset until explicitly resumed. */
 export function retainTeamSource(state: Store, at: string) {
@@ -73,6 +73,13 @@ export function retainedTeamView(state: Store, user: User, filters: Filters) {
     teams: teamOrderbookSummary(scoped.lines, filters.year),
     names: [...new Set(latestLines.map((l) => teamName(l.salesTeam)))].sort(),
     source: {
+      reviewed:
+        snapshots.length > 0 &&
+        snapshots.every((s) =>
+          retained.reviewedScopes?.includes(
+            `${s.entityId}:${s.year}:${s.week}`,
+          ),
+        ),
       weeks: [...new Set(snapshots.map((s) => s.week))].sort((a, b) => a - b),
       files: [...new Set(snapshots.map((s) => s.sourceFile))],
       periods: snapshots.map((s) => ({
@@ -83,4 +90,35 @@ export function retainedTeamView(state: Store, user: User, filters: Filters) {
       })),
     },
   };
+}
+
+/** Explicit reviewed sales scopes advance the pinned team reference; later imports remain paused. */
+export function publishTeamReference(
+  state: Store,
+  batch: ImportBatch,
+  at: string,
+) {
+  if (!batch.updateTeamReporting) return;
+  if (
+    !batch.snapshots.length ||
+    batch.customerAnalysis ||
+    batch.receivables ||
+    batch.teamActualData
+  )
+    throw new Error("Team reference requires reviewed weekly sales scopes");
+  retainTeamSource(state, at);
+  const retained = state.retainedTeamSource!,
+    key = (s: { entityId: string; year: number; week: number }) =>
+      s.entityId + ":" + s.year + ":" + s.week,
+    keys = new Set(batch.snapshots.map(key));
+  retained.snapshots = retained.snapshots
+    .filter((s) => !keys.has(key(s)))
+    .concat(structuredClone(batch.snapshots));
+  retained.lines = retained.lines
+    .filter((l) => !keys.has(key(l)))
+    .concat(structuredClone(batch.lines));
+  retained.reviewedScopes = [
+    ...new Set([...(retained.reviewedScopes ?? []), ...keys]),
+  ];
+  retained.reviewedAt = at;
 }

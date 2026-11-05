@@ -64,6 +64,12 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
   if (!state) throw new Error("DashboardFilterState is required");
   const { filters: requestedFilters, setFilters, pending } = state;
   const { tr, display } = useI18n();
+  // Keep the explicit team scope visible even when this Entity has no matching rows.
+  const selectedTeam = requestedFilters.salesTeam ?? "all";
+  const salesTeams =
+    selectedTeam !== "all" && !data.salesTeams.includes(selectedTeam)
+      ? [selectedTeam, ...data.salesTeams]
+      : data.salesTeams;
   const t = data.totals;
   const filterBar = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -126,7 +132,6 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
               ...requestedFilters,
               bu: e.target.value,
               entity: "all",
-              salesTeam: "all",
               customer: "all",
             })
           }
@@ -157,7 +162,7 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
           }
         >
           <option value="all">{tr("team.all")}</option>
-          {data.salesTeams.map((team) => (
+          {salesTeams.map((team) => (
             <option key={team} value={team}>
               {team === "__unassigned__" ? tr("team.unassigned") : team}
             </option>

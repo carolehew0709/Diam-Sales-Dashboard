@@ -204,7 +204,6 @@ const DashboardView = memo(function DashboardView({
           ? "all"
           : (data.entities.find((e) => e.id === id)?.businessUnit ?? "all"),
       entity: "all",
-      salesTeam: "all",
       customer: "all",
     }));
   const totalRows = [

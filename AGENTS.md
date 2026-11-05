@@ -171,4 +171,6 @@ The separate monthly team workbook supplies actual Sales and team annual budget 
 
 ## Reviewed team Prospect update 2026-11-05
 
+Entity changes preserve the selected Sales Team, including summary-card/detail-table shortcuts, All Entities and an Entity with no matching team rows. Keep the explicit team option visible rather than broadening to All Teams. Customer still resets on Entity changes; Region/year/sales-type reset behavior is unchanged. This supersedes the earlier reset-on-BU instruction.
+
 The owner authorizes W44 weekly team Prospect, retaining the Sales Team2 mapping. A reviewed weekly import may explicitly update the retained team reference for its selected Entity/year/week scopes in the same transaction. Default imports remain paused for team reference changes, and no later week is authorized implicitly. Detect the separate left team/product dimensions when monthly actual columns are inserted into a weekly template; numeric October amounts are not team names. Preserve source financial amounts, DDC Group/intercompany exclusions, actual Sales/budget sources, old weeks and other Entities. Show source YTD minus excluded DDC Group alongside reporting YTD where supplied, so a workbook summary containing internal transactions is not mistaken for an ingestion error.

@@ -8,6 +8,8 @@ All-teams sales, customer reporting and regional/Entity KPIs follow the newly pu
 
 Team charts show their actual retained week/files and a bilingual paused-update note; PNG/SVG and chart workbook exports use those same labels. The ordinary current weekly source label must not be substituted for the retained team's period. Invoice, budget and additional P1 allocations are not inferred from teams.
 
+Entity changes from the top selector, summary cards or detail table preserve the selected Sales Team, including when switching back to All Entities. An Entity with no matching team data keeps the explicit selection visible and reports the supported empty/missing scope rather than broadening to All Teams. Customer selection still resets with Entity changes; Region, fiscal-year and sales-type changes retain their existing reset behavior.
+
 Synthetic retention tests verify changed global weekly results, unchanged team monthly/annual data, idempotent capture, retained metadata and India/partial scope isolation. Private W44 sources and the production before-image stay outside public Git.
 
 For this update, the analyze API accepts an optional `weeks` form field with an explicit comma-separated sales-week list. All source sheets are parsed first so monthly derivation retains historical evidence; only selected snapshots/order rows enter the review batch. Invalid, absent, duplicate or out-of-range weeks and non-sales workbooks are rejected. Omitting the field preserves the existing import contract. W44 publication selects `44`, preserving all W1–W43 records.

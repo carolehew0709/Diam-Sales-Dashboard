@@ -88,6 +88,7 @@ export type Snapshot = {
 };
 export type Finding = { severity: "error" | "review"; message: string; code?: string; params?: Record<string, string | number> };
 export type ImportBatch = {
+  receivablesEntityIds?: string[];
   updateTeamReporting?: boolean;
   teamActualData?: TeamActualData;
   customerAnalysis?: CustomerAnalysis;

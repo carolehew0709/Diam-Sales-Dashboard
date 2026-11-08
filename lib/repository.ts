@@ -30,6 +30,7 @@ export const repository = {
           503,
           "Configure persistent storage before submitting imports.",
         );
+      if(batch.receivablesEntityIds && (batch.receivablesKind!=='aging'||!batch.receivablesEntityIds.length||batch.receivablesEntityIds.some(id=>!batch.entityIds.includes(id))||batch.receivables?.some(r=>r.category!=='invoice'||!batch.receivablesEntityIds!.includes(r.entityId))))throw new ApiError(400,'Invalid scoped aging replacement');
       state.batches.unshift(batch);
       state.audit.push({
         id: randomUUID(),
@@ -75,7 +76,7 @@ export const repository = {
       if (batch.receivables?.length) {
         const category = batch.receivablesKind === "aging" ? "aging" : "payments";
         state.receivables = (state.receivables ?? []).filter(r =>
-          category === "aging" ? r.category !== "invoice" : r.category === "invoice").concat(batch.receivables);
+          category === "aging" ? r.category !== "invoice" || (!!batch.receivablesEntityIds && !batch.receivablesEntityIds.includes(r.entityId)) : r.category === "invoice").concat(batch.receivables);
         state.receivablesUpdatedAt = now;
       }
       state.snapshots = state.snapshots

@@ -7,6 +7,7 @@ import { parseDashboardWorkbook } from "@/lib/workbook-parser";
 import { parseReceivablesWorkbook } from "@/lib/receivables-parser";
 import { parseCustomerAnalysisWorkbook } from "@/lib/customer-analysis-parser";
 import type { ImportBatch } from "@/lib/types";
+import {parseDdcAging} from '@/lib/ddc-aging-parser';
 export async function POST(request: Request) {
   return api(async () => {
     sameOrigin(request);
@@ -23,13 +24,14 @@ export async function POST(request: Request) {
       file.size > 12 * 1024 * 1024
     )
       throw new ApiError(400, "Choose an .xlsx workbook up to 12 MB");
-    let parsed: Pick<ImportBatch, "snapshots" | "lines" | "sheets" | "findings" | "receivables" | "receivablesKind" | "customerAnalysis" | "teamActualData">;
+    let parsed: Pick<ImportBatch, "snapshots" | "lines" | "sheets" | "findings" | "receivables" | "receivablesKind" | "customerAnalysis" | "teamActualData" | "receivablesEntityIds">;
     try {
       const bytes = Buffer.from(await file.arrayBuffer());
       parsed = parseTeamActualWorkbook(bytes, file.name) ?? parseCustomerAnalysisWorkbook(bytes, file.name) ?? parseDashboardWorkbook(bytes, file.name);
       if (!parsed.teamActualData && !parsed.customerAnalysis && !parsed.snapshots.length) {
-        const ar = parseReceivablesWorkbook(bytes, file.name, { paymentEntityId: "china-payments" });
-        parsed = { snapshots: [], lines: [], sheets: ar.sheets, findings: ar.findings, receivables: ar.records, receivablesKind: ar.sourceKind };
+        const partial=parseDdcAging(bytes,file.name);
+        const ar = partial ?? parseReceivablesWorkbook(bytes, file.name, { paymentEntityId: "china-payments" });
+        parsed = { snapshots: [], lines: [], sheets: ar.sheets, findings: ar.findings, receivables: ar.records, receivablesKind: ar.sourceKind,receivablesEntityIds:partial?.replacementEntityIds };
       }
     } catch {
       throw new ApiError(400, "Workbook could not be parsed");
@@ -46,7 +48,7 @@ export async function POST(request: Request) {
         fileName: file.name,
         sourceType: "Excel",
         status: "review",
-        entityIds: parsed.teamActualData ? [...new Set(parsed.teamActualData.rows.map(r=>r.entityId))] : parsed.customerAnalysis ? parsed.customerAnalysis.entityIds : parsed.receivables ? ["dhk", "ddc"] : [...new Set(parsed.snapshots.map((s) => s.entityId))],
+        entityIds: parsed.teamActualData ? [...new Set(parsed.teamActualData.rows.map(r=>r.entityId))] : parsed.customerAnalysis ? parsed.customerAnalysis.entityIds : parsed.receivables ? parsed.receivablesEntityIds??["dhk", "ddc"] : [...new Set(parsed.snapshots.map((s) => s.entityId))],
         submittedBy: user.id,
         submittedAt: new Date().toISOString(),
         ...parsed,

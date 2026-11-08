@@ -269,3 +269,8 @@ Filtering now separates immediate control feedback from the applied dashboard re
 - Account administration provides search, selected-account state, required-field/password validation, per-account in-page drafts, explicit reset/save feedback and duplicate-submit protection. Drafts are memory-only and are discarded when leaving the page. Role-dependent checkboxes show effective access; server authorization remains authoritative.
 - Import analysis displays progress and the selected filename, retains inputs on failure and focuses the review after explicit analysis/history selection. History supports loading/error/retry and selection state. Analysis never publishes; the existing acknowledgement and publish checks remain in place.
 - Browser verification uses synthetic API responses for account saves, uploads and sign-out, including failures and narrow-screen layouts. No production accounts or data are changed by these checks.
+
+
+## W45 source update (2026-11-09)
+
+Owner approves W45 Sales and team Prospect for China, retaining independent final October team actuals/budgets. Explicit Team headers and a single left monthly actual column resolve DEHK B/C and DDC A/B dimensions without changing financial offsets. DCP missing team stays Unassigned; historical YTD corrections are not extended. DDC aging updates independently from its new Chinese ledger; DEHK aging and Unknown/Advance stay unchanged by owner instruction. See docs/receivables.md for scoped replacement and classification limitations.

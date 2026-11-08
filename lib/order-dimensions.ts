@@ -20,6 +20,11 @@ export function orderDimensionColumns(
     "nov",
     "dec",
   ];
+  for(const row of [headerRow,headerRow+1])
+    for(let c=0;c<anchorCol;c++){
+      const value=String(sheet[utils.encode_cell({r:row,c})]?.v??'').trim().toLowerCase();
+      if(/^(team|sales team|sales team2)$/.test(value))return {team:c,product:c+1,shifted:true};
+    }
   for (const row of [headerRow, headerRow + 1])
     for (let c = 2; c < anchorCol; c++) {
       const label = String(sheet[utils.encode_cell({ r: row, c })]?.v ?? "")
@@ -37,5 +42,9 @@ export function orderDimensionColumns(
         length++;
       if (length >= 2) return { team: c - 2, product: c - 1, shifted: true };
     }
+  for(const row of [headerRow,headerRow+1])
+    for(let c=2;c<anchorCol;c++)
+      if(months.includes(String(sheet[utils.encode_cell({r:row,c})]?.v??'').trim().toLowerCase()))
+        return {team:c-2,product:c-1,shifted:true};
   return { team: anchorCol, product: anchorCol + 1, shifted: false };
 }

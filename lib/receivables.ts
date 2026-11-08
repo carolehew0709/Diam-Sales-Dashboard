@@ -246,7 +246,7 @@ export function getReceivables(
     ),
     asOfDates: [
       ...new Set(
-        permitted.map((r) => r.asOfDate).filter((d): d is string => !!d),
+        scope.filter(r=>r.category==='invoice').map((r) => r.asOfDate).filter((d): d is string => !!d),
       ),
     ].sort(),
     sourceFiles: [...new Set(permitted.map((r) => r.sourceFile))],

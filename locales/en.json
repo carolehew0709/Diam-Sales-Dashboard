@@ -387,7 +387,7 @@
   "ar.group": "Group",
   "ar.agingFilter": "Due / aging",
   "ar.currency": "Currency",
-  "ar.currencyNote": "DEHK is shown in EUR; DDC in RMB. Top 10 is ranked separately by currency.",
+  "ar.currencyNote": "Invoice balances retain their source currency (EUR / RMB); amounts and Top 10 are shown separately by currency.",
   "ar.receiptNote": "Receipts are not filtered by Entity or invoice aging and are not deducted from AR.",
   "ar.metric.ar": "Total AR",
   "ar.metric.due": "Not due",

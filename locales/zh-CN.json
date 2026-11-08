@@ -387,7 +387,7 @@
   "ar.group": "集团",
   "ar.agingFilter": "到期／账龄",
   "ar.currency": "币种",
-  "ar.currencyNote": "DEHK 使用欧元，DDC 使用人民币；前 10 名按币种分别排名。",
+  "ar.currencyNote": "应收余额保留来源币种（EUR / RMB）；金额和 Top 10 均分币种展示。",
   "ar.receiptNote": "未知／预收款不受 实体 或发票账龄筛选影响，也不自动抵减应收账款。",
   "ar.metric.ar": "应收总额",
   "ar.metric.due": "未到期金额",

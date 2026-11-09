@@ -1,7 +1,7 @@
 import {teamNamesState,teamActualView} from "./team-actuals";
 import { teamReportingState, retainedTeamView } from "./team-reporting";
 import { policyState } from "./governance";
-import { reportingPeriod } from './reporting-period';
+import { reportingPeriod, availableReportingWeeks } from './reporting-period';
 import { lineYear, latestFiscalSnapshot, sourceYear } from "./fiscal-years";
 import { reportingState } from "./intercompany";
 import {
@@ -347,7 +347,7 @@ export function getDashboardSnapshot(
   user: User,
   filters: Filters,
 ) {
-  const availableWeeks=[...new Set(state.snapshots.filter(s=>entities.some(e=>e.id===s.entityId&&canView(user,e)&&matchesRegion(e,filters.region)&&(filters.bu==='all'||e.businessUnit===filters.bu)) && [filters.year,filters.year-1].includes(s.year)).map(s=>s.week))].sort((a,b)=>b-a);
+  const availableWeeks = availableReportingWeeks(state, user, filters);
   state=reportingPeriod(state,filters.week);
   state=teamNamesState(state);
   const actualTeams=teamActualView(state,user,filters);

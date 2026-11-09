@@ -5633,3 +5633,21 @@ button:disabled, a[aria-disabled="true"] { cursor: not-allowed; }
 .manual-adjustments .wide,.manual-adjustments .muted {grid-column:1/-1;}
 .reporting-history-controls label,.reporting-history-controls span {font-size:12px;}
 @media(max-width:600px){.manual-adjustments .form-grid{grid-template-columns:1fr;}.import-mode-tabs .apac-button{flex:1;}.import-difference .bu-table{min-width:620px;}.import-difference{overflow:hidden;}}
+
+/* Snapshot period navigation lives with the applied source, not in a full-width filter row. */
+.snapshot-wrapper .snapshot-readiness-panel { width:min(540px,calc(100vw - 48px)); }
+.snapshot-period-control { padding:14px 0 12px; border-bottom:1px solid var(--line); }
+.snapshot-period-control h3,.snapshot-source-title { margin:0 0 12px; font-size:12px; color:var(--ink); }
+.snapshot-source-title { margin-top:16px; }
+.snapshot-period-actions { display:flex; flex-wrap:wrap; gap:8px; margin-bottom:10px; }
+.snapshot-period-actions button,.snapshot-week-grid button { appearance:none; border:1px solid #ddd5c7; border-radius:8px; background:#fff; color:#292b24; font:inherit; cursor:pointer; }
+.snapshot-period-actions button { padding:9px 12px; font-size:11px; }
+.snapshot-week-grid { display:grid; grid-template-columns:repeat(8,minmax(0,1fr)); gap:6px; max-height:174px; overflow-y:auto; overscroll-behavior:contain; padding:3px; }
+.snapshot-week-grid button { min-height:32px; padding:6px 2px; font-size:11px; }
+.snapshot-period-actions button[aria-pressed=true],.snapshot-week-grid button[aria-pressed=true] { color:#fff; background:#25271f; border-color:#25271f; }
+.snapshot-period-actions button:hover:not(:disabled),.snapshot-week-grid button:hover { border-color:var(--gold); }
+.snapshot-period-actions button:disabled { opacity:.45; }
+.snapshot-period-note { margin:10px 0 0; font-size:11px; color:var(--muted); line-height:1.6; }
+.snapshot-main .snapshot-history-badge { margin-top:4px; color:#e3c995; font-size:9px; }
+.snapshot-readiness-panel .readiness-groups { grid-template-columns:1fr; }
+@media(max-width:600px){.snapshot-week-grid{grid-template-columns:repeat(6,minmax(0,1fr));}.snapshot-period-actions button{flex:1;}.snapshot-wrapper .snapshot-readiness-panel{position:fixed;top:calc(var(--dashboard-header-height,112px) + 12px);right:12px;left:12px;width:auto;max-height:calc(100dvh - var(--dashboard-header-height,112px) - 28px);padding:16px;}}

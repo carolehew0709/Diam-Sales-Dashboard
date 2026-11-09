@@ -35,7 +35,7 @@ export function ImportReviewControls({
   const [restore, setRestore] = useState<Restore | null>(null);
   const [history, setHistory] = useState(false);
   const [reason, setReason] = useState("");
-  const [pending, setPending] = useState(false);
+  const [pending, setPending] = useState(batch.status === "review");
   const [error, setError] = useState("");
   async function call(route: string, body: object) {
     const response = await fetch(`/api/import/${route}`, {

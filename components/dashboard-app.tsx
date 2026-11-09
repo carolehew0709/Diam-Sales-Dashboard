@@ -39,6 +39,7 @@ import {
 } from "@/components/sales-graphics";
 import { CustomerGraphics } from "@/components/customer-graphics";
 import { KeyCustomerOrders } from "@/components/key-customer-orders";
+import { SnapshotPeriodControl } from "./snapshot-period-control";
 import { LanguageSwitcher } from "@/components/language-switcher";
 import { monthlyPerformanceSeries } from "@/lib/performance-chart";
 import {
@@ -193,7 +194,7 @@ const DashboardView = memo(function DashboardView({
         setReadiness(false);
         snapshotWrapper.current
           ?.querySelector<HTMLButtonElement>(".snapshot-cluster")
-          ?.focus();
+          ?.focus({ preventScroll: true });
       }
     };
     document.addEventListener("pointerdown", outside);
@@ -277,6 +278,7 @@ const DashboardView = memo(function DashboardView({
         <div className="snapshot-wrapper" ref={snapshotWrapper}>
           <button
             className="snapshot-cluster"
+            title={tr("snapshot.controls")}
             onClick={() => setReadiness(!readiness)}
             aria-expanded={readiness}
             aria-controls="snapshot-readiness"
@@ -288,6 +290,7 @@ const DashboardView = memo(function DashboardView({
                   ? data.weeks.map((w) => `W${w}`).join(" / ")
                   : tr("snapshot.none")}
               </strong>
+              {!!filters.week && <small className="snapshot-history-badge">{tr("history.mode")}</small>}
             </span>
             <span className="snapshot-detail">
               <span>
@@ -336,7 +339,7 @@ const DashboardView = memo(function DashboardView({
             >
               <div className="readiness-panel-head">
                 <h2 id="snapshot-readiness-title">
-                  {tr("snapshot.readiness")}
+                  {tr("snapshot.controls")}
                 </h2>
                 <button
                   className="readiness-close"
@@ -346,6 +349,11 @@ const DashboardView = memo(function DashboardView({
                   ×
                 </button>
               </div>
+              <SnapshotPeriodControl data={data} onSelect={() => {
+                setReadiness(false);
+                snapshotWrapper.current?.querySelector<HTMLButtonElement>(".snapshot-cluster")?.focus({ preventScroll: true });
+              }} />
+              <h3 className="snapshot-source-title">{tr("snapshot.readiness")}</h3>
               <div className="readiness-groups">
                 {data.rows.map((r) => (
                   <div className="readiness-item" key={r.entity.id}>

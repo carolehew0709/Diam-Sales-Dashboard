@@ -57,14 +57,35 @@ export function parseReceivablesWorkbook(
       XLSX.utils.decode_range(workbook.Sheets[name]["!ref"] ?? "A1").e.r + 1,
     kind: "Receivables",
   }));
-  const aging =
-    workbook.Sheets["DEHK OVERDUE"] && workbook.Sheets["DDC OVERDUE"];
+  const agingSheets = [
+    ["DEHK OVERDUE", "dhk", "EUR", 10],
+    ["DDC OVERDUE", "ddc", "RMB", 9],
+  ] as const;
+  const presentAging = agingSheets.filter(([sheet]) => workbook.Sheets[sheet]);
+  const aging = presentAging.length > 0;
   if (aging) {
-    for (const [sheet, entityId, currency, amountColumn] of [
-      ["DEHK OVERDUE", "dhk", "EUR", 10],
-      ["DDC OVERDUE", "ddc", "RMB", 9],
-    ] as const) {
+    for (const [sheet, entityId, currency, amountColumn] of presentAging) {
       const ws = workbook.Sheets[sheet];
+      const header = (column: number) =>
+        text(ws[XLSX.utils.encode_cell({ r: 1, c: column })]?.v)
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "");
+      const expected = [
+        [0, "date"],
+        [1, "invoicenumber"],
+        [2, "customer"],
+        [13, "terms"],
+        [14, "overdue"],
+        [15, "aging"],
+        [amountColumn, entityId === "dhk" ? "diversineur" : "amountcny"],
+      ] as const;
+      if (expected.some(([column, label]) => header(column) !== label)) {
+        findings.push({
+          severity: "error",
+          message: `${sheet}: unsupported or shifted invoice headers; confirm Entity, amount column and currency before replacement`,
+        });
+        continue;
+      }
       const rows = XLSX.utils.sheet_to_json<unknown[]>(ws, {
         header: 1,
         defval: null,
@@ -132,7 +153,11 @@ export function parseReceivablesWorkbook(
           severity: "error",
           message: `${sheet}: source reporting date missing`,
         });
-      if(!records.some(r=>r.entityId===entityId))findings.push({severity:'error',message:`${sheet}: no valid invoices; an empty Entity cannot replace the full aging dataset`});
+      if (!records.some((r) => r.entityId === entityId))
+        findings.push({
+          severity: "error",
+          message: `${sheet}: no valid invoices; an empty Entity cannot replace the full aging dataset`,
+        });
     }
   } else if (
     workbook.Sheets.Summary &&
@@ -250,5 +275,8 @@ export function parseReceivablesWorkbook(
     findings,
     sheets,
     sourceKind: aging ? ("aging" as const) : ("payments" as const),
+    replacementEntityIds: aging
+      ? presentAging.map(([, entityId]) => entityId)
+      : undefined,
   };
 }

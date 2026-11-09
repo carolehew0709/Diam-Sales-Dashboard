@@ -1,4 +1,35 @@
 import type { Store, Snapshot } from "./types";
+import type { Filters, User } from "./types";
+import { entities, matchesRegion } from "./entities";
+import { canView } from "./permissions";
+import { sourceYear } from "./fiscal-years";
+
+/** Navigation uses all permitted published weeks, before applying a historical cap. */
+export function availableReportingWeeks(
+  state: Store,
+  user: User,
+  filters: Filters,
+) {
+  const scoped = entities.filter(
+    (e) =>
+      canView(user, e) &&
+      matchesRegion(e, filters.region) &&
+      (filters.bu === "all" ||
+        e.businessUnit === filters.bu ||
+        (filters.bu === "DHK" && e.id === "dhk")) &&
+      (filters.entity === "all" || e.id === filters.entity),
+  );
+  const years = new Map(
+    scoped.map((e) => [e.id, sourceYear(state, e.id, filters.year)]),
+  );
+  return [
+    ...new Set(
+      state.snapshots
+        .filter((s) => years.get(s.entityId) === s.year)
+        .map((s) => s.week),
+    ),
+  ].sort((a, b) => b - a);
+}
 export type ReportingPeriod = Pick<Snapshot, "year" | "month"> &
   Partial<Pick<Snapshot, "entityId" | "week">>;
 const closedReportingMonths = [

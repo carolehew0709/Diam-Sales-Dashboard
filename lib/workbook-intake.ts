@@ -14,25 +14,30 @@ export function identifyWorkbook(bytes: Buffer) {
       ? "customer"
       : null,
     names.some((n) => /^(DEHK|DDC) OVERDUE$/.test(n)) ? "aging" : null,
-    names.some(n=>book.Sheets[n].A1?.v==='序号'&&book.Sheets[n].Q1?.v==='余额'&&book.Sheets[n].L1?.v==='最后到期日')?'ddc-aging':null,
+    names.some(
+      (n) =>
+        book.Sheets[n].A1?.v === "序号" &&
+        book.Sheets[n].Q1?.v === "余额" &&
+        book.Sheets[n].L1?.v === "最后到期日",
+    )
+      ? "ddc-aging"
+      : null,
     names.includes("Summary") &&
     names.some((n) => /^(Unknown|Advance)/i.test(n))
       ? "payments"
       : null,
-    names.includes('Sheet1') && names.includes('Sales Forecast') && String(book.Sheets.Sheet1.A1?.v??'').trim().toUpperCase()==='SALES TEAM1' ? 'team-actual' : null,
+    names.includes("Sheet1") &&
+    names.includes("Sales Forecast") &&
+    String(book.Sheets.Sheet1.A1?.v ?? "")
+      .trim()
+      .toUpperCase() === "SALES TEAM1"
+      ? "team-actual"
+      : null,
   ].filter(Boolean);
   if (types.length !== 1)
     throw new ApiError(
       400,
       "Upload one supported dataset type per batch; mixed or unknown workbook templates cannot be published",
-    );
-  if (
-    types[0] === "aging" &&
-    !["DEHK OVERDUE", "DDC OVERDUE"].every((n) => names.includes(n))
-  )
-    throw new ApiError(
-      400,
-      "Full aging replacement requires both DEHK OVERDUE and DDC OVERDUE sheets",
     );
   return types[0]!;
 }

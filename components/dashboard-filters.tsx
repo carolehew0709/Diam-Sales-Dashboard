@@ -247,45 +247,6 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
         />
         <UpdateStatus pending={pending} />
       </section>
-      <div className="reporting-history-controls">
-        <label htmlFor="reporting-week">{tr("history.week")}</label>
-        <select
-          id="reporting-week"
-          value={requestedFilters.week ?? 0}
-          onChange={(e) =>
-            setFilters({ ...requestedFilters, week: Number(e.target.value) })
-          }
-        >
-          <option value={0}>{tr("history.latest")}</option>
-          {(data.availableWeeks ?? []).map((w) => (
-            <option key={w} value={w}>
-              W{w}
-            </option>
-          ))}
-        </select>
-        <button
-          className="apac-button"
-          disabled={
-            !(data.availableWeeks ?? []).some(
-              (w) => w < (requestedFilters.week || Math.max(...data.weeks)),
-            )
-          }
-          onClick={() =>
-            setFilters({
-              ...requestedFilters,
-              week:
-                (data.availableWeeks ?? []).find(
-                  (w) => w < (requestedFilters.week || Math.max(...data.weeks)),
-                ) ?? 0,
-            })
-          }
-        >
-          {tr("history.previous")}
-        </button>
-        {!!requestedFilters.week && (
-          <span role="status">{tr("history.readOnly")}</span>
-        )}
-      </div>
     </>
   );
 }

@@ -274,3 +274,12 @@ Filtering now separates immediate control feedback from the applied dashboard re
 ## W45 source update (2026-11-09)
 
 Owner approves W45 Sales and team Prospect for China, retaining independent final October team actuals/budgets. Explicit Team headers and a single left monthly actual column resolve DEHK B/C and DDC A/B dimensions without changing financial offsets. DCP missing team stays Unassigned; historical YTD corrections are not extended. DDC aging updates independently from its new Chinese ledger; DEHK aging and Unknown/Advance stay unchanged by owner instruction. See docs/receivables.md for scoped replacement and classification limitations.
+
+
+## Reviewed imports and manual adjustments completed (2026-11-09)
+
+The import center now separates Excel uploads, manual Sales/AR adjustments and publication history. Employees submit requests within edit scope; authorized administrators review differences and publish. Formal budget and annual Sales/Prospect/additional P1/aggregate corrections require Super Admin approval. Source values remain unchanged; adjustments specify exact Entity/fiscal year/week scopes. The form defaults to each Entity's latest permitted published period. Source uploads require a fresh review version and preserve unselected historical ranges.
+
+New publications save before/after versions and explanations. Super Admin restoration previews scope, blocks later overlapping changes and restores a weekly publication's reviewed team Prospect together with the main source. Independent Entity aging and payment publications do not block unrelated AR restoration. The recognized DDC-only ledger preserves DEHK and shared receipts and names its replacement scope in review. Older batches without before-images do not offer restoration. View previous week is a read-only historical view, not rollback; later team actuals are not copied backward, and exports follow the selected source week.
+
+Import permission/storage status loads independently of the sales dashboard, and AR-origin navigation returns to AR. Production business data is not changed by acceptance tests. The independent account-administration UI and release-health identity rollout remain separate from this import-center release. See [import-workflows.md](import-workflows.md) for the full contract.

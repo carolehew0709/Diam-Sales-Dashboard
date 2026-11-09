@@ -1,3 +1,6 @@
+import { repository } from "../lib/repository";
+import { storage } from "../lib/storage";
+import { reviewedPublish } from "./review-helper";
 import {
   reportingState,
   isDuplicateIntercompanyOrder,
@@ -32,14 +35,19 @@ const admin: User = {
   permissions: {},
 };
 // Archived W40 fixtures keep prior owner-rule regressions stable as the live seed advances.
-const w40 = ["Dashboard 2026 - DDC(1).xlsx", "Dashboard 2026 - DEHK(1).xlsx", "W40-- Dashboard 2026 - DCP.xlsx"]
-  .map(file => parseDashboardWorkbook(fs.readFileSync(`Dashboard/${file}`), file));
+const w40 = [
+  "Dashboard 2026 - DDC(1).xlsx",
+  "Dashboard 2026 - DEHK(1).xlsx",
+  "W40-- Dashboard 2026 - DCP.xlsx",
+].map((file) =>
+  parseDashboardWorkbook(fs.readFileSync(`Dashboard/${file}`), file),
+);
 const state: Store = {
   version: 2,
   revision: 1,
   users: [admin],
-  snapshots: w40.flatMap(p => p.snapshots),
-  lines: w40.flatMap(p => p.lines),
+  snapshots: w40.flatMap((p) => p.snapshots),
+  lines: w40.flatMap((p) => p.lines),
   batches: [],
   audit: [],
 };
@@ -211,8 +219,9 @@ test("validation rejects nonfinite/fractional weeks, unknown entity and inconsis
 test("publish requires permission and review, is idempotent and replaces same-grain revisions", async () => {
   const dir = fs.mkdtempSync(path.join(os.tmpdir(), "diam-test-"));
   process.env.DIAM_DATA_PATH = path.join(dir, "state.json");
-  const { repository } = await import("../lib/repository");
-  const { storage } = await import("../lib/storage");
+  await storage.transaction((s) => {
+    s.users = [admin];
+  });
   const batch = manualBatch(input(), admin);
   await repository.createImportBatch(batch, admin);
   const editor = {
@@ -222,10 +231,10 @@ test("publish requires permission and review, is idempotent and replaces same-gr
   };
   await assert.rejects(repository.publishImportBatch(batch.id, editor, true));
   await assert.rejects(repository.publishImportBatch(batch.id, admin, false));
-  await repository.publishImportBatch(batch.id, admin, true);
+  await reviewedPublish(repository, batch.id, admin);
   const firstPublishedAt = (await storage.read()).dataUpdatedAt;
   assert.ok(firstPublishedAt);
-  await repository.publishImportBatch(batch.id, admin, true);
+  await reviewedPublish(repository, batch.id, admin);
   let s = await storage.read();
   assert.equal(s.dataUpdatedAt, firstPublishedAt); // Retrying publish never changes the update date.
   assert.equal(s.dataUpdatedAt, s.batches[0].publishedAt);
@@ -236,7 +245,7 @@ test("publish requires permission and review, is idempotent and replaces same-gr
   assert.equal(s.revision, 2);
   const revision = manualBatch({ ...input(), prospect: 15 }, admin);
   await repository.createImportBatch(revision, admin);
-  await repository.publishImportBatch(revision.id, admin, true);
+  await reviewedPublish(repository, revision.id, admin);
   s = await storage.read();
   assert.equal(
     s.lines.filter((l) => l.entityId === "ddc" && l.week === 37).length,
@@ -382,7 +391,10 @@ test("intercompany projection reconciles all metrics without modifying sources o
     )!;
     close(gross.orderbook.group! - s.orderbook.group!, removed);
     if (id === "ddc" || id === "dcp") {
-      close(s.turnover.external, id === "dcp" ? 260.81449 : gross.turnover.external!);
+      close(
+        s.turnover.external,
+        id === "dcp" ? 260.81449 : gross.turnover.external!,
+      );
       close(s.turnover.group, 0);
     } else assert.deepEqual(gross.turnover, s.turnover);
     assert.deepEqual(gross.monthTurnover, s.monthTurnover);
@@ -400,7 +412,8 @@ test("intercompany projection reconciles all metrics without modifying sources o
     });
     close(
       external.totals.base,
-      (id === "dcp" ? 260.81449 : gross.turnover.external!) + gross.orderbook.external!,
+      (id === "dcp" ? 260.81449 : gross.turnover.external!) +
+        gross.orderbook.external!,
     );
   }
   const china = getDashboardSnapshot(state, admin, {
@@ -454,7 +467,14 @@ test("intercompany rules match counterparties rather than row numbers or all Gro
   const adjusted = reportingState({
     ...state,
     snapshots: [s],
-    lines: [{ ...l, total2027: 25, monthly2027: [25, ...Array(11).fill(0)] }],
+    lines: [
+      {
+        ...l,
+        amountsByYear: undefined,
+        total2027: 25,
+        monthly2027: [25, ...Array(11).fill(0)],
+      },
+    ],
   });
   close(adjusted.snapshots[0].nextOrderbook.group, 5);
   close(adjusted.snapshots[0].nextMonthlyOrderbook.group[0], 5);
@@ -522,7 +542,7 @@ test("FY2027 budgets and WK40 owner orderbook confirmation preserve source and m
     scenario: "Sales",
   });
   close(china.totals.budget, 35788); // Approved DEHK + DDC subtotal only.
-  assert.equal(china.totals.budgetComplete,false);
+  assert.equal(china.totals.budgetComplete, false);
   close(china.totals.coverage, china.totals.base! / 35788);
   close(china.totals.gap, china.totals.base! - 35788);
 });
@@ -607,158 +627,386 @@ test("DDC H10/O10 reporting preserves raw Group sources and other BUs", () => {
   );
 });
 
-
-test("2027 provisional budgets respect scope and require complete operating inputs",()=>{
- for(const region of ["China","APAC"]){
-  const d=getDashboardSnapshot(state,admin,{...defaultFilters,year:2027,region,scenario:"Sales"});
-  close(d.totals.budget,region === "China" ? 35788 : 56988);assert.equal(d.totals.budgetComplete,false);
-  if(region === "China") { close(d.totals.coverage, d.totals.base! / 35788); close(d.totals.gap, d.totals.base! - 35788); }
-  else { assert.equal(d.totals.coverage,null);assert.equal(d.totals.gap,null); }
- }
- const user={...admin,role:"viewer" as const,permissions:{dhk:["view" as const]}};
- const d=getDashboardSnapshot(state,user,{...defaultFilters,year:2027,scenario:"Sales"});
- close(d.totals.budget,29771);assert.equal(d.totals.budgetComplete,true);close(d.totals.coverage,2597/29771);
- const missing=getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dcp",year:2027});
- close(missing.totals.budget,0);
- assert.equal(missing.totals.budgetComplete,false);
+test("2027 provisional budgets respect scope and require complete operating inputs", () => {
+  for (const region of ["China", "APAC"]) {
+    const d = getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      year: 2027,
+      region,
+      scenario: "Sales",
+    });
+    close(d.totals.budget, region === "China" ? 35788 : 56988);
+    assert.equal(d.totals.budgetComplete, false);
+    if (region === "China") {
+      close(d.totals.coverage, d.totals.base! / 35788);
+      close(d.totals.gap, d.totals.base! - 35788);
+    } else {
+      assert.equal(d.totals.coverage, null);
+      assert.equal(d.totals.gap, null);
+    }
+  }
+  const user = {
+    ...admin,
+    role: "viewer" as const,
+    permissions: { dhk: ["view" as const] },
+  };
+  const d = getDashboardSnapshot(state, user, {
+    ...defaultFilters,
+    year: 2027,
+    scenario: "Sales",
+  });
+  close(d.totals.budget, 29771);
+  assert.equal(d.totals.budgetComplete, true);
+  close(d.totals.coverage, 2597 / 29771);
+  const missing = getDashboardSnapshot(state, admin, {
+    ...defaultFilters,
+    entity: "dcp",
+    year: 2027,
+  });
+  close(missing.totals.budget, 0);
+  assert.equal(missing.totals.budgetComplete, false);
 });
 
-
-test("FY2027 pending BUs display zero without inventing approved budgets or operating data",()=>{
- for(const id of ["dcp","dsi"]){
- const d=getDashboardSnapshot(state,admin,{...defaultFilters,entity:id,region:"APAC",year:2027,scenario:"Sales"});
- close(d.totals.budget,0);assert.equal(d.totals.budgetComplete,false);if(id === "dcp") close(d.totals.gap, d.totals.base!); else assert.equal(d.totals.gap,null);assert.equal(d.totals.coverage,null);
- assert.ok(d.checks.some(c=>c.message==="FY2027 annual budget pending; displayed as 0"));
- if(id!=="dcp")assert.equal(d.totals.base,null);
- }
+test("FY2027 pending BUs display zero without inventing approved budgets or operating data", () => {
+  for (const id of ["dcp", "dsi"]) {
+    const d = getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      entity: id,
+      region: "APAC",
+      year: 2027,
+      scenario: "Sales",
+    });
+    close(d.totals.budget, 0);
+    assert.equal(d.totals.budgetComplete, false);
+    if (id === "dcp") close(d.totals.gap, d.totals.base!);
+    else assert.equal(d.totals.gap, null);
+    assert.equal(d.totals.coverage, null);
+    assert.ok(
+      d.checks.some(
+        (c) => c.message === "FY2027 annual budget pending; displayed as 0",
+      ),
+    );
+    if (id !== "dcp") assert.equal(d.totals.base, null);
+  }
 });
 
-
-test("DCP W40 refresh reconciles sales, current month and counterparty exclusions",()=>{
- const p=parseDashboardWorkbook(fs.readFileSync("Dashboard/W40-- Dashboard 2026 - DCP.xlsx"),"W40-- Dashboard 2026 - DCP.xlsx");
- assert.equal(p.snapshots.length,39);assert.equal(p.findings.filter(f=>f.severity==="error").length,0);
- const s=p.snapshots.at(-1)!;assert.equal(s.week,40);assert.equal(s.month,10);
- close(s.turnover.external,200.091);close(s.turnover.group,2431.542);
- close(s.orderbook.external,1.184);close(s.orderbook.group,6.161);
- const d=getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dcp",scenario:"Sales"});
- assert.equal(d.rows[0].snapshot!.sourceFile,"W40-- Dashboard 2026 - DCP.xlsx");
- close(d.totals.sales,260.81449);close(d.totals.orderbook,1.184);close(d.totals.base,261.99849);
- close(d.totals.remaining,1.184);close(d.totals.cumulative[11].base,261.99849);close(d.totals.budget,2608);
- const excluded=reportingState(state).intercompanyExcluded.filter(l=>l.entityId==="dcp"&&l.week===40);
- assert.equal(excluded.length,1);assert.equal(excluded[0].customer,"DDC");close(excluded[0].total2026,6.161);
+test("DCP W40 refresh reconciles sales, current month and counterparty exclusions", () => {
+  const p = parseDashboardWorkbook(
+    fs.readFileSync("Dashboard/W40-- Dashboard 2026 - DCP.xlsx"),
+    "W40-- Dashboard 2026 - DCP.xlsx",
+  );
+  assert.equal(p.snapshots.length, 39);
+  assert.equal(p.findings.filter((f) => f.severity === "error").length, 0);
+  const s = p.snapshots.at(-1)!;
+  assert.equal(s.week, 40);
+  assert.equal(s.month, 10);
+  close(s.turnover.external, 200.091);
+  close(s.turnover.group, 2431.542);
+  close(s.orderbook.external, 1.184);
+  close(s.orderbook.group, 6.161);
+  const d = getDashboardSnapshot(state, admin, {
+    ...defaultFilters,
+    entity: "dcp",
+    scenario: "Sales",
+  });
+  assert.equal(
+    d.rows[0].snapshot!.sourceFile,
+    "W40-- Dashboard 2026 - DCP.xlsx",
+  );
+  close(d.totals.sales, 260.81449);
+  close(d.totals.orderbook, 1.184);
+  close(d.totals.base, 261.99849);
+  close(d.totals.remaining, 1.184);
+  close(d.totals.cumulative[11].base, 261.99849);
+  close(d.totals.budget, 2608);
+  const excluded = reportingState(state).intercompanyExcluded.filter(
+    (l) => l.entityId === "dcp" && l.week === 40,
+  );
+  assert.equal(excluded.length, 1);
+  assert.equal(excluded[0].customer, "DDC");
+  close(excluded[0].total2026, 6.161);
 });
 
-
-test("DCP OB reads L10 even when K17 differs and preserves other BUs/raw data",()=>{
- const raw=state.snapshots.find(s=>s.entityId==="dcp"&&s.week===40)!;
- const modified={...raw,monthEstimate:{external:12.5,group:999},orderbook:{external:88,group:999}};
- const m=entityMetric(modified,{...defaultFilters,scenario:"Sales"});
- close(m.sales,260.81449);close(m.orderbook,12.5);close(m.base,273.31449);close(m.cumulative[11].base,273.31449);
- const adjusted=reportingState({...state,snapshots:[modified]});assert.deepEqual(reportingState(adjusted).snapshots,adjusted.snapshots);
- close(raw.turnover.group,2431.542);close(raw.orderbook.group,6.161);
- close(getDashboardSnapshot(state,admin,{...defaultFilters,entity:"ddc",scenario:"Sales"}).totals.base,7158.8329);
- close(getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dhk",scenario:"Sales"}).totals.base,32518.276);
+test("DCP OB reads L10 even when K17 differs and preserves other BUs/raw data", () => {
+  const raw = state.snapshots.find(
+    (s) => s.entityId === "dcp" && s.week === 40,
+  )!;
+  const modified = {
+    ...raw,
+    monthEstimate: { external: 12.5, group: 999 },
+    orderbook: { external: 88, group: 999 },
+  };
+  const m = entityMetric(modified, { ...defaultFilters, scenario: "Sales" });
+  close(m.sales, 260.81449);
+  close(m.orderbook, 12.5);
+  close(m.base, 273.31449);
+  close(m.cumulative[11].base, 273.31449);
+  const adjusted = reportingState({ ...state, snapshots: [modified] });
+  assert.deepEqual(reportingState(adjusted).snapshots, adjusted.snapshots);
+  close(raw.turnover.group, 2431.542);
+  close(raw.orderbook.group, 6.161);
+  close(
+    getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      entity: "ddc",
+      scenario: "Sales",
+    }).totals.base,
+    7158.8329,
+  );
+  close(
+    getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      entity: "dhk",
+      scenario: "Sales",
+    }).totals.base,
+    32518.276,
+  );
 });
 
-
-test("Sales scenario changes only first-row values with H12/H10 provenance",()=>{
- const sales={...defaultFilters,scenario:"Sales" as const};
- const d=getDashboardSnapshot(state,admin,sales);
- const expected={dhk:26606.729,ddc:5136.274,dcp:260.81449};
- for(const row of d.china){close(chinaStripAmount(row,sales),expected[row.entity.id as keyof typeof expected]);
- assert.equal(row.snapshot!.sourceCells.salesCardValue,row.entity.id==="dhk"?"H12":"H10");}
- close(sumKnown(d.china.map(r=>chinaStripAmount(r,sales))),32003.81749);
- close(d.totals.base,39939.10739); // Lower Sales + OB KPI unchanged.
- const prospect=getDashboardSnapshot(state,admin,defaultFilters);
- for(const row of prospect.china){const expected=row.entity.id==="dhk"?32518.276:row.entity.id==="ddc"?7158.8329:260.81449;
- close(chinaStripAmount(row,defaultFilters),expected);}
- const row=d.china.find(r=>r.entity.id==="dhk")!;
- close(chinaStripAmount({...row,snapshot:{...row.snapshot!,salesCardValue:123}},sales),123); // Cached H12, not reconstructed sum.
- assert.equal(chinaStripAmount({...row,snapshot:{...row.snapshot!,salesCardValue:null}},sales),null);
- close(chinaStripAmount(row,{...sales,salesType:"external"}),row.metrics.sales!);
- const future=getDashboardSnapshot(state,admin,{...sales,year:2027,entity:"dhk"});
- close(chinaStripAmount(future.rows[0],{...sales,year:2027}),2597);
+test("Sales scenario changes only first-row values with H12/H10 provenance", () => {
+  const sales = { ...defaultFilters, scenario: "Sales" as const };
+  const d = getDashboardSnapshot(state, admin, sales);
+  const expected = { dhk: 26606.729, ddc: 5136.274, dcp: 260.81449 };
+  for (const row of d.china) {
+    close(
+      chinaStripAmount(row, sales),
+      expected[row.entity.id as keyof typeof expected],
+    );
+    assert.equal(
+      row.snapshot!.sourceCells.salesCardValue,
+      row.entity.id === "dhk" ? "H12" : "H10",
+    );
+  }
+  close(sumKnown(d.china.map((r) => chinaStripAmount(r, sales))), 32003.81749);
+  close(d.totals.base, 39939.10739); // Lower Sales + OB KPI unchanged.
+  const prospect = getDashboardSnapshot(state, admin, defaultFilters);
+  for (const row of prospect.china) {
+    const expected =
+      row.entity.id === "dhk"
+        ? 32518.276
+        : row.entity.id === "ddc"
+          ? 7158.8329
+          : 260.81449;
+    close(chinaStripAmount(row, defaultFilters), expected);
+  }
+  const row = d.china.find((r) => r.entity.id === "dhk")!;
+  close(
+    chinaStripAmount(
+      { ...row, snapshot: { ...row.snapshot!, salesCardValue: 123 } },
+      sales,
+    ),
+    123,
+  ); // Cached H12, not reconstructed sum.
+  assert.equal(
+    chinaStripAmount(
+      { ...row, snapshot: { ...row.snapshot!, salesCardValue: null } },
+      sales,
+    ),
+    null,
+  );
+  close(
+    chinaStripAmount(row, { ...sales, salesType: "external" }),
+    row.metrics.sales!,
+  );
+  const future = getDashboardSnapshot(state, admin, {
+    ...sales,
+    year: 2027,
+    entity: "dhk",
+  });
+  close(chinaStripAmount(future.rows[0], { ...sales, year: 2027 }), 2597);
 });
 
-
-test("External uses H10 plus K17 independently of All-sales overrides",()=>{
- const f={...defaultFilters,salesType:"external" as const,scenario:"Sales" as const};
- for(const [id,sales,ob,total] of [["dhk",18256.216,5282.382,23538.598],["ddc",5136.274,2022.5589,7158.8329],["dcp",260.81449,1.184,261.99849]] as const){
- const d=getDashboardSnapshot(state,admin,{...f,entity:id});close(d.totals.sales,sales);close(d.totals.orderbook,ob);close(d.totals.base,total);
- close(d.totals.cumulative[11].base,total);
- close(chinaStripAmount(d.rows[0],{...f,scenario:"Sales + Prospect"}),total);
- }
- const china=getDashboardSnapshot(state,admin,f);close(china.totals.sales,23653.30449);close(china.totals.orderbook,7306.1249);close(china.totals.base,30959.42939);
- const raw=state.snapshots.find(s=>s.entityId==="dcp"&&s.week===40)!;
- const altered={...raw,monthEstimate:{external:12.5,group:999},orderbook:{external:88,group:999},monthlyOrderbook:{external:[...Array(9).fill(0),88,0,0],group:Array(12).fill(0)}};
- close(entityMetric(altered,f).base,348.81449);close(entityMetric(altered,{...f,salesType:"all"}).base,273.31449);
- const projected=reportingState({...state,snapshots:[altered]},"all");
- close(entityMetric(projected.snapshots[0],f).orderbook,88);
- const ext=reportingState(projected,"external");assert.deepEqual(reportingState(ext,"external").snapshots,ext.snapshots);
- close(entityMetric(ext.snapshots[0],f).cumulative[11].base,348.81449);
- const ddc=state.snapshots.find(s=>s.entityId==="ddc"&&s.week===40)!;
- close(entityMetric({...ddc,ddcAnnualTotal:99999},f).base,7158.8329);
- close(getDashboardSnapshot(state,admin,{...defaultFilters,salesType:"group",scenario:"Sales"}).totals.base,8979.678);
- close(getDashboardSnapshot(state,admin,{...defaultFilters,scenario:"Sales"}).totals.base,39939.10739);
+test("External uses H10 plus K17 independently of All-sales overrides", () => {
+  const f = {
+    ...defaultFilters,
+    salesType: "external" as const,
+    scenario: "Sales" as const,
+  };
+  for (const [id, sales, ob, total] of [
+    ["dhk", 18256.216, 5282.382, 23538.598],
+    ["ddc", 5136.274, 2022.5589, 7158.8329],
+    ["dcp", 260.81449, 1.184, 261.99849],
+  ] as const) {
+    const d = getDashboardSnapshot(state, admin, { ...f, entity: id });
+    close(d.totals.sales, sales);
+    close(d.totals.orderbook, ob);
+    close(d.totals.base, total);
+    close(d.totals.cumulative[11].base, total);
+    close(
+      chinaStripAmount(d.rows[0], { ...f, scenario: "Sales + Prospect" }),
+      total,
+    );
+  }
+  const china = getDashboardSnapshot(state, admin, f);
+  close(china.totals.sales, 23653.30449);
+  close(china.totals.orderbook, 7306.1249);
+  close(china.totals.base, 30959.42939);
+  const raw = state.snapshots.find(
+    (s) => s.entityId === "dcp" && s.week === 40,
+  )!;
+  const altered = {
+    ...raw,
+    monthEstimate: { external: 12.5, group: 999 },
+    orderbook: { external: 88, group: 999 },
+    monthlyOrderbook: {
+      external: [...Array(9).fill(0), 88, 0, 0],
+      group: Array(12).fill(0),
+    },
+  };
+  close(entityMetric(altered, f).base, 348.81449);
+  close(entityMetric(altered, { ...f, salesType: "all" }).base, 273.31449);
+  const projected = reportingState({ ...state, snapshots: [altered] }, "all");
+  close(entityMetric(projected.snapshots[0], f).orderbook, 88);
+  const ext = reportingState(projected, "external");
+  assert.deepEqual(reportingState(ext, "external").snapshots, ext.snapshots);
+  close(entityMetric(ext.snapshots[0], f).cumulative[11].base, 348.81449);
+  const ddc = state.snapshots.find(
+    (s) => s.entityId === "ddc" && s.week === 40,
+  )!;
+  close(entityMetric({ ...ddc, ddcAnnualTotal: 99999 }, f).base, 7158.8329);
+  close(
+    getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      salesType: "group",
+      scenario: "Sales",
+    }).totals.base,
+    8979.678,
+  );
+  close(
+    getDashboardSnapshot(state, admin, { ...defaultFilters, scenario: "Sales" })
+      .totals.base,
+    39939.10739,
+  );
 });
 
-
-test("DCP original W40 owner YTD correction is External, and preserves raw invoices/monthly sources",()=>{
- const raw=state.snapshots.find(s=>s.entityId==="dcp"&&s.week===40)!;close(raw.turnover.external,200.091);
- for(const salesType of ["all","external"] as const){
- const f={...defaultFilters,entity:"dcp",salesType,scenario:"Sales" as const};const d=getDashboardSnapshot(state,admin,f);
- close(d.totals.sales,260.81449);close(d.totals.base,261.99849);close(d.totals.cumulative[11].base,261.99849);
- close(chinaStripAmount(d.rows[0],f),260.81449);
- assert.ok(d.rows[0].snapshot!.sourceCells.dcpYtdSales.includes("260814.49 EUR"));
- assert.deepEqual(d.rows[0].snapshot!.monthlySales.external,raw.monthlySales.external);
- assert.deepEqual(d.rows[0].snapshot!.monthTurnover.external,raw.monthTurnover.external);
- }
- const old=state.snapshots.find(s=>s.entityId==="dcp"&&s.week===39)!;
- close(entityMetric(old,{...defaultFilters,scenario:"Sales"}).sales,old.turnover.external!);
- const group=getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dcp",salesType:"group",scenario:"Sales"});close(group.totals.sales,0);close(group.totals.base,0);
- close(getDashboardSnapshot(state,admin,{...defaultFilters,entity:"dhk",scenario:"Sales"}).totals.base,32518.276);
- close(getDashboardSnapshot(state,admin,{...defaultFilters,entity:"ddc",scenario:"Sales"}).totals.base,7158.8329);
+test("DCP original W40 owner YTD correction is External, and preserves raw invoices/monthly sources", () => {
+  const raw = state.snapshots.find(
+    (s) => s.entityId === "dcp" && s.week === 40,
+  )!;
+  close(raw.turnover.external, 200.091);
+  for (const salesType of ["all", "external"] as const) {
+    const f = {
+      ...defaultFilters,
+      entity: "dcp",
+      salesType,
+      scenario: "Sales" as const,
+    };
+    const d = getDashboardSnapshot(state, admin, f);
+    close(d.totals.sales, 260.81449);
+    close(d.totals.base, 261.99849);
+    close(d.totals.cumulative[11].base, 261.99849);
+    close(chinaStripAmount(d.rows[0], f), 260.81449);
+    assert.ok(
+      d.rows[0].snapshot!.sourceCells.dcpYtdSales.includes("260814.49 EUR"),
+    );
+    assert.deepEqual(
+      d.rows[0].snapshot!.monthlySales.external,
+      raw.monthlySales.external,
+    );
+    assert.deepEqual(
+      d.rows[0].snapshot!.monthTurnover.external,
+      raw.monthTurnover.external,
+    );
+  }
+  const old = state.snapshots.find(
+    (s) => s.entityId === "dcp" && s.week === 39,
+  )!;
+  close(
+    entityMetric(old, { ...defaultFilters, scenario: "Sales" }).sales,
+    old.turnover.external!,
+  );
+  const group = getDashboardSnapshot(state, admin, {
+    ...defaultFilters,
+    entity: "dcp",
+    salesType: "group",
+    scenario: "Sales",
+  });
+  close(group.totals.sales, 0);
+  close(group.totals.base, 0);
+  close(
+    getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      entity: "dhk",
+      scenario: "Sales",
+    }).totals.base,
+    32518.276,
+  );
+  close(
+    getDashboardSnapshot(state, admin, {
+      ...defaultFilters,
+      entity: "ddc",
+      scenario: "Sales",
+    }).totals.base,
+    7158.8329,
+  );
 });
-
 
 test("Coverage and Gap exclude missing and supplied Prospect in both scenarios", () => {
-  const snapshot = getDashboardSnapshot(state, admin, defaultFilters).rows.find(r => r.entity.id === "dhk")!.snapshot!;
+  const snapshot = getDashboardSnapshot(state, admin, defaultFilters).rows.find(
+    (r) => r.entity.id === "dhk",
+  )!.snapshot!;
   for (const prospect of [null, 5000]) {
     for (const scenario of ["Sales", "Sales + Prospect"] as const) {
-      const m = entityMetric({ ...snapshot, prospect }, { ...defaultFilters, scenario });
+      const m = entityMetric(
+        { ...snapshot, prospect },
+        { ...defaultFilters, scenario },
+      );
       close(m.coverage, m.base! / 25132);
       close(m.gap, m.base! - 25132);
       assert.equal(m.prospect, prospect);
-      close(m.scenario, m.base! + (scenario === "Sales" ? 0 : prospect ?? 0));
-      const modified = { ...state, snapshots: state.snapshots.map(s => s.entityId === snapshot.entityId && s.year === snapshot.year && s.week === snapshot.week ? { ...s, prospect } : s) };
-      const total = getDashboardSnapshot(modified, admin, { ...defaultFilters, scenario }).totals;
+      close(m.scenario, m.base! + (scenario === "Sales" ? 0 : (prospect ?? 0)));
+      const modified = {
+        ...state,
+        snapshots: state.snapshots.map((s) =>
+          s.entityId === snapshot.entityId &&
+          s.year === snapshot.year &&
+          s.week === snapshot.week
+            ? { ...s, prospect }
+            : s,
+        ),
+      };
+      const total = getDashboardSnapshot(modified, admin, {
+        ...defaultFilters,
+        scenario,
+      }).totals;
       close(total.coverage, total.base! / 33207);
       close(total.gap, total.base! - 33207);
     }
   }
 });
 
-
 test("signed variance reconciles BU totals and coverage across years, scenarios and sales types", () => {
   for (const year of [2026, 2027] as const) {
     for (const scenario of ["Sales", "Sales + Prospect"] as const) {
       for (const salesType of ["all", "external", "group"] as const) {
-        const d = getDashboardSnapshot(state, admin, { ...defaultFilters, year, scenario, salesType });
-        for (const m of [d.totals, ...d.rows.map(r => r.metrics), ...d.buGroups.map(b => b.metrics)]) {
+        const d = getDashboardSnapshot(state, admin, {
+          ...defaultFilters,
+          year,
+          scenario,
+          salesType,
+        });
+        for (const m of [
+          d.totals,
+          ...d.rows.map((r) => r.metrics),
+          ...d.buGroups.map((b) => b.metrics),
+        ]) {
           if (m.gap !== null) {
             close(m.gap, m.base! - m.budget!);
             if (m.coverage !== null) close(m.gap, (m.coverage - 1) * m.budget!);
           } else assert.ok(!m.budgetComplete || m.base === null);
         }
-        if (d.totals.gap !== null) close(d.totals.gap, d.buGroups.reduce((sum, b) => sum + b.metrics.gap!, 0));
+        if (d.totals.gap !== null)
+          close(
+            d.totals.gap,
+            d.buGroups.reduce((sum, b) => sum + b.metrics.gap!, 0),
+          );
       }
     }
   }
   const china = getDashboardSnapshot(state, admin, defaultFilters);
   assert.ok(china.totals.gap! > 0);
-  assert.ok(china.rows.find(r => r.entity.id === "dcp")!.metrics.gap! < 0);
+  assert.ok(china.rows.find((r) => r.entity.id === "dcp")!.metrics.gap! < 0);
 });
-
 
 test("final owner budgets reconcile External/Group/All by BU and year without changing source", () => {
   const before = JSON.stringify(state);
@@ -768,20 +1016,43 @@ test("final owner budgets reconcile External/Group/All by BU and year without ch
   };
   for (const year of [2026, 2027] as const) {
     for (const scenario of ["Sales", "Sales + Prospect"] as const) {
-      for (const [entity, [external, group]] of Object.entries(expected[year])) {
-        for (const [salesType, budget] of [["external", external], ["group", group], ["all", external + group]] as const) {
-          const d = getDashboardSnapshot(state, admin, { ...defaultFilters, year, entity, scenario, salesType });
+      for (const [entity, [external, group]] of Object.entries(
+        expected[year],
+      )) {
+        for (const [salesType, budget] of [
+          ["external", external],
+          ["group", group],
+          ["all", external + group],
+        ] as const) {
+          const d = getDashboardSnapshot(state, admin, {
+            ...defaultFilters,
+            year,
+            entity,
+            scenario,
+            salesType,
+          });
           close(d.totals.budget, budget);
           close(d.totals.gap, d.totals.base! - budget);
           if (budget > 0) close(d.totals.coverage, d.totals.base! / budget);
           else assert.equal(d.totals.coverage, null);
-          assert.equal(d.totals.budgetComplete, !(year === 2027 && entity === "dcp"));
-          assert.ok(d.totals.monthly.every(m => m.budget === null));
+          assert.equal(
+            d.totals.budgetComplete,
+            !(year === 2027 && entity === "dcp"),
+          );
+          assert.ok(d.totals.monthly.every((m) => m.budget === null));
         }
       }
-      const totalBudgets = year === 2026 ? [27419, 5788, 33207] : [30749, 5039, 35788];
-      for (const [index, salesType] of (["external", "group", "all"] as const).entries()) {
-        const d = getDashboardSnapshot(state, admin, { ...defaultFilters, year, scenario, salesType });
+      const totalBudgets =
+        year === 2026 ? [27419, 5788, 33207] : [30749, 5039, 35788];
+      for (const [index, salesType] of (
+        ["external", "group", "all"] as const
+      ).entries()) {
+        const d = getDashboardSnapshot(state, admin, {
+          ...defaultFilters,
+          year,
+          scenario,
+          salesType,
+        });
         close(d.totals.budget, totalBudgets[index]);
         close(d.totals.coverage, d.totals.base! / totalBudgets[index]);
         close(d.totals.gap, d.totals.base! - totalBudgets[index]);
@@ -791,89 +1062,181 @@ test("final owner budgets reconcile External/Group/All by BU and year without ch
   assert.equal(JSON.stringify(state), before);
 });
 
-
 test("W41 live seed preserves BU rules, approved budgets, owner DCP YTD and future OB", () => {
-  const fixtures = ["Dashboard 2026 - DDC(3).xlsx", "Dashboard 2026 - DEHK(3).xlsx", "W41-- Dashboard 2026 - DCP(1).xlsx"].map(file => parseDashboardWorkbook(fs.readFileSync(`Dashboard/${file}`), file));
-  const latest: Store = { ...state, snapshots: fixtures.flatMap(p => p.snapshots), lines: fixtures.flatMap(p => p.lines) };
+  const fixtures = [
+    "Dashboard 2026 - DDC(3).xlsx",
+    "Dashboard 2026 - DEHK(3).xlsx",
+    "W41-- Dashboard 2026 - DCP(1).xlsx",
+  ].map((file) =>
+    parseDashboardWorkbook(fs.readFileSync(`Dashboard/${file}`), file),
+  );
+  const latest: Store = {
+    ...state,
+    snapshots: fixtures.flatMap((p) => p.snapshots),
+    lines: fixtures.flatMap((p) => p.lines),
+  };
   const before = JSON.stringify(latest);
   for (const scenario of ["Sales", "Sales + Prospect"] as const) {
     for (const salesType of ["all", "external", "group"] as const) {
       const filters = { ...defaultFilters, scenario, salesType };
       const d = getDashboardSnapshot(latest, admin, filters);
       assert.deepEqual(d.weeks, [41]);
-      const expected = salesType === "all" ? [39973.10739, 33207, 2807.6859]
-        : salesType === "external" ? [30984.42939, 27419, 2591.6969] : [8988.678, 5788, 215.989];
-      close(d.totals.base, expected[0]); close(d.totals.budget, expected[1]); close(d.totals.remaining, expected[2]);
-      close(d.totals.coverage, expected[0] / expected[1]); close(d.totals.gap, expected[0] - expected[1]);
+      const expected =
+        salesType === "all"
+          ? [39973.10739, 33207, 2807.6859]
+          : salesType === "external"
+            ? [30984.42939, 27419, 2591.6969]
+            : [8988.678, 5788, 215.989];
+      close(d.totals.base, expected[0]);
+      close(d.totals.budget, expected[1]);
+      close(d.totals.remaining, expected[2]);
+      close(d.totals.coverage, expected[0] / expected[1]);
+      close(d.totals.gap, expected[0] - expected[1]);
       close(d.totals.cumulative[11].base, expected[0]);
-      const dcp = d.rows.find(r => r.entity.id === "dcp")!;
+      const dcp = d.rows.find((r) => r.entity.id === "dcp")!;
       close(dcp.metrics.sales, salesType === "group" ? 0 : 260.81449);
       assert.ok(dcp.snapshot!.sourceCells.dcpYtdSales.includes("2026-10-11"));
-      const future = getDashboardSnapshot(latest, admin, { ...filters, year: 2027 });
-      const futureExpected = salesType === "all" ? [3133.688, 35788] : salesType === "external" ? [2983.464, 30749] : [150.224, 5039];
-      close(future.totals.base, futureExpected[0]);close(future.totals.budget, futureExpected[1]);
-      close(future.totals.gap, futureExpected[0] - futureExpected[1]);close(future.totals.coverage, futureExpected[0] / futureExpected[1]);
-      close(future.rows.find(r => r.entity.id === "ddc")!.metrics.base, salesType === "group" ? 0 : 51);
+      const future = getDashboardSnapshot(latest, admin, {
+        ...filters,
+        year: 2027,
+      });
+      const futureExpected =
+        salesType === "all"
+          ? [3133.688, 35788]
+          : salesType === "external"
+            ? [2983.464, 30749]
+            : [150.224, 5039];
+      close(future.totals.base, futureExpected[0]);
+      close(future.totals.budget, futureExpected[1]);
+      close(future.totals.gap, futureExpected[0] - futureExpected[1]);
+      close(future.totals.coverage, futureExpected[0] / futureExpected[1]);
+      close(
+        future.rows.find((r) => r.entity.id === "ddc")!.metrics.base,
+        salesType === "group" ? 0 : 51,
+      );
       assert.equal(future.totals.remaining, null);
     }
   }
-  const rawDcp = latest.snapshots.find(s => s.entityId === "dcp" && s.week === 41)!;
+  const rawDcp = latest.snapshots.find(
+    (s) => s.entityId === "dcp" && s.week === 41,
+  )!;
   close(rawDcp.turnover.external, 200.091);
   close(entityMetric({ ...rawDcp, week: 44 }, defaultFilters).sales, 200.091); // W43 approval does not carry into later unconfirmed weeks.
-  const historical = latest.snapshots.find(s => s.entityId === "dcp" && s.week === 40)!;
+  const historical = latest.snapshots.find(
+    (s) => s.entityId === "dcp" && s.week === 40,
+  )!;
   close(entityMetric(historical, defaultFilters).sales, 260.81449);
   assert.equal(JSON.stringify(latest), before);
 });
-
 
 test("data update date uses seed/publication metadata and a stable APAC calendar date", () => {
   close(source.snapshots.length, 166);
   assert.ok(!Number.isNaN(Date.parse(source.meta.generatedAt)));
   const seeded = { ...state, dataUpdatedAt: source.meta.generatedAt };
-  assert.equal(getDashboardSnapshot(seeded, admin, defaultFilters).latestDataUpdate, source.meta.generatedAt);
+  assert.equal(
+    getDashboardSnapshot(seeded, admin, defaultFilters).latestDataUpdate,
+    source.meta.generatedAt,
+  );
   const at = "2026-10-10T17:30:00.000Z";
-  const legacy = { ...state, audit: [{ id: "publish-test", at, actor: admin.id, action: "publish", subject: "test" }] };
-  assert.equal(getDashboardSnapshot(legacy, admin, defaultFilters).latestDataUpdate, at);
+  const legacy = {
+    ...state,
+    audit: [
+      {
+        id: "publish-test",
+        at,
+        actor: admin.id,
+        action: "publish",
+        subject: "test",
+      },
+    ],
+  };
+  assert.equal(
+    getDashboardSnapshot(legacy, admin, defaultFilters).latestDataUpdate,
+    at,
+  );
   assert.equal(formatUpdateDate(at, "en"), "October 11, 2026");
   assert.equal(formatUpdateDate(at, "zh-CN"), "2026年10月11日");
   assert.equal(formatUpdateDate(null), "—");
   assert.equal(formatUpdateDate("invalid"), "—");
-  assert.equal(getDashboardSnapshot(state, admin, defaultFilters).latestDataUpdate, null);
+  assert.equal(
+    getDashboardSnapshot(state, admin, defaultFilters).latestDataUpdate,
+    null,
+  );
 });
 
-
 test("India source imports actual order ranges and retains monthly/source evidence", () => {
-  const p = parseDashboardWorkbook(fs.readFileSync("Dashboard/2. Dashboard_2026_DDI_Week-41.xlsx"), "2. Dashboard_2026_DDI_Week-41.xlsx");
+  const p = parseDashboardWorkbook(
+    fs.readFileSync("Dashboard/2. Dashboard_2026_DDI_Week-41.xlsx"),
+    "2. Dashboard_2026_DDI_Week-41.xlsx",
+  );
   assert.equal(p.snapshots.length, 41);
-  assert.ok(p.snapshots.every(s => s.entityId === "ddi"));
-  assert.ok(!p.findings.some(f => f.severity === "error"));
-  const s = p.snapshots.find(s => s.week === 41)!;
-  const lines = p.lines.filter(l => l.week === 41);
-  assert.equal(lines.length, 84); assert.ok(lines.every(l => l.sourceRow <= 115 && l.customerType !== "Unclassified"));
-  assert.ok(!s.findings.some(f => f.includes("classification missing") || f.includes("does not reconcile")));
-  assert.ok(s.findings.includes("Orderbook movement bridge has an unexplained difference; source amounts retained"));
+  assert.ok(p.snapshots.every((s) => s.entityId === "ddi"));
+  assert.ok(!p.findings.some((f) => f.severity === "error"));
+  const s = p.snapshots.find((s) => s.week === 41)!;
+  const lines = p.lines.filter((l) => l.week === 41);
+  assert.equal(lines.length, 84);
+  assert.ok(
+    lines.every((l) => l.sourceRow <= 115 && l.customerType !== "Unclassified"),
+  );
+  assert.ok(
+    !s.findings.some(
+      (f) =>
+        f.includes("classification missing") ||
+        f.includes("does not reconcile"),
+    ),
+  );
+  assert.ok(
+    s.findings.includes(
+      "Orderbook movement bridge has an unexplained difference; source amounts retained",
+    ),
+  );
   const m = entityMetric(s, defaultFilters);
-  close(m.sales, 6195); close(m.orderbook, 2909.3515846505334);close(m.base, 9104.351584650532);close(m.remaining, 1484.396964781534);
-  close(m.budget, 10667);assert.equal(m.prospect, null);close(m.coverage, 9104.351584650532 / 10667);
-  close(entityMetric(s, { ...defaultFilters, year: 2027 }).orderbook, 109.15973);
-  assert.deepEqual(s.monthlySales.external.slice(0, 10), [600,320,797,430,396,688,856,605,1021,304]);
+  close(m.sales, 6195);
+  close(m.orderbook, 2909.3515846505334);
+  close(m.base, 9104.351584650532);
+  close(m.remaining, 1484.396964781534);
+  close(m.budget, 10667);
+  assert.equal(m.prospect, null);
+  close(m.coverage, 9104.351584650532 / 10667);
+  close(
+    entityMetric(s, { ...defaultFilters, year: 2027 }).orderbook,
+    109.15973,
+  );
+  assert.deepEqual(
+    s.monthlySales.external.slice(0, 10),
+    [600, 320, 797, 430, 396, 688, 856, 605, 1021, 304],
+  );
 });
 
 test("India approved annual totals do not invent sales-type, monthly or team allocations", async () => {
-  const { applyApprovedBudget, approvedAnnualBudget } = await import("../lib/annual-budgets");
-  const raw = source.snapshots.find(s => s.entityId === "ddi" && s.week === 41) as unknown as Snapshot;
-  const projected = applyApprovedBudget({ ...raw, annualBudget: 1, monthlyBudget: Array(12).fill(1) });
+  const { applyApprovedBudget, approvedAnnualBudget } =
+    await import("../lib/annual-budgets");
+  const raw = source.snapshots.find(
+    (s) => s.entityId === "ddi" && s.week === 41,
+  ) as unknown as Snapshot;
+  const projected = applyApprovedBudget({
+    ...raw,
+    annualBudget: 1,
+    monthlyBudget: Array(12).fill(1),
+  });
   assert.equal(projected.annualBudget, 10667);
   assert.equal(projected.nextAnnualBudget, 10200);
   assert.ok(projected.sourceCells.nextBudget.includes("2026-10-24"));
   assert.ok(projected.sourceCells.budget.includes("2026-10-24"));
-  assert.ok(projected.monthlyBudget.every(v => v === null));
+  assert.ok(projected.monthlyBudget.every((v) => v === null));
   assert.equal(approvedAnnualBudget("ddi", 2026, "all"), 10667);
   for (const salesType of ["external", "group"] as const) {
     assert.equal(approvedAnnualBudget("ddi", 2026, salesType), undefined);
-    assert.equal(entityMetric(projected, { ...defaultFilters, salesType }).budget, null);
+    assert.equal(
+      entityMetric(projected, { ...defaultFilters, salesType }).budget,
+      null,
+    );
     assert.equal(approvedAnnualBudget("ddi", 2027, salesType), undefined);
-    assert.equal(entityMetric(projected, { ...defaultFilters, salesType, year: 2027 }).budget, null);
+    assert.equal(
+      entityMetric(projected, { ...defaultFilters, salesType, year: 2027 })
+        .budget,
+      null,
+    );
   }
   for (const scenario of ["Sales", "Sales + Prospect"] as const) {
     const metric = entityMetric(projected, { ...defaultFilters, scenario });
@@ -882,46 +1245,111 @@ test("India approved annual totals do not invent sales-type, monthly or team all
     assert.equal(metric.prospect, null);
   }
   const future = entityMetric(projected, { ...defaultFilters, year: 2027 });
-  assert.equal(future.budget, 10200);assert.equal(future.budgetComplete, true);
-  close(future.coverage, future.base! / 10200);close(future.gap, future.base! - 10200);
-  const futureSnapshot = applyApprovedBudget({ ...raw, year: 2027, annualBudget: 1 });
-  assert.equal(futureSnapshot.annualBudget, 10200);assert.ok(futureSnapshot.sourceCells.budget.includes("FY2027 India total only"));
-  assert.equal(entityMetric({ ...projected, teamScope: true, annualBudget: null }, defaultFilters).budget, null);
+  assert.equal(future.budget, 10200);
+  assert.equal(future.budgetComplete, true);
+  close(future.coverage, future.base! / 10200);
+  close(future.gap, future.base! - 10200);
+  const futureSnapshot = applyApprovedBudget({
+    ...raw,
+    year: 2027,
+    annualBudget: 1,
+  });
+  assert.equal(futureSnapshot.annualBudget, 10200);
+  assert.ok(
+    futureSnapshot.sourceCells.budget.includes("FY2027 India total only"),
+  );
+  assert.equal(
+    entityMetric(
+      { ...projected, teamScope: true, annualBudget: null },
+      defaultFilters,
+    ).budget,
+    null,
+  );
 });
 
 test("India editor cannot view, edit, publish or aggregate China records", async () => {
   const { configuredIndiaEditor } = await import("../lib/india-account");
   const { passwordHash } = await import("../lib/storage");
-  const india = configuredIndiaEditor({ DIAM_INDIA_EMAIL: "india.editor@diam.local", DIAM_INDIA_PASSWORD_HASH: passwordHash("test-india-password") })!;
+  const india = configuredIndiaEditor({
+    DIAM_INDIA_EMAIL: "india.editor@diam.local",
+    DIAM_INDIA_PASSWORD_HASH: passwordHash("test-india-password"),
+  })!;
   assert.equal(india.role, "editor");
   assert.equal(configuredIndiaEditor({}), null);
-  const plain = configuredIndiaEditor({ DIAM_INDIA_EMAIL: "india.editor@diam.local", DIAM_INDIA_PASSWORD: "india-test-password" })!;
+  const plain = configuredIndiaEditor({
+    DIAM_INDIA_EMAIL: "india.editor@diam.local",
+    DIAM_INDIA_PASSWORD: "india-test-password",
+  })!;
   const { verifyPassword } = await import("../lib/auth");
   assert.ok(verifyPassword("india-test-password", plain.passwordHash));
   assert.equal(plain.role, "editor");
-  assert.equal(configuredIndiaEditor({ DIAM_INDIA_EMAIL: "india.editor@diam.local", DIAM_INDIA_PASSWORD: "short" }), null);
-  for (const e of entities) { assert.equal(canView(india, e), e.id === "ddi");assert.equal(canEdit(india, e), e.id === "ddi");assert.equal(canPublish(india, e), false); }
-  const live: Store = { ...state, snapshots: source.snapshots as unknown as Snapshot[], lines: source.lines as OrderBookLine[] };
+  assert.equal(
+    configuredIndiaEditor({
+      DIAM_INDIA_EMAIL: "india.editor@diam.local",
+      DIAM_INDIA_PASSWORD: "short",
+    }),
+    null,
+  );
+  for (const e of entities) {
+    assert.equal(canView(india, e), e.id === "ddi");
+    assert.equal(canEdit(india, e), e.id === "ddi");
+    assert.equal(canPublish(india, e), false);
+  }
+  const live: Store = {
+    ...state,
+    snapshots: source.snapshots as unknown as Snapshot[],
+    lines: source.lines as OrderBookLine[],
+  };
   for (const region of ["China", "APAC", "India"]) {
     const d = getDashboardSnapshot(live, india, { ...defaultFilters, region });
-    assert.deepEqual(d.entities.map(e => e.id), ["ddi"]);
-    assert.deepEqual(d.china, []); assert.equal(d.chinaTotal.base, null);
-    assert.ok(d.regionRows.every(r => r.entity.id === "ddi"));
+    assert.deepEqual(
+      d.entities.map((e) => e.id),
+      ["ddi"],
+    );
+    assert.deepEqual(d.china, []);
+    assert.equal(d.chinaTotal.base, null);
+    assert.ok(d.regionRows.every((r) => r.entity.id === "ddi"));
     assert.ok(!d.regions.includes("China"));
-    assert.ok(d.rows.every(r => r.entity.id === "ddi"));assert.ok(d.history.every(r => r.entity.id === "ddi"));
-    if (region === "China") assert.equal(d.totals.base, null);else close(d.totals.base, 9104.351584650532);
+    assert.ok(d.rows.every((r) => r.entity.id === "ddi"));
+    assert.ok(d.history.every((r) => r.entity.id === "ddi"));
+    if (region === "China") assert.equal(d.totals.base, null);
+    else close(d.totals.base, 9104.351584650532);
     assert.ok(!JSON.stringify(d).includes("Dashboard 2026 - DEHK"));
   }
-  const { repository } = await import("../lib/repository");
-  await assert.rejects(repository.createImportBatch(manualBatch(input(), admin), india));
+  await assert.rejects(
+    repository.createImportBatch(manualBatch(input(), admin), india),
+  );
 });
 
-
 test("region briefing switches between India and China, retaining full permitted country totals", () => {
- const live: Store={...state,snapshots:source.snapshots as unknown as Snapshot[],lines:source.lines as OrderBookLine[]};
- const india=getDashboardSnapshot(live,admin,{...defaultFilters,region:"India"});
- assert.deepEqual(india.regionRows.map(r=>r.entity.code),["DDI"]);close(india.regionTotal.base,9104.351584650532);
- close(chinaStripAmount(india.regionRows[0],{...defaultFilters,region:"India",scenario:"Sales"}),6195);
- const china=getDashboardSnapshot(live,admin,{...defaultFilters,region:"China",bu:"DDC"});
- assert.equal(china.regionRows.length,3);close(china.regionTotal.base,40271.30039);close(china.totals.base,7260.3999);
+  const live: Store = {
+    ...state,
+    snapshots: source.snapshots as unknown as Snapshot[],
+    lines: source.lines as OrderBookLine[],
+  };
+  const india = getDashboardSnapshot(live, admin, {
+    ...defaultFilters,
+    region: "India",
+  });
+  assert.deepEqual(
+    india.regionRows.map((r) => r.entity.code),
+    ["DDI"],
+  );
+  close(india.regionTotal.base, 9104.351584650532);
+  close(
+    chinaStripAmount(india.regionRows[0], {
+      ...defaultFilters,
+      region: "India",
+      scenario: "Sales",
+    }),
+    6195,
+  );
+  const china = getDashboardSnapshot(live, admin, {
+    ...defaultFilters,
+    region: "China",
+    bu: "DDC",
+  });
+  assert.equal(china.regionRows.length, 3);
+  close(china.regionTotal.base, 40271.30039);
+  close(china.totals.base, 7260.3999);
 });

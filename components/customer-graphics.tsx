@@ -1,11 +1,19 @@
 "use client";
-import { memo, useEffect, useRef, useState, useTransition, type ReactNode } from "react";
+import {
+  memo,
+  useEffect,
+  useRef,
+  useState,
+  useTransition,
+  type ReactNode,
+} from "react";
 import { UpdateStatus } from "./update-status";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import { DonutPlot, Legend, graphicColors } from "./graphic-plots";
 import type { Filters } from "@/lib/types";
 import type { customerAnalysisView } from "@/lib/customer-analysis";
+import { integerAxis } from "@/lib/chart-axis";
 import { formatK } from "@/lib/dashboard";
 import type { MessageKey } from "@/lib/i18n";
 import { customerGrowth, customerMetrics } from "@/lib/customer-metrics";
@@ -56,7 +64,13 @@ export const CustomerGraphics = memo(function CustomerGraphics({
         const j = await r.json();
         if (!r.ok || !j.ok) throw new Error("Customer analysis unavailable");
         if (!controller.signal.aborted)
-          startTransition(() => setResponse((previous) => controller.signal.aborted ? previous : { query, revision, data: j.data }));
+          startTransition(() =>
+            setResponse((previous) =>
+              controller.signal.aborted
+                ? previous
+                : { query, revision, data: j.data },
+            ),
+          );
       })
       .catch(() => {
         if (!controller.signal.aborted)
@@ -68,10 +82,25 @@ export const CustomerGraphics = memo(function CustomerGraphics({
     response?.query === query && response.revision === revision
       ? response
       : undefined;
-  return <CustomerGraphicsView current={current ?? response} pending={!current || renderPending} selectedMonth={selectedMonth} setMonth={setMonth} orderbook={children} />;
+  return (
+    <CustomerGraphicsView
+      current={current ?? response}
+      pending={!current || renderPending}
+      selectedMonth={selectedMonth}
+      setMonth={setMonth}
+      orderbook={children}
+    />
+  );
 });
 
-function CustomerGraphicsView({ current, pending = false, selectedMonth, setMonth, exportOnly = false, orderbook }: {
+function CustomerGraphicsView({
+  current,
+  pending = false,
+  selectedMonth,
+  setMonth,
+  exportOnly = false,
+  orderbook,
+}: {
   current?: { data?: View; error?: boolean };
   pending?: boolean;
   selectedMonth: string;
@@ -81,7 +110,19 @@ function CustomerGraphicsView({ current, pending = false, selectedMonth, setMont
 }) {
   const { tr, locale } = useI18n();
   const root = useRef<HTMLElement>(null);
-  useWorkbookGroup(root, exportOnly ? null : () => <CustomerGraphicsView current={current} selectedMonth={selectedMonth} setMonth={() => {}} exportOnly />);
+  useWorkbookGroup(
+    root,
+    exportOnly
+      ? null
+      : () => (
+          <CustomerGraphicsView
+            current={current}
+            selectedMonth={selectedMonth}
+            setMonth={() => {}}
+            exportOnly
+          />
+        ),
+  );
   const view = current?.data,
     analysis = view?.analysis;
   const monthLabel = (m: string) =>
@@ -110,9 +151,13 @@ function CustomerGraphicsView({ current, pending = false, selectedMonth, setMont
       ? "—"
       : `${growth >= 0 ? "+" : ""}${(growth * 100).toFixed(1)}%`;
   };
-  const metrics = analysis ? customerMetrics(analysis, view?.referenceTotal) : null;
-  const metricsShare = (amount: number) => metrics && metrics.keyTotal > 0
-    ? `${(amount / metrics.keyTotal * 100).toFixed(1)}%` : "—";
+  const metrics = analysis
+    ? customerMetrics(analysis, view?.referenceTotal)
+    : null;
+  const metricsShare = (amount: number) =>
+    metrics && metrics.keyTotal > 0
+      ? `${((amount / metrics.keyTotal) * 100).toFixed(1)}%`
+      : "—";
   const contributionTable = analysis && (
     <table className="bu-table">
       <thead>
@@ -185,26 +230,41 @@ function CustomerGraphicsView({ current, pending = false, selectedMonth, setMont
         currentLabel,
       ]
     : [];
-  const max =
-    Math.max(
-      1,
-      ...(analysis?.breakdown[0]?.values.map((_, i) =>
-        analysis.breakdown.reduce((n, r) => n + r.values[i], 0),
-      ) ?? []),
-    ) * 1.13;
+  const axis = integerAxis(
+    analysis?.breakdown[0]?.values.map((_, i) =>
+      analysis.breakdown.reduce((n, r) => n + r.values[i], 0),
+    ) ?? [],
+  );
+  const max = axis.max;
   const maxCustomer = Math.max(
     1,
     ...(analysis?.customers.flatMap((c) => [c.prior, c.current]) ?? []),
   );
-  const customerExport: ChartTable | null = analysis ? {
-    columns: [{ label: tr("common.customer") }, { label: `${priorLabel} (kEUR)` }, { label: `${currentLabel} (kEUR)` }, { label: tr("graphics.yoy"), format: "0.0%" }, { label: tr("graphics.status") }],
-    rows: analysis.customers.map(c => [c.name, c.prior, c.current, customerGrowth(c.prior, c.current), statusKeys[c.status] ? tr(statusKeys[c.status]) : c.status]),
-  } : null;
+  const customerExport: ChartTable | null = analysis
+    ? {
+        columns: [
+          { label: tr("common.customer") },
+          { label: `${priorLabel} (kEUR)` },
+          { label: `${currentLabel} (kEUR)` },
+          { label: tr("graphics.yoy"), format: "0.0%" },
+          { label: tr("graphics.status") },
+        ],
+        rows: analysis.customers.map((c) => [
+          c.name,
+          c.prior,
+          c.current,
+          customerGrowth(c.prior, c.current),
+          statusKeys[c.status] ? tr(statusKeys[c.status]) : c.status,
+        ]),
+      }
+    : null;
   return (
     <section
       ref={root}
       className="graphics-section customer-graphics"
-      data-customer-status={pending || !current ? "loading" : current.error ? "error" : "ready"}
+      data-customer-status={
+        pending || !current ? "loading" : current.error ? "error" : "ready"
+      }
       aria-busy={pending}
       data-updating={pending || undefined}
       aria-labelledby={exportOnly ? undefined : "customer-graphics-title"}
@@ -213,7 +273,9 @@ function CustomerGraphicsView({ current, pending = false, selectedMonth, setMont
         <UpdateStatus pending={pending} />
         <div>
           <p className="panel-kicker">{tr("graphics.monthlyKicker")}</p>
-          <h2 id={exportOnly ? undefined : "customer-graphics-title"}>{tr("graphics.customerTitle")}</h2>
+          <h2 id={exportOnly ? undefined : "customer-graphics-title"}>
+            {tr("graphics.customerTitle")}
+          </h2>
         </div>
         {!!view?.months.length && (
           <label className="graphics-month-select">
@@ -239,7 +301,11 @@ function CustomerGraphicsView({ current, pending = false, selectedMonth, setMont
             : current.error
               ? tr("graphics.loadError")
               : !view?.permitted || !view.scopeMatches
-                ? tr(view?.customerScoped ? "graphics.customerExternalUnavailable" : "graphics.customerScope")
+                ? tr(
+                    view?.customerScoped
+                      ? "graphics.customerExternalUnavailable"
+                      : "graphics.customerScope",
+                  )
                 : tr("graphics.customerMissing")}
         </div>
       ) : (
@@ -278,132 +344,178 @@ function CustomerGraphicsView({ current, pending = false, selectedMonth, setMont
             </div>
           </div>
           <div className="graphics-grid">
-            {view?.customerScoped ? <p className="graphic-wide graphic-unavailable">{tr("graphics.customerBreakdownUnavailable")}</p> : (
-            <GraphicCard
-              title={tr("graphics.customerBreakdown")}
-              className="graphic-wide"
-              context={context}
-              note={`${tr("graphics.forecastRule")} ${sourceNote}`}
-              height={410}
-              exportTable={{ columns: [{ label: tr("common.customer") }, ...columns.map(label => ({ label: `${label} (kEUR)` }))], rows: [...analysis.breakdown.map(r => [groupLabel(r.name), ...r.values]), [tr("graphics.total"), ...columns.map((_, i) => analysis.breakdown.reduce((n, r) => n + r.values[i], 0))]], summaryRows: [analysis.breakdown.length] }}
-              table={
-                <table className="bu-table">
-                  <thead>
-                    <tr>
-                      <th>{tr("common.customer")}</th>
-                      {columns.map((c) => (
-                        <th className="numeric" key={c}>
-                          {c}
-                        </th>
+            {view?.customerScoped ? (
+              <p className="graphic-wide graphic-unavailable">
+                {tr("graphics.customerBreakdownUnavailable")}
+              </p>
+            ) : (
+              <GraphicCard
+                title={tr("graphics.customerBreakdown")}
+                className="graphic-wide"
+                context={context}
+                note={`${tr("graphics.forecastRule")} ${sourceNote}`}
+                height={410}
+                exportTable={{
+                  columns: [
+                    { label: tr("common.customer") },
+                    ...columns.map((label) => ({ label: `${label} (kEUR)` })),
+                  ],
+                  rows: [
+                    ...analysis.breakdown.map((r) => [
+                      groupLabel(r.name),
+                      ...r.values,
+                    ]),
+                    [
+                      tr("graphics.total"),
+                      ...columns.map((_, i) =>
+                        analysis.breakdown.reduce((n, r) => n + r.values[i], 0),
+                      ),
+                    ],
+                  ],
+                  summaryRows: [analysis.breakdown.length],
+                }}
+                table={
+                  <table className="bu-table">
+                    <thead>
+                      <tr>
+                        <th>{tr("common.customer")}</th>
+                        {columns.map((c) => (
+                          <th className="numeric" key={c}>
+                            {c}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {analysis.breakdown.map((r) => (
+                        <tr key={r.name}>
+                          <td>{groupLabel(r.name)}</td>
+                          {r.values.map((v, i) => (
+                            <td key={i} className="numeric">
+                              {formatK(v)}
+                            </td>
+                          ))}
+                        </tr>
                       ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {analysis.breakdown.map((r) => (
-                      <tr key={r.name}>
-                        <td>{groupLabel(r.name)}</td>
-                        {r.values.map((v, i) => (
-                          <td key={i} className="numeric">
-                            {formatK(v)}
+                      <tr>
+                        <td>
+                          <strong>{tr("graphics.total")}</strong>
+                        </td>
+                        {columns.map((c, i) => (
+                          <td className="numeric" key={c}>
+                            {formatK(
+                              analysis.breakdown.reduce(
+                                (n, r) => n + r.values[i],
+                                0,
+                              ),
+                            )}
                           </td>
                         ))}
                       </tr>
-                    ))}
-                    <tr>
-                      <td>
-                        <strong>{tr("graphics.total")}</strong>
-                      </td>
-                      {columns.map((c, i) => (
-                        <td className="numeric" key={c}>
-                          {formatK(
-                            analysis.breakdown.reduce(
-                              (n, r) => n + r.values[i],
-                              0,
-                            ),
-                          )}
-                        </td>
-                      ))}
-                    </tr>
-                  </tbody>
-                </table>
-              }
-            >
-              {[0, 0.25, 0.5, 0.75, 1].map((f) => (
-                <g key={f}>
-                  <line
-                    x1="70"
-                    x2="770"
-                    y1={290 - f * 250}
-                    y2={290 - f * 250}
-                    stroke="#e5e0d6"
-                    strokeDasharray="3 4"
-                  />
-                  <text
-                    x="60"
-                    y={294 - f * 250}
-                    textAnchor="end"
-                    fontSize="12"
-                    fill="#706f67"
+                    </tbody>
+                  </table>
+                }
+              >
+                {axis.ticks
+                  .map((value) => value / max)
+                  .map((f) => (
+                    <g key={f}>
+                      <line
+                        x1="70"
+                        x2="770"
+                        y1={290 - f * 250}
+                        y2={290 - f * 250}
+                        stroke="#e5e0d6"
+                        strokeDasharray="3 4"
+                      />
+                      <text
+                        x="60"
+                        y={294 - f * 250}
+                        textAnchor="end"
+                        fontSize="12"
+                        fill="#706f67"
+                      >
+                        {formatK(max * f)}
+                      </text>
+                    </g>
+                  ))}
+                <text x="70" y="17" fill="#706f67" fontSize="11">
+                  kEUR
+                </text>
+                {columns.map((label, i) => {
+                  let offset = 0;
+                  const x = 114 + i * 166;
+                  const columnTotal = analysis.breakdown.reduce(
+                    (n, r) => n + r.values[i],
+                    0,
+                  );
+                  return (
+                    <g key={label}>
+                      {analysis.breakdown.map((r, j) => {
+                        const value = r.values[i],
+                          y = 290 - ((offset + value) / max) * 250;
+                        offset += value;
+                        return (
+                          <ChartMark
+                            key={r.name}
+                            group={`category-${j}`}
+                            color={graphicColors[j]}
+                            data={{
+                              title: groupLabel(r.name),
+                              subtitle: monthLabel(analysis.month),
+                              rows: [
+                                { label, value: chartAmount(value, locale) },
+                                {
+                                  label: tr("graphics.share"),
+                                  value:
+                                    columnTotal > 0
+                                      ? `${((value / columnTotal) * 100).toFixed(1)}%`
+                                      : "—",
+                                },
+                              ],
+                            }}
+                          >
+                            <rect
+                              x={x}
+                              y={y}
+                              width="95"
+                              height={(value / max) * 250}
+                              fill={graphicColors[j]}
+                            />
+                          </ChartMark>
+                        );
+                      })}
+                      <text
+                        x={x + 47}
+                        y={278 - (columnTotal / max) * 250}
+                        textAnchor="middle"
+                        fontWeight="600"
+                      >
+                        {formatK(columnTotal)}
+                      </text>
+                      <text
+                        x={x + 47}
+                        y="316"
+                        textAnchor="middle"
+                        fontSize="12"
+                      >
+                        {label}
+                      </text>
+                    </g>
+                  );
+                })}
+                {analysis.breakdown.map((r, i) => (
+                  <g
+                    key={r.name}
+                    transform={`translate(${70 + (i % 3) * 234},${355 + Math.floor(i / 3) * 26})`}
                   >
-                    {formatK(max * f)}
-                  </text>
-                </g>
-              ))}
-              <text x="70" y="17" fill="#706f67" fontSize="11">
-                kEUR
-              </text>
-              {columns.map((label, i) => {
-                let offset = 0;
-                const x = 114 + i * 166;
-                const columnTotal = analysis.breakdown.reduce(
-                  (n, r) => n + r.values[i],
-                  0,
-                );
-                return (
-                  <g key={label}>
-                    {analysis.breakdown.map((r, j) => {
-                      const value = r.values[i],
-                        y = 290 - ((offset + value) / max) * 250;
-                      offset += value;
-                      return (
-                        <ChartMark key={r.name} group={`category-${j}`} color={graphicColors[j]}
-                          data={{title:groupLabel(r.name),subtitle:monthLabel(analysis.month),rows:[{label,value:chartAmount(value,locale)},{label:tr("graphics.share"),value:columnTotal>0?`${((value/columnTotal)*100).toFixed(1)}%`:"—"}]}}>
-                        <rect
-                          x={x}
-                          y={y}
-                          width="95"
-                          height={(value / max) * 250}
-                          fill={graphicColors[j]}
-                        />
-                        </ChartMark>
-                      );
-                    })}
-                    <text
-                      x={x + 47}
-                      y={278 - (columnTotal / max) * 250}
-                      textAnchor="middle"
-                      fontWeight="600"
-                    >
-                      {formatK(columnTotal)}
-                    </text>
-                    <text x={x + 47} y="316" textAnchor="middle" fontSize="12">
-                      {label}
+                    <rect width="10" height="10" fill={graphicColors[i]} />
+                    <text x="17" y="10" fontSize="12" fill="#706f67">
+                      {groupLabel(r.name)}
                     </text>
                   </g>
-                );
-              })}
-              {analysis.breakdown.map((r, i) => (
-                <g
-                  key={r.name}
-                  transform={`translate(${70 + (i % 3) * 234},${355 + Math.floor(i / 3) * 26})`}
-                >
-                  <rect width="10" height="10" fill={graphicColors[i]} />
-                  <text x="17" y="10" fontSize="12" fill="#706f67">
-                    {groupLabel(r.name)}
-                  </text>
-                </g>
-              ))}
-            </GraphicCard>
+                ))}
+              </GraphicCard>
             )}
             <GraphicCard
               title={tr("graphics.customerPie")}
@@ -444,36 +556,62 @@ function CustomerGraphicsView({ current, pending = false, selectedMonth, setMont
             >
               {analysis.customers.map((c, i) => (
                 <g key={c.name} transform={`translate(0,${24 + i * 52})`}>
-                  <ChartMark color="#a77a35" lift={[3,0]} data={{title:c.name,subtitle:monthLabel(analysis.month),rows:[
-                    {label:priorLabel,value:chartAmount(c.prior,locale)},
-                    {label:currentLabel,value:chartAmount(c.current,locale)},
-                    {label:tr("graphics.yoy"),value:yoy(c.prior,c.current)},
-                  ]}} hit={<rect x="15" y="-2" width="770" height="42" fill="white" />}>
-                  <text x="132" y="23" textAnchor="end" fontSize="13">
-                    {c.name}
-                  </text>
-                  <rect
-                    x="148"
-                    width={(c.prior / maxCustomer) * 490}
-                    height="16"
-                    fill="#bebbb2"
-                  />
-                  <rect
-                    x="148"
-                    y="20"
-                    width={(c.current / maxCustomer) * 490}
-                    height="16"
-                    fill="#a77a35"
-                  />
-                  <text
-                    x="770"
-                    y="23"
-                    textAnchor="end"
-                    fill={c.current < c.prior ? "#a34f3d" : "#2f7a5d"}
-                    fontWeight="600"
+                  <ChartMark
+                    color="#a77a35"
+                    lift={[3, 0]}
+                    data={{
+                      title: c.name,
+                      subtitle: monthLabel(analysis.month),
+                      rows: [
+                        {
+                          label: priorLabel,
+                          value: chartAmount(c.prior, locale),
+                        },
+                        {
+                          label: currentLabel,
+                          value: chartAmount(c.current, locale),
+                        },
+                        {
+                          label: tr("graphics.yoy"),
+                          value: yoy(c.prior, c.current),
+                        },
+                      ],
+                    }}
+                    hit={
+                      <rect
+                        x="15"
+                        y="-2"
+                        width="770"
+                        height="42"
+                        fill="white"
+                      />
+                    }
                   >
-                    {yoy(c.prior, c.current)}
-                  </text>
+                    <text x="132" y="23" textAnchor="end" fontSize="13">
+                      {c.name}
+                    </text>
+                    <rect
+                      x="148"
+                      width={(c.prior / maxCustomer) * 490}
+                      height="16"
+                      fill="#bebbb2"
+                    />
+                    <rect
+                      x="148"
+                      y="20"
+                      width={(c.current / maxCustomer) * 490}
+                      height="16"
+                      fill="#a77a35"
+                    />
+                    <text
+                      x="770"
+                      y="23"
+                      textAnchor="end"
+                      fill={c.current < c.prior ? "#a34f3d" : "#2f7a5d"}
+                      fontWeight="600"
+                    >
+                      {yoy(c.prior, c.current)}
+                    </text>
                   </ChartMark>
                 </g>
               ))}

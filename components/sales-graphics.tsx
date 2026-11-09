@@ -1,5 +1,6 @@
 "use client";
 import {TeamActualGraphics} from "./team-actual-graphics";
+import { integerAxis } from "@/lib/chart-axis";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import {
@@ -18,8 +19,14 @@ import { useWorkbookGroup } from "./use-workbook-group";
 import { ChartMark } from "./chart-interaction";
 import { chartAmount } from "@/lib/chart-tooltip";
 import { SalesMonthlyGraphic } from "./sales-monthly-graphic";
-import { businessUnitShares, exploreBusinessUnitRows } from "@/lib/sales-graphics";
-import { firstOpenMonth, teamMonthlyPerformance } from "@/lib/performance-chart";
+import {
+  businessUnitShares,
+  exploreBusinessUnitRows,
+} from "@/lib/sales-graphics";
+import {
+  firstOpenMonth,
+  teamMonthlyPerformance,
+} from "@/lib/performance-chart";
 
 export const SalesGraphics = memo(function SalesGraphics({
   data,
@@ -99,16 +106,9 @@ export const SalesGraphics = memo(function SalesGraphics({
       color: "#a77a35",
     },
   ];
-  const waterfallMax =
-    Math.max(
-      1,
-      ...bars.map((b) => Math.max(b.start, b.start + (b.value ?? 0))),
-    ) * 1.18;
-  const waterfallMin =
-    Math.min(
-      0,
-      ...bars.map((b) => Math.min(b.start, b.start + (b.value ?? 0))),
-    ) * 1.18;
+  const { max: waterfallMax, min: waterfallMin } = integerAxis(
+    bars.flatMap((b) => [b.start, b.start + (b.value ?? 0)]),
+  );
   const wy = (v: number) =>
     280 - ((v - waterfallMin) / (waterfallMax - waterfallMin)) * 245;
   return (
@@ -117,14 +117,26 @@ export const SalesGraphics = memo(function SalesGraphics({
       className="graphics-section"
       aria-labelledby={exportOnly ? undefined : "sales-graphics-title"}
     >
-      {exploreRows.length > 0 && <details className="graphics-entity-details bu-explore">
-        <summary>{tr(data.filters.bu !== "all" || data.filters.entity !== "all" ? "graphics.otherEntityCharts" : "graphics.entityCharts")}</summary>
-        <div className="graphics-grid">
-          {exploreRows.map((row) => (
-            <SalesMonthlyGraphic key={row.entity.id} data={data} comparisonRow={row} />
-          ))}
-        </div>
-      </details>}
+      {exploreRows.length > 0 && (
+        <details className="graphics-entity-details bu-explore">
+          <summary>
+            {tr(
+              data.filters.bu !== "all" || data.filters.entity !== "all"
+                ? "graphics.otherEntityCharts"
+                : "graphics.entityCharts",
+            )}
+          </summary>
+          <div className="graphics-grid">
+            {exploreRows.map((row) => (
+              <SalesMonthlyGraphic
+                key={row.entity.id}
+                data={data}
+                comparisonRow={row}
+              />
+            ))}
+          </div>
+        </details>
+      )}
       <div className="graphics-section-heading">
         <div>
           <p className="panel-kicker">{tr("graphics.weeklyKicker")}</p>
@@ -252,7 +264,9 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
     v === null
       ? "—"
       : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  const teams = data.graphics.teams.filter((row) => team === "all" || row.name === team);
+  const teams = data.graphics.teams.filter(
+    (row) => team === "all" || row.name === team,
+  );
   const teamTotal = teams.reduce((n, r) => n + r.value, 0);
   const teamRows = teams.map((r) => ({
     ...r,
@@ -262,12 +276,21 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
   const entityIds = new Set(teams.flatMap((row) => row.entityIds));
   const openMonth = firstOpenMonth(
     data.filters.year,
-    data.graphics.teamSource ? data.graphics.teamSource.periods.filter(row=>entityIds.has(row.entityId)) : data.rows.filter((row) => entityIds.has(row.entity.id)).map((row) => row.snapshot),
+    data.graphics.teamSource
+      ? data.graphics.teamSource.periods.filter((row) => entityIds.has(row.entityId))
+      : data.rows
+          .filter((row) => entityIds.has(row.entity.id))
+          .map((row) => row.snapshot),
   );
   const monthlyLabel = tr("graphics.monthlyTeamOB");
   const cumulativeLabel = tr("graphics.cumulativeTeamOB");
   const trendTitle = tr("graphics.teamPerformanceFor", {
-    name: team === "all" ? tr("team.all") : team === "__unassigned__" ? tr("team.unassigned") : team,
+    name:
+      team === "all"
+        ? tr("team.all")
+        : team === "__unassigned__"
+          ? tr("team.unassigned")
+          : team,
   });
   const trendNote = `${tr("graphics.teamMonthlyRule")} ${tr("graphics.periodColorsRule")} ${note}`;
   const teamBUs = (row: (typeof teamRows)[number]) =>
@@ -279,7 +302,7 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
     .filter(({ index }) => teamRows.some((row) => row.monthly[index] !== 0));
   return (
     <div ref={root} className="team-contribution-graphic">
-      <TeamActualGraphics data={data} />
+      <TeamActualGraphics data={data}/>
       <GraphicCard
         className="team-monthly-graphic-card"
         title={trendTitle}
@@ -293,17 +316,40 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
             { label: `${cumulativeLabel} (kEUR)` },
             { label: tr("common.source") },
           ],
-          rows: trend.map((point, index) => [display(months[index]), point.monthly, point.ytd, teams.map((row) => row.source).join("; ")]),
+          rows: trend.map((point, index) => [
+            display(months[index]),
+            point.monthly,
+            point.ytd,
+            teams.map((row) => row.source).join("; "),
+          ]),
         }}
         table={
           <table className="bu-table">
-            <thead><tr><th>{tr("common.month")}</th><th className="numeric">{monthlyLabel}</th><th className="numeric">{cumulativeLabel}</th></tr></thead>
-            <tbody>{trend.map((point, index) => <tr key={index}><td>{display(months[index])}</td><td className="numeric">{exact(point.monthly)}</td><td className="numeric">{exact(point.ytd)}</td></tr>)}</tbody>
+            <thead>
+              <tr>
+                <th>{tr("common.month")}</th>
+                <th className="numeric">{monthlyLabel}</th>
+                <th className="numeric">{cumulativeLabel}</th>
+              </tr>
+            </thead>
+            <tbody>
+              {trend.map((point, index) => (
+                <tr key={index}>
+                  <td>{display(months[index])}</td>
+                  <td className="numeric">{exact(point.monthly)}</td>
+                  <td className="numeric">{exact(point.ytd)}</td>
+                </tr>
+              ))}
+            </tbody>
           </table>
         }
       >
         <ComboPlot
-          points={trend.map((point, index) => ({ ...point, label: display(months[index]), estimated: openMonth === null ? null : index >= openMonth }))}
+          points={trend.map((point, index) => ({
+            ...point,
+            label: display(months[index]),
+            estimated: openMonth === null ? null : index >= openMonth,
+          }))}
           monthlyLabel={monthlyLabel}
           ytdLabel={cumulativeLabel}
           empty={tr("graphics.noTeam")}

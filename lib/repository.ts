@@ -1,4 +1,11 @@
-import { retainTeamSource, publishTeamReference } from "./team-reporting";
+import {
+  previewImport,
+  publishReviewed,
+  previewRestore,
+  restoreReviewed,
+  importActor,
+  snapshotScope,
+} from "./import-review";
 import { randomUUID } from "node:crypto";
 import { storage, storageStatus } from "./storage";
 import { entities } from "./entities";
@@ -7,14 +14,51 @@ import { ApiError } from "./auth";
 import type { ImportBatch, User } from "./types";
 import customerSeed from "@/data/customer-analysis.json";
 import type { CustomerAnalysis } from "./graphics-types";
+import { createAdjustment } from "./manual-adjustments";
 const customerAnalyses = customerSeed.analyses as CustomerAnalysis[];
 export const repository = {
+  createAdjustmentBatch: async (input: unknown, user: User) =>
+    storage.transaction((state) => {
+      const batch = createAdjustment(state, user, input);
+      importActor(state, user, batch);
+      state.batches.unshift(batch);
+      state.audit.push({
+        id: randomUUID(),
+        at: new Date().toISOString(),
+        actor: user.id,
+        action: "submit-adjustment",
+        subject: batch.id,
+      });
+      return batch;
+    }),
   read: async () => {
     const state = await storage.read();
-    return { ...state, customerAnalyses: state.customerAnalyses ?? customerAnalyses };
+    return {
+      ...state,
+      customerAnalyses: state.customerAnalyses ?? customerAnalyses,
+    };
   },
   createImportBatch: async (batch: ImportBatch, user: User) =>
     storage.transaction((state) => {
+      importActor(state, user, batch);
+      const scopes = batch.snapshots.map(snapshotScope);
+      if (
+        new Set(scopes).size !== scopes.length ||
+        new Set(batch.lines.map((l) => l.id)).size !== batch.lines.length
+      )
+        batch.findings.push({
+          severity: "error",
+          message:
+            "Conflicting duplicate source records; resolve duplicate Entity / fiscal year / week or detail identifiers",
+        });
+      if (
+        batch.snapshots.some((s) => !batch.entityIds.includes(s.entityId)) ||
+        batch.lines.some((l) => !scopes.includes(snapshotScope(l)))
+      )
+        throw new ApiError(
+          400,
+          "Source records do not match the declared import scope",
+        );
       if (
         !batch.entityIds.length ||
         batch.entityIds.some(
@@ -30,7 +74,6 @@ export const repository = {
           503,
           "Configure persistent storage before submitting imports.",
         );
-      if(batch.receivablesEntityIds && (batch.receivablesKind!=='aging'||!batch.receivablesEntityIds.length||batch.receivablesEntityIds.some(id=>!batch.entityIds.includes(id))||batch.receivables?.some(r=>r.category!=='invoice'||!batch.receivablesEntityIds!.includes(r.entityId))))throw new ApiError(400,'Invalid scoped aging replacement');
       state.batches.unshift(batch);
       state.audit.push({
         id: randomUUID(),
@@ -41,63 +84,85 @@ export const repository = {
       });
       return batch;
     }),
-  publishImportBatch: async (id: string, user: User, acknowledge: boolean) =>
+  previewImportBatch: async (
+    id: string,
+    user: User,
+    selected?: string[],
+    updateTeamReporting?: boolean,
+  ) => {
+    if (updateTeamReporting !== undefined)
+      return storage.transaction((state) => {
+        const b = state.batches.find((b) => b.id === id);
+        if (!b) throw new ApiError(404, "Review batch not found.");
+        importActor(state, user, b);
+        if (
+          b.status !== "review" ||
+          !b.snapshots.length ||
+          b.adjustment ||
+          b.receivablesKind ||
+          b.customerAnalysis ||
+          b.teamActualData
+        )
+          throw new ApiError(
+            400,
+            "Team reference selection requires a weekly sales review",
+          );
+        if (
+          updateTeamReporting &&
+          b.lines.some(
+            (l) =>
+              l.salesTeam &&
+              (/^[-+]?\d+(\.\d+)?$/.test(l.salesTeam) ||
+                /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)$/i.test(
+                  l.salesTeam,
+                )),
+          )
+        )
+          throw new ApiError(
+            400,
+            "Team column contains amounts or month headers; review the workbook layout",
+          );
+        b.updateTeamReporting = updateTeamReporting;
+        return previewImport(state, b, selected);
+      });
+    const state = await repository.read();
+    const batch = state.batches.find((b) => b.id === id);
+    if (!batch) throw new ApiError(404, "Review batch not found.");
+    importActor(state, user, batch);
+    return previewImport(state, batch, selected);
+  },
+  publishImportBatch: async (
+    id: string,
+    user: User,
+    request:
+      | { selectedScopes?: string[]; reviewVersion?: string; reason?: string }
+      | boolean,
+  ) =>
+    storage.transaction((state) => {
+      state.customerAnalyses ??= structuredClone(customerAnalyses);
+      const batch = state.batches.find((b) => b.id === id);
+      if (!batch) throw new ApiError(404, "Review batch not found.");
+      return publishReviewed(
+        state,
+        batch,
+        user,
+        typeof request === "boolean" ? {} : request,
+      );
+    }),
+  restoreImportBatch: async (
+    id: string,
+    user: User,
+    version?: string,
+    reason?: string,
+  ) =>
     storage.transaction((state) => {
       const batch = state.batches.find((b) => b.id === id);
       if (!batch) throw new ApiError(404, "Review batch not found.");
-      if (
-        batch.entityIds.some(
-          (id) => !entities.some((e) => e.id === id && canPublish(user, e)),
-        )
-      )
-        throw new ApiError(403, "Publishing is not permitted for this entity.");
-      if (batch.status === "published") return batch;
-      if (
-        batch.status !== "review" ||
-        (!batch.snapshots.length && !batch.receivables?.length && !batch.customerAnalysis && !batch.teamActualData) ||
-        batch.findings.some((f) => f.severity === "error")
-      )
-        throw new ApiError(409, "Resolve validation errors before publishing.");
-      if (batch.findings.some((f) => f.severity === "review") && !acknowledge)
-        throw new ApiError(
-          409,
-          "Acknowledge the listed source limitations before publishing.",
-        );
-      const keys = new Set(
-        batch.snapshots.map((s) => `${s.entityId}:${s.year}:${s.week}`),
-      );
-      const now = new Date().toISOString();
-      if (batch.snapshots.length) retainTeamSource(state,now);
-      if (batch.teamActualData) state.teamActualData = batch.teamActualData;
-      if (batch.customerAnalysis) {
-        state.customerAnalyses = (state.customerAnalyses ?? customerAnalyses).filter(r => r.month !== batch.customerAnalysis!.month)
-          .concat(batch.customerAnalysis);
-      }
-      if (batch.receivables?.length) {
-        const category = batch.receivablesKind === "aging" ? "aging" : "payments";
-        state.receivables = (state.receivables ?? []).filter(r =>
-          category === "aging" ? r.category !== "invoice" || (!!batch.receivablesEntityIds && !batch.receivablesEntityIds.includes(r.entityId)) : r.category === "invoice").concat(batch.receivables);
-        state.receivablesUpdatedAt = now;
-      }
-      state.snapshots = state.snapshots
-        .filter((s) => !keys.has(`${s.entityId}:${s.year}:${s.week}`))
-        .concat(batch.snapshots.map((s) => ({ ...s, publishedAt: now })));
-      state.lines = state.lines
-        .filter((l) => !keys.has(`${l.entityId}:${l.year}:${l.week}`))
-        .concat(batch.lines);
-      publishTeamReference(state,batch,now);
-      batch.status = "published";
-      batch.publishedBy = user.id;
-      batch.publishedAt = now;
-      if (batch.snapshots.length) state.dataUpdatedAt = now;
-      batch.revision = ++state.revision;
-      state.audit.push({
-        id: randomUUID(),
-        at: now,
-        actor: user.id,
-        action: "publish",
-        subject: batch.id,
-      });
-      return batch;
+      importActor(state, user, batch, true);
+      if (user.role !== "superadmin")
+        throw new ApiError(403, "Superadmin access required");
+      return version
+        ? restoreReviewed(state, batch, user, version, reason ?? "")
+        : previewRestore(state, batch);
     }),
 };

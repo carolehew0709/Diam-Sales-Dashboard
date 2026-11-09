@@ -1,4 +1,7 @@
 import { teamReportingState } from "@/lib/team-reporting";
+import { lineYear } from "@/lib/fiscal-years";
+import { reportingPeriod } from '@/lib/reporting-period';
+import { policyState } from "@/lib/governance";
 import { reportingState } from "@/lib/intercompany";
 import { salesTeamState, matchesOrderDimensions } from "@/lib/sales-teams";
 import * as XLSX from "xlsx-js-style";
@@ -11,8 +14,16 @@ export async function GET(request: Request) {
   try {
     const user = await currentUser();
     const filters = filtersFrom(new URL(request.url));
-    const rawState = reportingState(teamReportingState(await repository.read(), filters), filters.salesType);
-    const state = { ...salesTeamState(rawState, filters.salesTeam, filters.customer), intercompanyExcluded: rawState.intercompanyExcluded.filter(line => matchesOrderDimensions(line, filters.salesTeam, filters.customer)) };
+    const rawState = reportingState(
+      policyState(teamReportingState(reportingPeriod(await repository.read(),filters.week), filters), filters.salesType),
+      filters.salesType,
+    );
+    const state = {
+      ...salesTeamState(rawState, filters.salesTeam, filters.customer),
+      intercompanyExcluded: rawState.intercompanyExcluded.filter((line) =>
+        matchesOrderDimensions(line, filters.salesTeam, filters.customer),
+      ),
+    };
     const d = getDashboardSnapshot(state, user, filters);
     const wb = XLSX.utils.book_new();
     const context = [
@@ -48,8 +59,7 @@ export async function GET(request: Request) {
                 : {}),
             };
             if (typeof cell.v === "number")
-              cell.z =
-                name === "Team actual Sales" && c === 3 && r >= 3 ? "0.0%" : name === "Executive Summary" && c === 7 ? "0%" : "#,##0";
+              cell.z = name === "Executive Summary" && c === 7 ? "0%" : "#,##0";
           }
         }
       XLSX.utils.book_append_sheet(wb, sheet, name);
@@ -72,7 +82,6 @@ export async function GET(request: Request) {
         "Source week",
         "Source status",
       ],
-      ...(d.graphics.teamKpiSource ? [[translate("en","teamKpi.scope",d.graphics.teamKpiSource)]] : []),
       ...d.rows.map((r) => [
         r.entity.code,
         r.metrics.budget,
@@ -84,7 +93,7 @@ export async function GET(request: Request) {
         r.metrics.coverage,
         r.metrics.gap,
         r.metrics.remaining,
-        d.graphics.teamKpiSource ? r.snapshot?.teamActualSource?.week ?? r.snapshot?.week ?? null : r.snapshot?.week ?? null,
+        r.snapshot?.week ?? null,
         r.snapshot ? "Review" : "Missing",
       ]),
       [
@@ -99,12 +108,19 @@ export async function GET(request: Request) {
         d.totals.gap,
         d.totals.remaining,
       ],
-      [
-        translate("en", "export.missingNote"),
-      ],
-      ...(!d.totals.budgetComplete && d.totals.budget !== null ? [[
-        `Annual budget includes confirmed budgets: ${d.rows.filter(r => r.metrics.budgetComplete).map(r => r.entity.code).join(" + ") || "none"}; pending FY2027 budgets counted as 0 for provisional Coverage/Gap, not approved.`,
-      ]] : []),
+      [translate("en", "export.missingNote")],
+      ...(!d.totals.budgetComplete && d.totals.budget !== null
+        ? [
+            [
+              `Annual budget includes confirmed budgets: ${
+                d.rows
+                  .filter((r) => r.metrics.budgetComplete)
+                  .map((r) => r.entity.code)
+                  .join(" + ") || "none"
+              }; pending FY2027 budgets counted as 0 for provisional Coverage/Gap, not approved.`,
+            ],
+          ]
+        : []),
     ]);
     if(d.graphics.teamActuals){ const t=d.graphics.teamActuals; add("Team actual Sales",[["Team actual Sales / 团队实际销售 · kEUR"],[`${t.reportingWeek ? `W${t.reportingWeek} · ` : ""}${t.year}-${String(t.month).padStart(2,"0")} · ${t.sourceFile} · ${t.sourceSheet}`],["Team / 团队","Sales / 实际销售","Team annual budget / 团队年度预算","Attainment / 完成率",...months,"Entities / 实体"],...t.groups.map(r=>[r.name,r.sales,r.budget,r.attainment,...r.monthly,r.entityIds.join(" / ")]),["TOTAL",t.sales,t.budget,t.attainment,...t.monthly],[translate("en","teamActual.sourceYtd"),t.sourceSales],[translate("en","teamActual.excludedGroup"),t.excludedDdcGroup],[translate("en",t.unavailable?"teamActual.unavailable":"teamActual.rule")]]); }
     add("Weekly Review", [
@@ -141,8 +157,8 @@ export async function GET(request: Request) {
           s.orderbook.external,
           s.orderbook.group,
           s.prospect,
-          s.teamActualSource ? `${s.teamActualSource.sourceFile} / Prospect: ${s.sourceFile}` : s.sourceFile,
-          s.teamActualSource ? `Actual W${s.teamActualSource.week??"—"} · ${s.teamActualSource.sourceSheet} / Prospect W${s.week} · ${s.sourceSheet}` : s.sourceSheet,
+          s.sourceFile,
+          s.sourceSheet,
         ]),
     ]);
     add(translate("en", "export.prospectDetail"), [
@@ -153,10 +169,10 @@ export async function GET(request: Request) {
         translate("en", "export.originalCustomer"),
         "Type",
         "Sales Team",
-        "2026 total",
-        "2027 total",
-        ...months.map((m) => `${m} 2026`),
-        ...months.map((m) => `${m} 2027`),
+        `${filters.year} total`,
+        `${filters.year + 1} total`,
+        ...months.map((m) => `${m} ${filters.year}`),
+        ...months.map((m) => `${m} ${filters.year + 1}`),
         "Source",
         "Sheet",
         "Row",
@@ -165,7 +181,10 @@ export async function GET(request: Request) {
         .filter(
           (l) =>
             d.rows.some(
-              (r) => r.entity.id === l.entityId && r.snapshot?.week === l.week,
+              (r) =>
+                r.entity.id === l.entityId &&
+                r.snapshot?.week === l.week &&
+                r.snapshot?.year === l.year,
             ) &&
             (filters.salesType === "all" ||
               l.customerType.toLowerCase() === filters.salesType),
@@ -177,10 +196,10 @@ export async function GET(request: Request) {
           l.customer,
           l.customerType,
           l.salesTeam ?? "",
-          l.total2026,
-          l.total2027,
-          ...l.monthly2026,
-          ...l.monthly2027,
+          lineYear(l, filters.year).total,
+          lineYear(l, filters.year + 1).total,
+          ...lineYear(l, filters.year).monthly,
+          ...lineYear(l, filters.year + 1).monthly,
           l.sourceFile,
           l.sourceSheet,
           l.sourceRow,
@@ -191,10 +210,10 @@ export async function GET(request: Request) {
         "Entity",
         "Week",
         "Customer",
-        "2026 excluded",
-        "2027 excluded",
-        ...months.map((m) => `${m} 2026 excluded`),
-        ...months.map((m) => `${m} 2027 excluded`),
+        `${filters.year} excluded`,
+        `${filters.year + 1} excluded`,
+        ...months.map((m) => `${m} ${filters.year} excluded`),
+        ...months.map((m) => `${m} ${filters.year + 1} excluded`),
         "Source",
         "Sheet",
         "Row",
@@ -203,17 +222,20 @@ export async function GET(request: Request) {
         .filter(
           (l) =>
             d.rows.some(
-              (r) => r.entity.id === l.entityId && r.snapshot?.week === l.week,
+              (r) =>
+                r.entity.id === l.entityId &&
+                r.snapshot?.week === l.week &&
+                r.snapshot?.year === l.year,
             ) && filters.salesType !== "external",
         )
         .map((l) => [
           l.entityId,
           l.week,
           l.customer,
-          l.total2026,
-          l.total2027,
-          ...l.monthly2026,
-          ...l.monthly2027,
+          lineYear(l, filters.year).total,
+          lineYear(l, filters.year + 1).total,
+          ...lineYear(l, filters.year).monthly,
+          ...lineYear(l, filters.year + 1).monthly,
           l.sourceFile,
           l.sourceSheet,
           l.sourceRow,
@@ -230,8 +252,8 @@ export async function GET(request: Request) {
         "MTD group",
         "Estimate external",
         "Estimate group",
-        `${translate("en", "metric.ob")} 2027 external`,
-        `${translate("en", "metric.ob")} 2027 group`,
+        `${translate("en", "metric.ob")} next source year external`,
+        `${translate("en", "metric.ob")} next source year group`,
         translate("en", "metric.prospect"),
         "Source note",
       ],

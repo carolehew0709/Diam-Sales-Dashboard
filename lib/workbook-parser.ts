@@ -79,7 +79,6 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
         ? "Weekly summary"
         : "Supporting",
   }));
-  const year = Number(fileName.match(/20\d{2}/)?.[0] ?? 2026);
   for (const name of workbook.SheetNames.filter((n) => /^W\d+$/.test(n))) {
     const ws = workbook.Sheets[name];
     const range = XLSX.utils.decode_range(ws["!ref"] ?? "A1");
@@ -125,10 +124,33 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
       });
       continue;
     }
+    const currentHeader = text(at(15, 7)),
+      nextHeader = text(at(15, 8));
+    const currentYear = Number(currentHeader.match(/20\d{2}/)?.[0]);
+    const nextYear = Number(nextHeader.match(/20\d{2}/)?.[0]);
+    if (
+      !currentYear || !/total.*amount/i.test(currentHeader) || !/total.*amount/i.test(nextHeader) ||
+      nextYear !== currentYear + 1 ||
+      (fileName.match(/20\d{2}/) &&
+        Number(fileName.match(/20\d{2}/)![0]) !== currentYear)
+    ) {
+      findings.push({
+        severity: "error",
+        message:
+          name +
+          ": fiscal-year headers are missing or conflict with reporting information",
+      });
+      continue;
+    }
+    const year = currentYear;
     const s = emptySnapshot(entity.id, year, week, month, fileName, name);
+    s.sourceCells.fiscalYear = cell(15, 7) + " / " + cell(15, 8);
     s.turnover = { external: number(at(9, 4)), group: number(at(10, 4)) };
-    s.salesCardValue = number(at(["dhk", "ddi", "ddj"].includes(entity.id) ? 11 : 9, 4));
-    if (entity.id === "ddc") s.ddcAnnualTotal = number(at(9, 11));
+    s.salesCardValue = number(
+      at(["dhk", "ddi", "ddj"].includes(entity.id) ? 11 : 9, 4),
+    );
+    if (entity.id === "ddc" && year === 2026)
+      s.ddcAnnualTotal = number(at(9, 11));
     s.monthTurnover = { external: number(at(9, 6)), group: number(at(10, 6)) };
     s.monthEstimate = { external: number(at(9, 8)), group: number(at(10, 8)) };
     s.orderbook = { external: number(at(16, 7)), group: number(at(17, 7)) };
@@ -145,8 +167,12 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
       );
     }
     s.sourceCells = {
+      ...s.sourceCells,
       turnover: `${cell(9, 4)}:${cell(10, 4)}`,
-      salesCardValue: cell(["dhk", "ddi", "ddj"].includes(entity.id) ? 11 : 9, 4),
+      salesCardValue: cell(
+        ["dhk", "ddi", "ddj"].includes(entity.id) ? 11 : 9,
+        4,
+      ),
       monthTurnover: `${cell(9, 6)}:${cell(10, 6)}`,
       monthEstimate: `${cell(9, 8)}:${cell(10, 8)}`,
       orderbook: `${cell(16, 7)}:${cell(17, 8)}`,
@@ -158,24 +184,67 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
       s.findings.push("Workbook source check requires review");
     // Respect the source SUMIF order range; notes below it are not order records.
     const firstOrderRow = range.s.r + 24;
-    const detailEnds = [16, 17].flatMap(r => {
+    const detailEnds = [16, 17].flatMap((r) => {
       const formula = ws[cell(r, 7)]?.f ?? "";
-      const matches = [...formula.matchAll(/\$?[A-Z]+\$?(\d+):\$?[A-Z]+\$?(\d+)/g)];
-      return matches.filter(m => Number(m[1]) === firstOrderRow).map(m => Number(m[2]));
+      const matches = [
+        ...formula.matchAll(/\$?[A-Z]+\$?(\d+):\$?[A-Z]+\$?(\d+)/g),
+      ];
+      return matches
+        .filter((m) => Number(m[1]) === firstOrderRow)
+        .map((m) => Number(m[2]));
     });
-    const lastOrderRow = detailEnds.length ? Math.max(...detailEnds) : rows.length + range.s.r;
+    const lastOrderRow = detailEnds.length
+      ? Math.max(...detailEnds)
+      : rows.length + range.s.r;
+    for (const [address, value] of Object.entries(ws)) {
+      if (address.startsWith("!")) continue;
+      const position = XLSX.utils.decode_cell(address);
+      const rr = position.r - range.s.r,
+        cc = position.c - range.s.c;
+      const consumed =
+        ([9, 10, 11].includes(rr) && [4, 6, 8, 11].includes(cc)) ||
+        ([16, 17].includes(rr) && cc >= 7 && cc <= 34) ||
+        (rr >= 23 && position.r < lastOrderRow && cc >= 7 && cc <= 34);
+      if (
+        consumed &&
+        (value.t === "e" || (value.f && number(value.v) === null))
+      )
+        findings.push({
+          severity: "error",
+          message:
+            name +
+            "!" +
+            address +
+            ": formula error or missing numeric cache; recalculate and save the source workbook",
+        });
+    }
     const dimensions=orderDimensionColumns(ws,range.s.r+22,range.s.c);
     s.sourceCells.teamNames = `${XLSX.utils.encode_col(dimensions.team)} / source product ${XLSX.utils.encode_col(dimensions.product)}`;
     s.sourceCells.orderDetail = `${cell(23, 1)}:${XLSX.utils.encode_cell({ r: lastOrderRow - 1, c: range.s.c + 34 })}`;
     if (entity.id === "ddi") {
-      const movementDifference = rows.find(r => text(r[1]).toLowerCase() === "difference");
-      if (movementDifference && number(movementDifference[3]) !== null && Math.abs(number(movementDifference[3])!) > 0.1)
-        s.findings.push("Orderbook movement bridge has an unexplained difference; source amounts retained");
+      const movementDifference = rows.find(
+        (r) => text(r[1]).toLowerCase() === "difference",
+      );
+      if (
+        movementDifference &&
+        number(movementDifference[3]) !== null &&
+        Math.abs(number(movementDifference[3])!) > 0.1
+      )
+        s.findings.push(
+          "Orderbook movement bridge has an unexplained difference; source amounts retained",
+        );
     }
-    for (let i = 23; i < rows.length && i + range.s.r + 1 <= lastOrderRow; i++) {
+    for (
+      let i = 23;
+      i < rows.length && i + range.s.r + 1 <= lastOrderRow;
+      i++
+    ) {
       const r = rows[i];
       if (!text(r[1]) && !text(r[3])) continue;
       const type = text(r[2]).toLowerCase();
+      // Historical templates may keep explanatory rows inside the SUMIF bounds.
+      // They have no classification, numeric annual totals, or annual formulas.
+      if (!["external","group","internal"].includes(type) && number(r[7]) === null && number(r[8]) === null && !ws[cell(i,7)]?.f && !ws[cell(i,8)]?.f) continue;
       const customerType =
         type === "external"
           ? "External"
@@ -207,6 +276,34 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
         sourceSheet: name,
         sourceRow: i + range.s.r + 1,
       };
+      line.amountsByYear = {
+        [year]: { total: number(r[7]), monthly: line.monthly2026 },
+        [year + 1]: { total: number(r[8]), monthly: line.monthly2027 },
+      };
+      for (const c of [
+        ...Array.from({ length: 12 }, (_, m) => 10 + m),
+        ...Array.from({ length: 12 }, (_, m) => 23 + m),
+      ]) {
+        if (
+          r[c] !== null &&
+          r[c] !== undefined &&
+          r[c] !== "" &&
+          number(r[c]) === null
+        )
+          findings.push({
+            severity: "error",
+            message: `${name}!${cell(i, c)}: unknown monthly allocation; only a numeric amount or template blank allocation is supported`,
+          });
+      }
+      if (number(r[7]) === null || number(r[8]) === null)
+        findings.push({
+          severity: "error",
+          message:
+            name +
+            " row " +
+            line.sourceRow +
+            ": missing annual amount; no value is inferred",
+        });
       if (customerType === "Unclassified")
         s.findings.push(
           `Row ${line.sourceRow}: External/Group classification missing`,
@@ -269,6 +366,9 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
           current !== null && previous !== null ? current - previous : null;
       }
   if (workbook.Sheets["Data Weekly"]) {
+    const year = Number(text(workbook.Sheets["Data Weekly"].U2?.v).match(/20\d{2}/)?.[0]);
+    const validYear = !!year && (!fileName.match(/20\d{2}/) || Number(fileName.match(/20\d{2}/)![0]) === year);
+    if (!validYear) findings.push({severity:"error",message:"Data Weekly: explicit source fiscal year is missing or conflicts with report information"});
     const rows = XLSX.utils.sheet_to_json<unknown[]>(
       workbook.Sheets["Data Weekly"],
       { header: 1, defval: null },
@@ -287,7 +387,11 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
         : undefined;
     const currentWeek = Number(fileName.match(/W(\d+)/)?.[1] ?? 0);
     for (const [i, r] of rows.entries())
-      if (r[0] === "PDA" && /^W\d+$/.test(text(r[3]))) {
+      if (validYear && r[0] === "PDA" && /^W\d+$/.test(text(r[3]))) {
+        for (let c=5;c<=17;c++) {
+          const address=XLSX.utils.encode_cell({r:i,c}), value=workbook.Sheets["Data Weekly"][address];
+          if (value && (value.t==="e" || (value.f && number(value.v)===null))) findings.push({severity:"error",message:`Data Weekly!${address}: formula error or missing numeric cache`});
+        }
         const week = Number(r[4]);
         const s = emptySnapshot(
           "dcp",
@@ -331,7 +435,14 @@ export function parseDashboardWorkbook(bytes: Buffer, fileName: string) {
   const approvedSnapshots = snapshots.map(applyApprovedBudget);
   const issues = [...new Set(approvedSnapshots.flatMap((s) => s.findings))];
   findings.push(
-    ...issues.map((message) => ({ severity: "review" as const, message })),
+    ...issues.map((message) => ({
+      severity: (message ===
+        "Approved annual budget has no supplied monthly phasing" ||
+      /Intercompany.*excluded/.test(message)
+        ? "info"
+        : "review") as Finding["severity"],
+      message,
+    })),
   );
   return { snapshots: approvedSnapshots, lines, findings, sheets };
 }

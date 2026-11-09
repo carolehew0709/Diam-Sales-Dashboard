@@ -7,11 +7,11 @@ export async function POST(request: Request) {
     const b = await request.json();
     return {
       ok: true,
-      batch: await repository.publishImportBatch(
-        String(b.id),
-        user,
-        b.acknowledge === true,
-      ),
+      batch: await repository.publishImportBatch(String(b.id), user, {
+        selectedScopes: b.selectedScopes,
+        reviewVersion: b.reviewVersion,
+        reason: b.reason,
+      }),
     };
   });
 }

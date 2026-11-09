@@ -1,11 +1,24 @@
-import {teamNamesState, teamActualView} from "./team-actuals";
+import {teamNamesState,teamActualView} from "./team-actuals";
 import { teamReportingState, retainedTeamView } from "./team-reporting";
+import { policyState } from "./governance";
+import { reportingPeriod } from './reporting-period';
+import { lineYear, latestFiscalSnapshot, sourceYear } from "./fiscal-years";
 import { reportingState } from "./intercompany";
-import { applyApprovedBudget, approvedAnnualBudget, pending2027Budgets } from "./annual-budgets";
+import {
+  applyApprovedBudget,
+  approvedAnnualBudget,
+  pending2027Budgets,
+} from "./annual-budgets";
 import { applyReportingOverrides } from "./reporting-overrides";
 import { entities, regions, matchesRegion } from "./entities";
 import { canView } from "./permissions";
-import { salesTeamState, teamName, orderCustomerName, orderCustomerKey, teamOrderbookSummary } from "./sales-teams";
+import {
+  salesTeamState,
+  teamName,
+  orderCustomerName,
+  orderCustomerKey,
+  teamOrderbookSummary,
+} from "./sales-teams";
 import { salesGraphicSeries } from "./sales-graphics";
 import type {
   Amount,
@@ -31,6 +44,7 @@ export const months = [
   "Dec",
 ];
 export const defaultFilters: Filters = {
+  week: 0,
   salesTeam: "all",
   customer: "all",
   region: "China",
@@ -42,6 +56,7 @@ export const defaultFilters: Filters = {
 };
 export function filtersFrom(url: URL): Filters {
   return {
+    week: /^(?:[1-9]|[1-4]\d|5[0-3])$/.test(url.searchParams.get('week')??'') ? Number(url.searchParams.get('week')) : 0,
     salesTeam: url.searchParams.get("salesTeam") || "all",
     customer: url.searchParams.get("customer") || "all",
     region: url.searchParams.get("region") ?? "China",
@@ -50,7 +65,9 @@ export function filtersFrom(url: URL): Filters {
         ? "DEHK"
         : (url.searchParams.get("bu") ?? "all"),
     entity: url.searchParams.get("entity") ?? "all",
-    year: url.searchParams.get("year") === "2027" ? 2027 : 2026,
+    year: /^20\d{2}$/.test(url.searchParams.get("year") ?? "")
+      ? Number(url.searchParams.get("year"))
+      : 2026,
     scenario:
       url.searchParams.get("scenario") === "Sales"
         ? "Sales"
@@ -72,36 +89,72 @@ export const sumComplete = (values: Amount[]): Amount =>
     : null;
 export const splitValue = (split: Split, type: SalesType): Amount =>
   type === "all" ? sumComplete([split.external, split.group]) : split[type];
-export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId = s?.entityId) {
-  if (s && !s.teamScope) s = applyReportingOverrides(applyApprovedBudget(s), filters.salesType);
-  const future = filters.year === 2027,
+export function entityMetric(
+  s: Snapshot | undefined,
+  filters: Filters,
+  entityId = s?.entityId,
+) {
+  if (s && !s.teamScope)
+    s = applyReportingOverrides(applyApprovedBudget(s), filters.salesType);
+  const future = !!s && filters.year === s.year + 1,
     type = filters.salesType;
-  const sales = s && !future ? splitValue(s.turnover, type) : s ? 0 : null;
-  const unallocatedNext = future && s?.nextOrderbookOverride != null;
+  const policy = !s?.teamScope
+    ? s?.policyMetrics?.[`${filters.year}:${type}`]
+    : undefined;
+  const sales =
+    policy?.sales ??
+    (s && !future ? splitValue(s.turnover, type) : s ? 0 : null);
+  const unallocatedNext =
+    future && (s?.nextOrderbookOverride != null || policy?.orderbook != null);
   const orderbook =
-    unallocatedNext && type === "all"
+    policy?.orderbook ??
+    (unallocatedNext && type === "all"
       ? s!.nextOrderbookOverride!
       : s
         ? splitValue(future ? s.nextOrderbook : s.orderbook, type)
-        : null;
+        : null);
   const base =
-    s &&
-    !future &&
-    s.entityId === "ddc" &&
-    s.ddcAnnualTotal !== undefined &&
-    type === "all"
-      ? s.ddcAnnualTotal
-      : s && !future && s.baseOverride !== null
-        ? type === "all"
-          ? s.baseOverride
-          : null
-        : sumComplete([sales, orderbook]);
+    policy?.annual ??
+    (policy?.sales !== undefined || policy?.orderbook !== undefined
+      ? sumComplete([sales, orderbook])
+      : s &&
+          !future &&
+          s.year === 2026 &&
+          s.entityId === "ddc" &&
+          s.ddcAnnualTotal !== undefined &&
+          type === "all"
+        ? s.ddcAnnualTotal
+        : s && !future && s.baseOverride !== null
+          ? type === "all"
+            ? s.baseOverride
+            : null
+          : sumComplete([sales, orderbook]));
   const prospect =
-    s && type === "all" ? (future ? s.nextProspect : s.prospect) : null;
-  const approvedBudget = entityId && !s?.teamScope ? approvedAnnualBudget(entityId, filters.year, type) : undefined;
-  const pendingBudget = !s?.teamScope && future && !!entityId && entityId in pending2027Budgets;
-  const budget = s?.teamActualSource?.year === filters.year ? splitValue(s.teamActualSource.budget,type) : approvedBudget ?? (pendingBudget ? 0
-    : s && type === "all" ? (future ? s.nextAnnualBudget : s.annualBudget) : null);
+    policy?.prospect ??
+    (s && type === "all" ? (future ? s.nextProspect : s.prospect) : null);
+  const policyBudget = !s?.teamScope
+    ? s?.managedBudgets?.[`${filters.year}:${type}`]
+    : undefined;
+  const approvedBudget =
+    entityId && !s?.teamScope && !s?.managedBudgets
+      ? approvedAnnualBudget(entityId, filters.year, type)
+      : undefined;
+  const pendingBudget = policyBudget
+    ? policyBudget.pending
+    : !s?.teamScope &&
+      filters.year === 2027 &&
+      !!entityId &&
+      entityId in pending2027Budgets;
+  const budget = s?.teamActualSource?.year === filters.year ? splitValue(s.teamActualSource.budget,type) : policyBudget
+    ? policyBudget.value
+    : (approvedBudget ??
+      (pendingBudget
+        ? 0
+        : s && type === "all"
+          ? future
+            ? s.nextAnnualBudget
+            : s.annualBudget
+          : null));
   const budgetComplete = budget !== null && !pendingBudget;
   const budgetComparable = budgetComplete || pendingBudget;
   const scenarioComplete =
@@ -190,7 +243,10 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId
       budgetComparable && budget !== null && budget > 0 && base !== null
         ? base / budget
         : null,
-    gap: budgetComparable && budget !== null && base !== null ? base - budget : null,
+    gap:
+      budgetComparable && budget !== null && base !== null
+        ? base - budget
+        : null,
     remaining,
     monthSales,
     monthEstimate,
@@ -200,13 +256,27 @@ export function entityMetric(s: Snapshot | undefined, filters: Filters, entityId
 }
 export type Metric = ReturnType<typeof entityMetric>;
 /** First-row display only; never changes annual KPI or scenario calculations. */
-export function chinaStripAmount(row: { snapshot?: Snapshot; metrics: Metric }, filters: Filters): Amount {
+export function chinaStripAmount(
+  row: { snapshot?: Snapshot; metrics: Metric },
+  filters: Filters,
+): Amount {
   if (filters.year === 2026 && filters.scenario === "Sales") {
-    return filters.salesType === "all" && row.snapshot?.salesCardValue !== undefined
-      ? row.snapshot.salesCardValue : row.metrics.sales;
+    if (
+      row.snapshot?.policyMetrics?.[`${filters.year}:${filters.salesType}`]
+        ?.sales !== undefined
+    )
+      return row.metrics.sales;
+    return filters.salesType === "all" &&
+      row.snapshot?.salesCardValue !== undefined
+      ? row.snapshot.salesCardValue
+      : row.metrics.sales;
   }
-  return filters.year === 2026 && filters.salesType === "all" && row.snapshot?.entityId === "dcp" && row.snapshot.sourceCells.dcpReporting
-    ? row.metrics.sales : row.metrics.base;
+  return filters.year === 2026 &&
+    filters.salesType === "all" &&
+    row.snapshot?.entityId === "dcp" &&
+    row.snapshot.sourceCells.dcpReporting
+    ? row.metrics.sales
+    : row.metrics.base;
 }
 export function combine(metrics: Metric[], showKnownBudget = false): Metric {
   const total = (
@@ -221,10 +291,14 @@ export function combine(metrics: Metric[], showKnownBudget = false): Metric {
       | "monthEstimate",
   ) => sumKnown(metrics.map((m) => m[key]));
   const completeBudget = metrics.every((m) => m.budgetComplete)
-    ? sumComplete(metrics.map((m) => m.budget)) : null;
-  const comparableBudget = metrics.every(m => m.budgetComparable)
-    ? sumComplete(metrics.map(m => m.budget)) : null;
-  const budget = showKnownBudget ? sumKnown(metrics.map((m) => m.budget)) : completeBudget;
+    ? sumComplete(metrics.map((m) => m.budget))
+    : null;
+  const comparableBudget = metrics.every((m) => m.budgetComparable)
+    ? sumComplete(metrics.map((m) => m.budget))
+    : null;
+  const budget = showKnownBudget
+    ? sumKnown(metrics.map((m) => m.budget))
+    : completeBudget;
   // Coverage and Gap always compare the complete annual Sales + OB base, excluding Prospect.
   const completeBase = sumComplete(metrics.map((m) => m.base));
   const scenarioComplete =
@@ -273,35 +347,65 @@ export function getDashboardSnapshot(
   user: User,
   filters: Filters,
 ) {
-  state = teamNamesState(state);
-  const actualTeams = teamActualView(state,user,filters);
+  const availableWeeks=[...new Set(state.snapshots.filter(s=>entities.some(e=>e.id===s.entityId&&canView(user,e)&&matchesRegion(e,filters.region)&&(filters.bu==='all'||e.businessUnit===filters.bu)) && [filters.year,filters.year-1].includes(s.year)).map(s=>s.week))].sort((a,b)=>b-a);
+  state=reportingPeriod(state,filters.week);
+  state=teamNamesState(state);
+  const actualTeams=teamActualView(state,user,filters);
   const retainedTeams = retainedTeamView(state,user,filters);
   state = teamReportingState(state,filters);
-  state = reportingState(state, filters.salesType);
+  state = reportingState(
+    policyState(state, filters.salesType),
+    filters.salesType,
+  );
   const allowed = entities.filter((e) => canView(user, e));
-  const dimensionLines = state.lines.filter(line => allowed.some(e => e.id === line.entityId &&
-    matchesRegion(e, filters.region) && (filters.bu === "all" || filters.bu === e.businessUnit)) &&
-    (filters.entity === "all" || filters.entity === line.entityId) &&
-    (filters.salesType === "all" || line.customerType.toLowerCase() === filters.salesType) &&
-    line.week === Math.max(...state.snapshots.filter(s => s.entityId === line.entityId && s.year === 2026).map(s => s.week)));
-  const salesTeams = [...new Set(dimensionLines.map(line => teamName(line.salesTeam)))].sort();
+  const sourcePeriods = new Map(allowed.map(e => [e.id, latestFiscalSnapshot(state,e.id,filters.year)]));
+  const dimensionLines = state.lines.filter(
+    (line) =>
+      allowed.some(
+        (e) =>
+          e.id === line.entityId &&
+          matchesRegion(e, filters.region) &&
+          (filters.bu === "all" || filters.bu === e.businessUnit),
+      ) &&
+      (filters.entity === "all" || filters.entity === line.entityId) &&
+      (filters.salesType === "all" ||
+        line.customerType.toLowerCase() === filters.salesType) &&
+      line.year === sourcePeriods.get(line.entityId)?.year &&
+      line.week === sourcePeriods.get(line.entityId)?.week,
+  );
+  const salesTeams = [
+    ...new Set(dimensionLines.map((line) => teamName(line.salesTeam))),
+  ].sort();
   const customerLabels = new Map<string, string>();
-  for (const line of [...dimensionLines].sort((a, b) => Number(b.entityId === "dhk") - Number(a.entityId === "dhk"))) {
+  for (const line of [...dimensionLines].sort(
+    (a, b) => Number(b.entityId === "dhk") - Number(a.entityId === "dhk"),
+  )) {
     if (line.customerType.toLowerCase() !== "external") continue;
-    if (filters.salesTeam && filters.salesTeam !== "all" && teamName(line.salesTeam) !== filters.salesTeam) continue;
+    if (
+      filters.salesTeam &&
+      filters.salesTeam !== "all" &&
+      teamName(line.salesTeam) !== filters.salesTeam
+    )
+      continue;
     const name = orderCustomerName(line);
-    if (!customerLabels.has(orderCustomerKey(name))) customerLabels.set(orderCustomerKey(name), name);
+    if (!customerLabels.has(orderCustomerKey(name)))
+      customerLabels.set(orderCustomerKey(name), name);
   }
   const customers = [...customerLabels.values()].sort();
   state = salesTeamState(state, filters.salesTeam, filters.customer);
-  const latest = (id: string) =>
-    state.snapshots
-      .filter((s) => s.entityId === id && s.year === 2026)
-      .sort((a, b) => b.week - a.week)[0];
+  const latest = (id: string) => latestFiscalSnapshot(state, id, filters.year);
   const rows = allowed.map((entity) => {
     const raw = latest(entity.id);
-    const snapshot = raw ? raw.teamScope ? raw : applyApprovedBudget(raw) : undefined;
-    return { entity, snapshot, metrics: entityMetric(snapshot, filters, entity.id) };
+    const snapshot = raw
+      ? raw.teamScope
+        ? raw
+        : applyApprovedBudget(raw)
+      : undefined;
+    return {
+      entity,
+      snapshot,
+      metrics: entityMetric(snapshot, filters, entity.id),
+    };
   });
   const actualKpi = !!filters.salesTeam && filters.salesTeam !== 'all' && (!filters.customer || filters.customer==='all') && state.teamActualData?.year===filters.year && Object.values(state.teamActualData.mappings).includes(filters.salesTeam);
   const scopedRows = actualKpi && rows.some(r=>r.snapshot?.teamActualSource && matchesRegion(r.entity,filters.region)) ? rows.filter(r=>r.snapshot?.teamActualSource) : rows;
@@ -314,26 +418,32 @@ export function getDashboardSnapshot(
         (filters.bu === "DHK" && r.entity.id === "dhk")) &&
       (filters.entity === "all" || r.entity.id === filters.entity),
   );
-  const combineSelected = (metrics: Metric[]) => combine(metrics, filters.year === 2027);
+  const combineSelected = (metrics: Metric[]) =>
+    combine(metrics, filters.year === 2027);
   const totals = combineSelected(selected.map((r) => r.metrics));
   const china = scopedRows.filter((r) => r.entity.reportingRegion === "China");
   const chinaTotal = combineSelected(china.map((r) => r.metrics));
-  const regionRows = scopedRows.filter(r => matchesRegion(r.entity, filters.region));
-  const regionTotal = combineSelected(regionRows.map(r => r.metrics));
+  const regionRows = scopedRows.filter((r) =>
+    matchesRegion(r.entity, filters.region),
+  );
+  const regionTotal = combineSelected(regionRows.map((r) => r.metrics));
   const weeks = [
     ...new Set(selected.flatMap((r) => (r.snapshot ? [actualKpiSource ? r.snapshot.teamActualSource?.week ?? r.snapshot.week : r.snapshot.week] : []))),
   ].sort((a, b) => a - b);
   const visibleLines = state.lines.filter(
     (l) =>
       selected.some(
-        (r) => r.entity.id === l.entityId && r.snapshot?.week === l.week,
+        (r) =>
+          r.entity.id === l.entityId &&
+          r.snapshot?.week === l.week &&
+          r.snapshot?.year === l.year,
       ) &&
       (filters.salesType === "all" ||
         l.customerType.toLowerCase() === filters.salesType),
   );
   const commercial = Object.entries(
     visibleLines.reduce<Record<string, number>>((a, l) => {
-      const value = filters.year === 2027 ? l.total2027 : l.total2026;
+      const value = lineYear(l, filters.year).total ?? 0;
       a[l.customer || "Unspecified customer"] =
         (a[l.customer || "Unspecified customer"] ?? 0) + value;
       return a;
@@ -359,9 +469,27 @@ export function getDashboardSnapshot(
           message,
         })),
   );
-  if (filters.year === 2027) checks.push(...selected
-    .filter(r => r.entity.id in pending2027Budgets)
-    .map(r => ({entity:r.entity.code,message:"FY2027 annual budget pending; displayed as 0"})));
+  if (filters.year === 2027)
+    checks.push(
+      ...selected
+        .filter((r) =>
+          r.snapshot?.managedBudgets
+            ? r.snapshot.managedBudgets[`2027:${filters.salesType}`]?.pending
+            : r.entity.id in pending2027Budgets,
+        )
+        .map((r) => ({
+          entity: r.entity.code,
+          message: "FY2027 annual budget pending; displayed as 0",
+        })),
+    );
+  checks.push(
+    ...selected
+      .filter((r) => r.snapshot && r.snapshot.year < filters.year)
+      .map((r) => ({
+        entity: r.entity.code,
+        message: `FY${filters.year} uses FY${r.snapshot!.year} outlook; actual-year source not yet supplied`,
+      })),
+  );
   const partialKeys = (
     ["sales", "orderbook", "base", "prospect", "scenario", "remaining"] as const
   ).filter((key) =>
@@ -374,23 +502,41 @@ export function getDashboardSnapshot(
   const history = selected.map((r) => ({
     entity: r.entity,
     records: (actualKpiSource ? [] : state.snapshots)
-      .filter((s) => s.entityId === r.entity.id)
+      .filter(
+        (s) =>
+          s.entityId === r.entity.id &&
+          s.year === sourceYear(state, r.entity.id, filters.year),
+      )
       .sort((a, b) => a.week - b.week)
       .map((s) => ({ week: s.week, value: entityMetric(s, filters).scenario })),
   }));
   return {
+    availableWeeks,
+    availableYears: [
+      ...new Set(
+        state.snapshots
+          .filter((s) => allowed.some((e) => e.id === s.entityId))
+          .flatMap((s) => [s.year, s.year + 1]),
+      ),
+    ].sort(),
     filters,
     graphics: {
-      series: salesGraphicSeries(state, selected.map(r => r.entity), filters),
+      series: salesGraphicSeries(
+        state,
+        selected.map((r) => r.entity),
+        filters,
+      ),
       teams: retainedTeams?.teams ?? teamOrderbookSummary(visibleLines, filters.year),
       teamSource: retainedTeams?.source,
-      teamActuals: actualTeams,
+      teamActuals:actualTeams,
       teamKpiSource:actualKpiSource,
     },
-    salesTeams: [...new Set([...(retainedTeams?.names ?? salesTeams), ...(actualTeams?.names ?? [])])].sort(),
+    salesTeams:[...new Set([...(retainedTeams?.names ?? salesTeams),...(actualTeams?.names ?? [])])].sort(),
     customers,
     entities: allowed,
-    regions: regions.filter(region => allowed.some(entity => matchesRegion(entity, region))),
+    regions: regions.filter((region) =>
+      allowed.some((entity) => matchesRegion(entity, region)),
+    ),
     rows: selected,
     totals,
     china,
@@ -404,7 +550,10 @@ export function getDashboardSnapshot(
     commercial,
     history,
     revision: state.revision,
-    latestDataUpdate: state.dataUpdatedAt ?? state.audit.filter(a => a.action === "publish").at(-1)?.at ?? null,
+    latestDataUpdate:
+      state.dataUpdatedAt ??
+      state.audit.filter((a) => a.action === "publish").at(-1)?.at ??
+      null,
     latestPublish:
       state.audit.filter((a) => a.action === "publish").at(-1)?.at ?? null,
     sourceCount: selected.filter((r) => r.snapshot).length,
@@ -439,6 +588,9 @@ export function percent(value: Amount) {
 export function formatUpdateDate(value: string | null, locale: string = "en") {
   if (!value || Number.isNaN(Date.parse(value))) return "—";
   return new Intl.DateTimeFormat(locale === "zh-CN" ? "zh-CN" : "en-US", {
-    timeZone: "Asia/Singapore", year: "numeric", month: "long", day: "numeric",
+    timeZone: "Asia/Singapore",
+    year: "numeric",
+    month: "long",
+    day: "numeric",
   }).format(new Date(value));
 }

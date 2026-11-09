@@ -135,7 +135,10 @@ export function DashboardShell({
             ["superadmin", "region_admin", "editor"].includes(user.role) && (
               <Link
                 className="import-data"
-                href={pagePath(locale, "imports")}
+                href={
+                  pagePath(locale, "imports") +
+                  `?from=${page === "ar-aging" ? "ar-aging" : "overview"}`
+                }
                 title={tr("nav.import")}
                 aria-label={tr("nav.import")}
               >
@@ -143,7 +146,7 @@ export function DashboardShell({
                 <span>{tr("nav.import")}</span>
               </Link>
             )}
-          {page !== "home" && page !== "ar-aging" && (
+          {page !== "home" && page !== "ar-aging" && page !== "imports" && (
             <a
               className="excel-export"
               href={`/api/export?${query}`}

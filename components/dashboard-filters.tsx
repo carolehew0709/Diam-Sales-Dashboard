@@ -93,156 +93,199 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
     };
   }, []);
   return (
-    <section
-      className="filter-bar sales-filter-bar"
-      ref={filterBar}
-      data-updating={pending || undefined}
-      aria-label={tr("filters.global")}
-    >
-      <div className="filter-field">
-        <label htmlFor="region">{tr("filters.region")}</label>
-        <select
-          id="region"
-          value={requestedFilters.region}
-          onChange={(e) =>
+    <>
+      <section
+        className="filter-bar sales-filter-bar"
+        ref={filterBar}
+        data-updating={pending || undefined}
+        aria-label={tr("filters.global")}
+      >
+        <div className="filter-field">
+          <label htmlFor="region">{tr("filters.region")}</label>
+          <select
+            id="region"
+            value={requestedFilters.region}
+            onChange={(e) =>
+              setFilters({
+                ...requestedFilters,
+                region: e.target.value,
+                week: 0,
+                bu: "all",
+                entity: "all",
+                salesTeam: "all",
+                customer: "all",
+              })
+            }
+          >
+            {data.regions.map((r) => (
+              <option key={r} value={r}>
+                {r === "APAC" ? tr("filters.apac") : display(r)}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-field">
+          <label htmlFor="bu">{tr("filters.businessUnitEntity")}</label>
+          <select
+            id="bu"
+            value={requestedFilters.bu}
+            onChange={(e) =>
+              setFilters({
+                ...requestedFilters,
+                bu: e.target.value,
+                entity: "all",
+                customer: "all",
+              })
+            }
+          >
+            <option value="all">{tr("filters.allBU")}</option>
+            {[
+              ...new Set(
+                data.entities
+                  .filter((e) => matchesRegion(e, requestedFilters.region))
+                  .map((e) => e.businessUnit),
+              ),
+            ].map((b) => (
+              <option key={b}>{b}</option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-field">
+          <label htmlFor="sales-team">{tr("team.label")}</label>
+          <select
+            id="sales-team"
+            value={requestedFilters.salesTeam ?? "all"}
+            onChange={(event) =>
+              setFilters({
+                ...requestedFilters,
+                salesTeam: event.target.value,
+                customer: "all",
+              })
+            }
+          >
+            <option value="all">{tr("team.all")}</option>
+            {salesTeams.map((team) => (
+              <option key={team} value={team}>
+                {team === "__unassigned__" ? tr("team.unassigned") : team}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="filter-field">
+          <label htmlFor="customer">{tr("common.customer")}</label>
+          <select
+            id="customer"
+            title={tr("filters.customerSource")}
+            value={requestedFilters.customer ?? "all"}
+            onChange={(event) =>
+              setFilters({ ...requestedFilters, customer: event.target.value })
+            }
+          >
+            <option value="all">{tr("filters.allAvailable")}</option>
+            {data.customers.map((customer) => (
+              <option key={customer} value={customer}>
+                {customer}
+              </option>
+            ))}
+          </select>
+        </div>
+        <Segmented
+          label={tr("filters.years")}
+          value={String(requestedFilters.year)}
+          options={data.availableYears.map((year) => ({
+            value: String(year),
+            label: String(year),
+          }))}
+          onChange={(v) =>
             setFilters({
               ...requestedFilters,
-              region: e.target.value,
-              bu: "all",
-              entity: "all",
+              year: Number(v),
+              week: 0,
               salesTeam: "all",
               customer: "all",
             })
           }
-        >
-          {data.regions.map((r) => (
-            <option key={r} value={r}>
-              {r === "APAC" ? tr("filters.apac") : display(r)}
-            </option>
-          ))}
-        </select>
-      </div>
-      <div className="filter-field">
-        <label htmlFor="bu">{tr("filters.businessUnitEntity")}</label>
+        />
+        <Segmented
+          label={tr("filters.scenario")}
+          columns="minmax(48px,.6fr) minmax(0,1.4fr)"
+          value={requestedFilters.scenario}
+          options={[
+            { value: "Sales", label: tr("metric.sales") },
+            {
+              value: "Sales + Prospect",
+              label: tr(
+                t.prospect !== null && t.prospect !== 0
+                  ? "metric.salesProspectP1"
+                  : "metric.salesProspect",
+              ),
+            },
+          ]}
+          onChange={(v) =>
+            setFilters({
+              ...requestedFilters,
+              scenario: v as Filters["scenario"],
+            })
+          }
+        />
+        <Segmented
+          label={tr("filters.type")}
+          value={requestedFilters.salesType}
+          options={[
+            { value: "all", label: tr("filters.allSales") },
+            { value: "external", label: tr("common.external") },
+            { value: "group", label: tr("common.group") },
+          ]}
+          onChange={(v) =>
+            setFilters({
+              ...requestedFilters,
+              salesType: v as Filters["salesType"],
+              salesTeam: "all",
+              customer: "all",
+            })
+          }
+        />
+        <UpdateStatus pending={pending} />
+      </section>
+      <div className="reporting-history-controls">
+        <label htmlFor="reporting-week">{tr("history.week")}</label>
         <select
-          id="bu"
-          value={requestedFilters.bu}
+          id="reporting-week"
+          value={requestedFilters.week ?? 0}
           onChange={(e) =>
-            setFilters({
-              ...requestedFilters,
-              bu: e.target.value,
-              entity: "all",
-              customer: "all",
-            })
+            setFilters({ ...requestedFilters, week: Number(e.target.value) })
           }
         >
-          <option value="all">{tr("filters.allBU")}</option>
-          {[
-            ...new Set(
-              data.entities
-                .filter((e) => matchesRegion(e, requestedFilters.region))
-                .map((e) => e.businessUnit),
-            ),
-          ].map((b) => (
-            <option key={b}>{b}</option>
-          ))}
-        </select>
-      </div>
-      <div className="filter-field">
-        <label htmlFor="sales-team">{tr("team.label")}</label>
-        <select
-          id="sales-team"
-          value={requestedFilters.salesTeam ?? "all"}
-          onChange={(event) =>
-            setFilters({
-              ...requestedFilters,
-              salesTeam: event.target.value,
-              customer: "all",
-            })
-          }
-        >
-          <option value="all">{tr("team.all")}</option>
-          {salesTeams.map((team) => (
-            <option key={team} value={team}>
-              {team === "__unassigned__" ? tr("team.unassigned") : team}
+          <option value={0}>{tr("history.latest")}</option>
+          {(data.availableWeeks ?? []).map((w) => (
+            <option key={w} value={w}>
+              W{w}
             </option>
           ))}
         </select>
-      </div>
-      <div className="filter-field">
-        <label htmlFor="customer">{tr("common.customer")}</label>
-        <select
-          id="customer"
-          title={tr("filters.customerSource")}
-          value={requestedFilters.customer ?? "all"}
-          onChange={(event) =>
-            setFilters({ ...requestedFilters, customer: event.target.value })
+        <button
+          className="apac-button"
+          disabled={
+            !(data.availableWeeks ?? []).some(
+              (w) => w < (requestedFilters.week || Math.max(...data.weeks)),
+            )
+          }
+          onClick={() =>
+            setFilters({
+              ...requestedFilters,
+              week:
+                (data.availableWeeks ?? []).find(
+                  (w) => w < (requestedFilters.week || Math.max(...data.weeks)),
+                ) ?? 0,
+            })
           }
         >
-          <option value="all">{tr("filters.allAvailable")}</option>
-          {data.customers.map((customer) => (
-            <option key={customer} value={customer}>
-              {customer}
-            </option>
-          ))}
-        </select>
+          {tr("history.previous")}
+        </button>
+        {!!requestedFilters.week && (
+          <span role="status">{tr("history.readOnly")}</span>
+        )}
       </div>
-      <Segmented
-        label={tr("filters.years")}
-        value={String(requestedFilters.year)}
-        options={[
-          { value: "2026", label: "2026" },
-          { value: "2027", label: "2027" },
-        ]}
-        onChange={(v) =>
-          setFilters({
-            ...requestedFilters,
-            year: Number(v),
-            salesTeam: "all",
-            customer: "all",
-          })
-        }
-      />
-      <Segmented
-        label={tr("filters.scenario")}
-        columns="minmax(48px,.6fr) minmax(0,1.4fr)"
-        value={requestedFilters.scenario}
-        options={[
-          { value: "Sales", label: tr("metric.sales") },
-          {
-            value: "Sales + Prospect",
-            label: tr(
-              t.prospect !== null && t.prospect !== 0
-                ? "metric.salesProspectP1"
-                : "metric.salesProspect",
-            ),
-          },
-        ]}
-        onChange={(v) =>
-          setFilters({
-            ...requestedFilters,
-            scenario: v as Filters["scenario"],
-          })
-        }
-      />
-      <Segmented
-        label={tr("filters.type")}
-        value={requestedFilters.salesType}
-        options={[
-          { value: "all", label: tr("filters.allSales") },
-          { value: "external", label: tr("common.external") },
-          { value: "group", label: tr("common.group") },
-        ]}
-        onChange={(v) =>
-          setFilters({
-            ...requestedFilters,
-            salesType: v as Filters["salesType"],
-            salesTeam: "all",
-            customer: "all",
-          })
-        }
-      />
-      <UpdateStatus pending={pending} />
-    </section>
+    </>
   );
 }

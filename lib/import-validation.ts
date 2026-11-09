@@ -27,7 +27,9 @@ export function manualBatch(input: unknown, user: User): ImportBatch {
     week = Number(b.week),
     month = Number(b.month);
   if (
-    year !== 2026 ||
+    !Number.isInteger(year) ||
+    year < 2000 ||
+    year > 2099 ||
     !Number.isInteger(week) ||
     week < 1 ||
     week > 53 ||
@@ -37,7 +39,7 @@ export function manualBatch(input: unknown, user: User): ImportBatch {
   )
     throw new ApiError(
       400,
-      "Supply reporting year 2026, an integer week 1–53 and month 1–12",
+      "Supply reporting year 2000–2099, an integer week 1–53 and month 1–12",
     );
   if (new Date(weekDate(year, week)).getUTCMonth() + 1 !== month)
     throw new ApiError(400, "Reporting month must match the ISO week Friday");
@@ -68,7 +70,11 @@ export function manualBatch(input: unknown, user: User): ImportBatch {
       throw new ApiError(400, "MTD turnover cannot exceed YTD turnover");
   s.prospect = amount(b.prospect, "Prospect", true);
   s.nextProspect = amount(b.nextProspect, "2027 Prospect", true);
-  s.annualBudget = amount(b.annualBudget, translate("en", "metric.budget"), true);
+  s.annualBudget = amount(
+    b.annualBudget,
+    translate("en", "metric.budget"),
+    true,
+  );
   s.nextAnnualBudget = amount(
     b.nextAnnualBudget,
     translate("en", "validation.nextBudget"),
@@ -142,6 +148,11 @@ export function manualBatch(input: unknown, user: User): ImportBatch {
     s.findings.push("Prospect monthly phasing not supplied");
   else s.monthlyProspect.fill(0);
   s.findings.push("Historical monthly turnover not supplied");
+  for (const l of lines)
+    l.amountsByYear = {
+      [year]: { total: l.total2026, monthly: l.monthly2026 },
+      [year + 1]: { total: l.total2027, monthly: l.monthly2027 },
+    };
   s.sourceCheck = "Review";
   const approved = applyApprovedBudget(s);
   return {

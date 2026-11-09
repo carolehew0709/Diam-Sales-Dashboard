@@ -75,6 +75,30 @@ export function parseReceivablesWorkbook(
         const date = excelDate(row[0]),
           invoice = text(row[1]),
           amount = num(row[amountColumn]);
+        if (
+          invoice &&
+          text(row[2]) &&
+          (date || amount !== null) &&
+          (!date || amount === null)
+        )
+          findings.push({
+            severity: "error",
+            message: `${sheet} row ${i + 1}: invoice date or amount missing / invalid; row cannot be silently omitted`,
+          });
+        for (const c of [0, amountColumn, 13, 14]) {
+          const cell = ws[XLSX.utils.encode_cell({ r: i, c })];
+          if (
+            invoice &&
+            text(row[2]) &&
+            (date || amount !== null) &&
+            cell &&
+            (cell.t === "e" || (cell.f && num(cell.v) === null))
+          )
+            findings.push({
+              severity: "error",
+              message: `${sheet} row ${i + 1}: invalid formula or missing numeric cache`,
+            });
+        }
         if (!date || !invoice || !text(row[2]) || amount === null) return;
         const terms = num(row[13]);
         records.push({
@@ -105,9 +129,10 @@ export function parseReceivablesWorkbook(
       });
       if (!asOfDate)
         findings.push({
-          severity: "review",
+          severity: "error",
           message: `${sheet}: source reporting date missing`,
         });
+      if(!records.some(r=>r.entityId===entityId))findings.push({severity:'error',message:`${sheet}: no valid invoices; an empty Entity cannot replace the full aging dataset`});
     }
   } else if (
     workbook.Sheets.Summary &&
@@ -152,6 +177,15 @@ export function parseReceivablesWorkbook(
     rows.forEach((row, i) => {
       const receivedDate = excelDate(row[2]),
         amount = num(row[7]);
+      if (
+        text(row[3]) &&
+        (receivedDate || amount !== null) &&
+        (!receivedDate || amount === null)
+      )
+        findings.push({
+          severity: "error",
+          message: `Summary row ${i + 1}: date or balance missing / invalid; row cannot be silently omitted`,
+        });
       if (!receivedDate || !text(row[3]) || amount === null) return;
       const category = categories
         .get(identity(row[2], row[3], row[4], row[6]))

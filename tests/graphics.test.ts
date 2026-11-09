@@ -1,3 +1,6 @@
+import { repository } from "../lib/repository";
+import { storage } from "../lib/storage";
+import { reviewedPublish } from "./review-helper";
 import test from "node:test";
 import assert from "node:assert/strict";
 import * as XLSX from "xlsx";
@@ -393,8 +396,10 @@ test("monthly analyze/review/publish preserves weekly data, requires all China e
     if (previousPath === undefined) delete process.env.DIAM_DATA_PATH;
     else process.env.DIAM_DATA_PATH = previousPath;
   });
-  fs.writeFileSync(process.env.DIAM_DATA_PATH, JSON.stringify(state));
-  const { repository } = await import("../lib/repository");
+  fs.writeFileSync(
+    process.env.DIAM_DATA_PATH,
+    JSON.stringify({ ...state, users: [admin] }),
+  );
   const parsed = parseCustomerAnalysisWorkbook(
     customerWorkbook(),
     "Graphics.xlsx",
@@ -433,14 +438,14 @@ test("monthly analyze/review/publish preserves weekly data, requires all China e
   } as User;
   await assert.rejects(repository.publishImportBatch(batch.id, editor, true));
   await assert.rejects(repository.publishImportBatch(batch.id, admin, false));
-  await repository.publishImportBatch(batch.id, admin, true);
+  await reviewedPublish(repository, batch.id, admin);
   const published = await repository.read();
   assert.equal(published.customerAnalyses.length, 2);
   assert.deepEqual(published.snapshots, state.snapshots);
   assert.deepEqual(published.lines, state.lines);
   assert.equal(published.dataUpdatedAt, state.dataUpdatedAt);
   assert.equal(published.revision, 2);
-  await repository.publishImportBatch(batch.id, admin, true);
+  await reviewedPublish(repository, batch.id, admin);
   assert.equal((await repository.read()).revision, 2);
   await repository.createImportBatch(
     {
@@ -453,7 +458,7 @@ test("monthly analyze/review/publish preserves weekly data, requires all China e
     },
     admin,
   );
-  await repository.publishImportBatch("monthly-revision", admin, true);
+  await reviewedPublish(repository, "monthly-revision", admin);
   const saved = JSON.parse(
     fs.readFileSync(process.env.DIAM_DATA_PATH, "utf8"),
   ) as Store;

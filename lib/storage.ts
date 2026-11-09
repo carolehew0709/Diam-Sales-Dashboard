@@ -1,3 +1,4 @@
+import { ensureGovernance } from "./governance";
 import fs from "node:fs/promises";
 import path from "node:path";
 import { randomBytes } from "node:crypto";
@@ -20,23 +21,30 @@ function initial(): Store {
     version: 2,
     revision: 1,
     dataUpdatedAt: seed.meta?.generatedAt,
-    users: [...(password
-      ? [
-          {
-            id: "admin",
-            name: "APAC Administrator",
-            email: process.env.DIAM_ADMIN_EMAIL ?? "admin@diam.local",
-            role: "superadmin",
-            region: "APAC",
-            crossRegionView: false,
-            permissions: Object.fromEntries(
-              entities.map((e) => [e.id, ["view", "edit"]]),
-            ),
-            passwordHash: passwordHash(password),
-            sessionVersion: 1,
-          },
-        ]
-      : []), ...(indiaEditor && indiaEditor.email !== (process.env.DIAM_ADMIN_EMAIL ?? "admin@diam.local").toLowerCase() ? [indiaEditor] : [])] as Store["users"],
+    users: [
+      ...(password
+        ? [
+            {
+              id: "admin",
+              name: "APAC Administrator",
+              email: process.env.DIAM_ADMIN_EMAIL ?? "admin@diam.local",
+              role: "superadmin",
+              region: "APAC",
+              crossRegionView: false,
+              permissions: Object.fromEntries(
+                entities.map((e) => [e.id, ["view", "edit"]]),
+              ),
+              passwordHash: passwordHash(password),
+              sessionVersion: 1,
+            },
+          ]
+        : []),
+      ...(indiaEditor &&
+      indiaEditor.email !==
+        (process.env.DIAM_ADMIN_EMAIL ?? "admin@diam.local").toLowerCase()
+        ? [indiaEditor]
+        : []),
+    ] as Store["users"],
     snapshots: seed.snapshots ?? [],
     lines: seed.lines ?? [],
     batches: [],
@@ -61,7 +69,7 @@ async function fileRead() {
 export const fileAdapter: StorageAdapter = {
   read: async () => {
     await queue;
-    return fileRead();
+    return ensureGovernance(await fileRead());
   },
   transaction: async (update) => {
     if (process.env.VERCEL)
@@ -70,7 +78,7 @@ export const fileAdapter: StorageAdapter = {
       );
     const task = queue.then(async () => {
       const file = storageFile();
-      const state = await fileRead();
+      const state = ensureGovernance(await fileRead());
       const result = await update(state);
       await fs.mkdir(path.dirname(file), { recursive: true });
       const temp = `${file}.${randomBytes(6).toString("hex")}.tmp`;
@@ -100,7 +108,7 @@ export const postgresAdapter: StorageAdapter = {
     const result = await db.query(
       "SELECT payload FROM diam_dashboard_state WHERE id=1",
     );
-    return result.rows[0]?.payload ?? initial();
+    return ensureGovernance(result.rows[0]?.payload ?? initial());
   },
   transaction: async (update) => {
     const db = await database();
@@ -111,7 +119,9 @@ export const postgresAdapter: StorageAdapter = {
       const result = await client.query(
         "SELECT payload FROM diam_dashboard_state WHERE id=1 FOR UPDATE",
       );
-      const state: Store = result.rows[0]?.payload ?? initial();
+      const state: Store = ensureGovernance(
+        result.rows[0]?.payload ?? initial(),
+      );
       const value = await update(state);
       await client.query(
         "INSERT INTO diam_dashboard_state(id,payload) VALUES(1,$1) ON CONFLICT(id) DO UPDATE SET payload=EXCLUDED.payload",

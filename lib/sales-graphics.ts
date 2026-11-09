@@ -2,16 +2,20 @@ import type { Filters, Store, Entity, Amount } from "./types";
 import type { SalesGraphicSeries } from "./graphics-types";
 
 /** Explore the authorized reporting region, excluding a specifically selected BU. */
-export function exploreBusinessUnitRows<T extends { entity: Pick<Entity, "id" | "businessUnit"> }>(
-  regionRows: readonly T[],
-  filters: Pick<Filters, "bu" | "entity">,
-): T[] {
-  if (new Set(regionRows.map((row) => row.entity.businessUnit)).size <= 1) return [];
-  const selectedBU = filters.bu !== "all"
-    ? filters.bu === "DHK" ? "DEHK" : filters.bu
-    : filters.entity !== "all"
-      ? regionRows.find((row) => row.entity.id === filters.entity)?.entity.businessUnit
-      : undefined;
+export function exploreBusinessUnitRows<
+  T extends { entity: Pick<Entity, "id" | "businessUnit"> },
+>(regionRows: readonly T[], filters: Pick<Filters, "bu" | "entity">): T[] {
+  if (new Set(regionRows.map((row) => row.entity.businessUnit)).size <= 1)
+    return [];
+  const selectedBU =
+    filters.bu !== "all"
+      ? filters.bu === "DHK"
+        ? "DEHK"
+        : filters.bu
+      : filters.entity !== "all"
+        ? regionRows.find((row) => row.entity.id === filters.entity)?.entity
+            .businessUnit
+        : undefined;
   return regionRows.filter((row) => row.entity.businessUnit !== selectedBU);
 }
 
@@ -54,9 +58,10 @@ export function salesGraphicSeries(
     const ytd = byMonth.map((s): Amount =>
       !s || s.teamScope
         ? null
-        : filters.salesType === "all"
-          ? complete([s.turnover.external, s.turnover.group])
-          : s.turnover[filters.salesType],
+        : (s.policyMetrics?.[`${filters.year}:${filters.salesType}`]?.sales ??
+          (filters.salesType === "all"
+            ? complete([s.turnover.external, s.turnover.group])
+            : s.turnover[filters.salesType])),
     );
     return {
       id: entity.id,
@@ -67,6 +72,12 @@ export function salesGraphicSeries(
         // Never allocate an owner-confirmed YTD adjustment to a month.
         monthly:
           s?.sourceCells.dcpYtdSales ||
+          s?.policyMetrics?.[`${filters.year}:${filters.salesType}`]?.sales !==
+            undefined ||
+          (i > 0 &&
+            byMonth[i - 1]?.policyMetrics?.[
+              `${filters.year}:${filters.salesType}`
+            ]?.sales !== undefined) ||
           (i > 0 && byMonth[i - 1]?.sourceCells.dcpYtdSales)
             ? null
             : i === 0

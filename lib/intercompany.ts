@@ -1,4 +1,11 @@
-import type { Amount, OrderBookLine, Snapshot, Store, SalesType } from "./types";
+import { lineYear } from "./fiscal-years";
+import type {
+  Amount,
+  OrderBookLine,
+  Snapshot,
+  Store,
+  SalesType,
+} from "./types";
 import { applyReportingOverrides } from "./reporting-overrides";
 
 const normalize = (value: string) =>
@@ -40,13 +47,13 @@ export function reportingState(state: Store, salesType: SalesType = "all") {
   const snapshots = state.snapshots.map((s): Snapshot => {
     const lines = byWeek.get(key(s));
     if (!lines?.length) return s;
-    const current = sum(lines.map((l) => l.total2026));
-    const next = sum(lines.map((l) => l.total2027));
+    const current = sum(lines.map((l) => lineYear(l, s.year).total));
+    const next = sum(lines.map((l) => lineYear(l, s.year + 1).total));
     const monthly = Array.from({ length: 12 }, (_, i) =>
-      sum(lines.map((l) => l.monthly2026[i])),
+      sum(lines.map((l) => lineYear(l, s.year).monthly[i])),
     );
     const nextMonthly = Array.from({ length: 12 }, (_, i) =>
-      sum(lines.map((l) => l.monthly2027[i])),
+      sum(lines.map((l) => lineYear(l, s.year + 1).monthly[i])),
     );
     return {
       ...s,
@@ -78,7 +85,7 @@ export function reportingState(state: Store, salesType: SalesType = "all") {
         intercompany: lines
           .map(
             (l) =>
-              `${l.sourceSheet} row ${l.sourceRow} · ${l.customer} · 2026 ${l.total2026} / 2027 ${l.total2027} kEUR`,
+              `${l.sourceSheet} row ${l.sourceRow} · ${l.customer} · ${s.year} ${lineYear(l, s.year).total} / ${s.year + 1} ${lineYear(l, s.year + 1).total} kEUR`,
           )
           .join("; "),
       },
@@ -92,12 +99,26 @@ export function reportingState(state: Store, salesType: SalesType = "all") {
   });
   return {
     ...state,
-    snapshots: snapshots.map(s => applyReportingOverrides(s, salesType)),
+    snapshots: snapshots.map((s) => applyReportingOverrides(s, salesType)),
     lines: state.lines
       .filter((l) => !isDuplicateIntercompanyOrder(l))
       .map((l) =>
-        ["ddc", "dcp"].includes(l.entityId) && l.year === 2026 && l.customerType === "Group"
-          ? { ...l, total2026: 0, monthly2026: Array(12).fill(0) }
+        ["ddc", "dcp"].includes(l.entityId) &&
+        l.year === 2026 &&
+        l.customerType === "Group"
+          ? {
+              ...l,
+              total2026: 0,
+              monthly2026: Array(12).fill(0),
+              ...(l.amountsByYear
+                ? {
+                    amountsByYear: {
+                      ...l.amountsByYear,
+                      [l.year]: { total: 0, monthly: Array(12).fill(0) },
+                    },
+                  }
+                : {}),
+            }
           : l,
       ),
     intercompanyExcluded: excluded,

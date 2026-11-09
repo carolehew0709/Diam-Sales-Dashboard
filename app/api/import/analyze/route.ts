@@ -1,5 +1,10 @@
 import {parseTeamActualWorkbook} from "@/lib/team-actual-parser";
 import { selectImportWeeks } from "@/lib/import-scope";
+import {
+  identifyWorkbook,
+  archiveWorkbook,
+  supplementMonthlyHistory,
+} from "@/lib/workbook-intake";
 import { randomUUID } from "node:crypto";
 import { api, ApiError, currentUser, sameOrigin } from "@/lib/auth";
 import { repository } from "@/lib/repository";
@@ -24,19 +29,51 @@ export async function POST(request: Request) {
       file.size > 12 * 1024 * 1024
     )
       throw new ApiError(400, "Choose an .xlsx workbook up to 12 MB");
-    let parsed: Pick<ImportBatch, "snapshots" | "lines" | "sheets" | "findings" | "receivables" | "receivablesKind" | "customerAnalysis" | "teamActualData" | "receivablesEntityIds">;
+    let parsed: Pick<
+      ImportBatch,
+      | "snapshots"
+      | "lines"
+      | "sheets"
+      | "findings"
+      | "receivables"
+      | "receivablesKind"
+      | "receivablesEntityIds"
+      | "customerAnalysis"
+      | "teamActualData"
+    >;
+    const bytes = Buffer.from(await file.arrayBuffer());
+    const kind=identifyWorkbook(bytes);
     try {
-      const bytes = Buffer.from(await file.arrayBuffer());
-      parsed = parseTeamActualWorkbook(bytes, file.name) ?? parseCustomerAnalysisWorkbook(bytes, file.name) ?? parseDashboardWorkbook(bytes, file.name);
-      if (!parsed.teamActualData && !parsed.customerAnalysis && !parsed.snapshots.length) {
-        const partial=parseDdcAging(bytes,file.name);
-        const ar = partial ?? parseReceivablesWorkbook(bytes, file.name, { paymentEntityId: "china-payments" });
-        parsed = { snapshots: [], lines: [], sheets: ar.sheets, findings: ar.findings, receivables: ar.records, receivablesKind: ar.sourceKind,receivablesEntityIds:partial?.replacementEntityIds };
+      parsed = kind==='team-actual' ? parseTeamActualWorkbook(bytes,file.name)! : (
+        kind === "customer"
+          ? parseCustomerAnalysisWorkbook(bytes, file.name)!
+          : kind === "sales"
+            ? parseDashboardWorkbook(bytes, file.name)
+            : { snapshots: [], lines: [], sheets: [], findings: [] });
+      if (kind === "aging" || kind === "payments" || kind==='ddc-aging') {
+        const partial=kind==='ddc-aging'?parseDdcAging(bytes,file.name):null;
+        const ar = partial ?? parseReceivablesWorkbook(bytes, file.name, {
+          paymentEntityId: "china-payments",
+        });
+        parsed = {
+          snapshots: [],
+          lines: [],
+          sheets: ar.sheets,
+          findings: ar.findings,
+          receivables: ar.records,
+          receivablesKind: ar.sourceKind,
+          receivablesEntityIds:partial?.replacementEntityIds,
+        };
       }
-    } catch {
-      throw new ApiError(400, "Workbook could not be parsed");
+    } catch (error) {
+      throw new ApiError(400, error instanceof Error ? `Workbook could not be parsed: ${error.message.slice(0,400)}` : "Workbook could not be parsed");
     }
-    if (parsed.teamActualData && form.get("weeks") !== null) throw new ApiError(400,"Week selection is not available for monthly team actuals");
+    if (!parsed)
+      throw new ApiError(400, "Incomplete customer workbook template");
+    const state = await repository.read();
+    supplementMonthlyHistory(parsed.snapshots, state.snapshots);
+    const fingerprint = await archiveWorkbook(bytes);
+    if(parsed.teamActualData && form.get("weeks")!==null)throw new ApiError(400,"Week selection is not available for team actuals");
     parsed = selectImportWeeks(parsed, form.get("weeks"));
     const teamSelection=form.get('teamReporting');
     if(teamSelection==='selected' && parsed.lines.some(l=>l.salesTeam && (/^[-+]?\d+(\.\d+)?$/.test(l.salesTeam) || /^(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)$/i.test(l.salesTeam))))throw new ApiError(400,'Team column contains amounts or month headers; review the workbook layout before publishing');
@@ -45,10 +82,16 @@ export async function POST(request: Request) {
       {
         id: randomUUID(),
         updateTeamReporting:teamSelection==='selected',
+        fingerprint,
+        templateVersion: `${kind}-v2`,
         fileName: file.name,
         sourceType: "Excel",
         status: "review",
-        entityIds: parsed.teamActualData ? [...new Set(parsed.teamActualData.rows.map(r=>r.entityId))] : parsed.customerAnalysis ? parsed.customerAnalysis.entityIds : parsed.receivables ? parsed.receivablesEntityIds??["dhk", "ddc"] : [...new Set(parsed.snapshots.map((s) => s.entityId))],
+        entityIds: parsed.teamActualData ? [...new Set(parsed.teamActualData.rows.map(r=>r.entityId))] : parsed.customerAnalysis
+          ? parsed.customerAnalysis.entityIds
+          : parsed.receivables
+            ? parsed.receivablesEntityIds??["dhk", "ddc"]
+            : [...new Set(parsed.snapshots.map((s) => s.entityId))],
         submittedBy: user.id,
         submittedAt: new Date().toISOString(),
         ...parsed,

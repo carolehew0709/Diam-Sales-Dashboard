@@ -1,3 +1,6 @@
+import { repository } from "../lib/repository";
+import { storage } from "../lib/storage";
+import { reviewedPublish } from "./review-helper";
 import assert from "node:assert/strict";
 import test from "node:test";
 import fs from "node:fs";
@@ -255,8 +258,6 @@ sourceTest(
       os.tmpdir(),
       `diam-ar-${Date.now()}.json`,
     );
-    const { storage } = await import("../lib/storage");
-    const { repository } = await import("../lib/repository");
     const batch = {
       id: "ar-test",
       fileName: "Unknown Payment.xlsx",
@@ -274,8 +275,11 @@ sourceTest(
     } as const;
     await assert.rejects(
       repository.createImportBatch(structuredClone(batch) as never, india),
-      /outside your edit scope/,
+      /not permitted for this scope/,
     );
+    await storage.transaction((s) => {
+      s.users = [admin];
+    });
     const before = await storage.read();
     await repository.createImportBatch(structuredClone(batch) as never, admin);
     assert.deepEqual((await storage.read()).receivables ?? [], []);
@@ -283,12 +287,12 @@ sourceTest(
       repository.publishImportBatch(batch.id, india, true),
       /not permitted/,
     );
-    await repository.publishImportBatch(batch.id, admin, true);
+    await reviewedPublish(repository, batch.id, admin);
     const after = await storage.read();
     assert.deepEqual(after.snapshots, before.snapshots);
     assert.equal(after.dataUpdatedAt, before.dataUpdatedAt);
     assert.equal(after.receivables!.length, 39);
-    await repository.publishImportBatch(batch.id, admin, true);
+    await reviewedPublish(repository, batch.id, admin);
     assert.equal((await storage.read()).receivables!.length, 39);
     await fs.promises.unlink(process.env.DIAM_DATA_PATH!);
   },

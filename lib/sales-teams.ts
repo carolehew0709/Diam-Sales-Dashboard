@@ -1,19 +1,35 @@
 import {projectTeamActuals} from "./team-actuals";
+import { lineYear } from "./fiscal-years";
 import type { Snapshot, Store, OrderBookLine } from "./types";
 import { keyCustomerName } from "./key-customers";
 
 export const teamName = (value?: string) =>
   value?.replace(/\s+/g, " ").trim() || "__unassigned__";
 export const customerName = (value?: string) =>
-  keyCustomerName(value ?? "") ?? (value?.replace(/\s+/g, " ").trim() || "Unspecified customer");
+  keyCustomerName(value ?? "") ??
+  (value?.replace(/\s+/g, " ").trim() || "Unspecified customer");
 /** User-facing Customer follows source column E; column G remains raw bill-to evidence. */
-export const orderCustomerName = (line: Pick<OrderBookLine, "product" | "customer">) =>
-  line.product?.replace(/\s+/g, " ").trim() || "Unspecified customer";
+export const orderCustomerName = (
+  line: Pick<OrderBookLine, "product" | "customer">,
+) => line.product?.replace(/\s+/g, " ").trim() || "Unspecified customer";
 export const orderCustomerKey = (name: string) =>
-  name.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").replace(/[‘’']/g, "").replace(/\s+/g, " ").trim().toLowerCase();
-export const matchesOrderDimensions = (line: OrderBookLine, salesTeam = "all", customer = "all") =>
+  name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[‘’']/g, "")
+    .replace(/\s+/g, " ")
+    .trim()
+    .toLowerCase();
+export const matchesOrderDimensions = (
+  line: OrderBookLine,
+  salesTeam = "all",
+  customer = "all",
+) =>
   (salesTeam === "all" || teamName(line.salesTeam) === salesTeam) &&
-  (customer === "all" || (line.customerType.toLowerCase() === "external" && orderCustomerKey(orderCustomerName(line)) === orderCustomerKey(customer)));
+  (customer === "all" ||
+    (line.customerType.toLowerCase() === "external" &&
+      orderCustomerKey(orderCustomerName(line)) ===
+        orderCustomerKey(customer)));
 
 /** Receives only latest, authorized reporting lines, after exclusions and filters. */
 export function teamOrderbookSummary(lines: OrderBookLine[], year: number) {
@@ -26,9 +42,7 @@ export function teamOrderbookSummary(lines: OrderBookLine[], year: number) {
   }
   return [...groups]
     .map(([name, group]) => {
-      const monthly = group.map((l) =>
-        year === 2027 ? l.monthly2027 : l.monthly2026,
-      );
+      const monthly = group.map((l) => lineYear(l, year).monthly);
       const evidence = new Map<string, number[]>();
       for (const line of group) {
         const key = `${line.sourceFile} · ${line.sourceSheet}`;
@@ -37,7 +51,7 @@ export function teamOrderbookSummary(lines: OrderBookLine[], year: number) {
       return {
         name,
         value: group.reduce(
-          (sum, l) => sum + (year === 2027 ? l.total2027 : l.total2026),
+          (sum, l) => sum + (lineYear(l, year).total ?? 0),
           0,
         ),
         monthly: Array.from({ length: 12 }, (_, i) =>
@@ -56,10 +70,14 @@ export function teamOrderbookSummary(lines: OrderBookLine[], year: number) {
 }
 
 /** Project only source-backed team OB. Do not allocate BU invoices or budgets to teams. */
-export function salesTeamState(state: Store, salesTeam = "all", customer = "all"): Store {
+export function salesTeamState(
+  state: Store,
+  salesTeam = "all",
+  customer = "all",
+): Store {
   if (salesTeam === "all" && customer === "all") return state;
-  const lines = state.lines.filter(
-    (line) => matchesOrderDimensions(line, salesTeam, customer),
+  const lines = state.lines.filter((line) =>
+    matchesOrderDimensions(line, salesTeam, customer),
   );
   const snapshots = state.snapshots.map((s): Snapshot => {
     if (s.teamScope) return s;
@@ -75,11 +93,29 @@ export function salesTeamState(state: Store, salesTeam = "all", customer = "all"
         line.year === s.year &&
         line.week === s.week,
     );
-    const sum = (kind: string, year: 2026 | 2027, month?: number) => {
+    const sum = (kind: string, year: number, month?: number) => {
       if (!source.length) return null;
-      const matching = selected.filter((line) => line.customerType.toLowerCase() === kind);
-      if (month !== undefined && matching.some((line) => line[`monthly${year}`][month] == null)) return null;
-      return matching.reduce((n, line) => n + (month === undefined ? line[`total${year}`] : line[`monthly${year}`][month]!), 0);
+      const matching = selected.filter(
+        (line) => line.customerType.toLowerCase() === kind,
+      );
+      if (
+        month === undefined &&
+        matching.some((line) => lineYear(line, year).total === null)
+      )
+        return null;
+      if (
+        month !== undefined &&
+        matching.some((line) => lineYear(line, year).monthly[month] == null)
+      )
+        return null;
+      return matching.reduce(
+        (n, line) =>
+          n +
+          (month === undefined
+            ? lineYear(line, year).total!
+            : lineYear(line, year).monthly[month]!),
+        0,
+      );
     };
     const empty = () => Array<null>(12).fill(null);
     return projectTeamActuals(state, {
@@ -88,22 +124,27 @@ export function salesTeamState(state: Store, salesTeam = "all", customer = "all"
       turnover: { external: null, group: null },
       monthTurnover: { external: null, group: null },
       monthEstimate: { external: null, group: null },
-      orderbook: { external: sum("external", 2026), group: sum("group", 2026) },
+      orderbook: {
+        external: sum("external", s.year),
+        group: sum("group", s.year),
+      },
       nextOrderbook: {
-        external: sum("external", 2027),
-        group: sum("group", 2027),
+        external: sum("external", s.year + 1),
+        group: sum("group", s.year + 1),
       },
       monthlyOrderbook: {
         external: Array.from({ length: 12 }, (_, m) =>
-          sum("external", 2026, m),
+          sum("external", s.year, m),
         ),
-        group: Array.from({ length: 12 }, (_, m) => sum("group", 2026, m)),
+        group: Array.from({ length: 12 }, (_, m) => sum("group", s.year, m)),
       },
       nextMonthlyOrderbook: {
         external: Array.from({ length: 12 }, (_, m) =>
-          sum("external", 2027, m),
+          sum("external", s.year + 1, m),
         ),
-        group: Array.from({ length: 12 }, (_, m) => sum("group", 2027, m)),
+        group: Array.from({ length: 12 }, (_, m) =>
+          sum("group", s.year + 1, m),
+        ),
       },
       monthlySales: { external: empty(), group: empty() },
       annualBudget: null,
@@ -122,7 +163,9 @@ export function salesTeamState(state: Store, salesTeam = "all", customer = "all"
       findings: [
         ...new Set([
           ...s.findings,
-          customer !== "all" ? "Customer invoices and budget not supplied; only customer orderbook is available" : "Team invoices and budget not supplied; only team orderbook is available",
+          customer !== "all"
+            ? "Customer invoices and budget not supplied; only customer orderbook is available"
+            : "Team invoices and budget not supplied; only team orderbook is available",
         ]),
       ],
     }, salesTeam, customer);

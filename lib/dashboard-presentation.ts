@@ -7,6 +7,7 @@ export function dashboardFilterKey(filters: Filters) {
     filters.bu,
     filters.entity,
     filters.year,
+    filters.week ?? 0,
     filters.salesType,
     filters.scenario,
     filters.salesTeam ?? "all",

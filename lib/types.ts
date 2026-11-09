@@ -15,6 +15,7 @@ export type User = {
   passwordHash?: string;
   disabled?: boolean;
   sessionVersion?: number;
+  systemIdentity?: "apac-health" | "india-health";
 };
 export type Entity = {
   id: string;
@@ -31,6 +32,7 @@ export type SalesType = "all" | "external" | "group";
 export type Scenario = "Sales" | "Sales + Prospect";
 export type Split = { external: Amount; group: Amount };
 export type OrderBookLine = {
+  amountsByYear?: Record<string, { total: Amount; monthly: Amount[] }>;
   id: string;
   entityId: string;
   week: number;
@@ -51,6 +53,15 @@ export type OrderBookLine = {
 };
 export type Snapshot = {
   teamActualSource?: {year:number;month:number;week?:number;sourceFile:string;sourceSheet:string;budget:Split};
+  managedCorrections?: boolean;
+  managedBudgets?: Record<
+    string,
+    { value: Amount; pending: boolean; reason: string }
+  >;
+  policyMetrics?: Record<
+    string,
+    Partial<Record<"sales" | "orderbook" | "prospect" | "annual", number>>
+  >;
   teamScope?: boolean;
   entityId: string;
   year: number;
@@ -86,18 +97,87 @@ export type Snapshot = {
   sourceCheck: "Ready" | "Review";
   publishedAt?: string;
 };
-export type Finding = { severity: "error" | "review"; message: string; code?: string; params?: Record<string, string | number> };
+export type Finding = {
+  severity: "error" | "review" | "info";
+  message: string;
+  code?: string;
+  params?: Record<string, string | number>;
+};
+export type PublicationSlice = {
+  budgetVersions?: BudgetVersion[];
+  correctionVersions?: CorrectionVersion[];
+  teamActualData?: TeamActualData;
+  snapshots: Snapshot[];
+  lines: OrderBookLine[];
+  customerAnalyses: CustomerAnalysis[];
+  receivables: ReceivableRecord[];
+};
+export type Publication = {
+  teamReference?: { before: Store["retainedTeamSource"]; after: Store["retainedTeamSource"] };
+  scopes: string[];
+  before: PublicationSlice;
+  after: PublicationSlice;
+  reason: string;
+  reviewVersion: string;
+  restoredAt?: string;
+  restoredBy?: string;
+};
+export type BudgetVersion = {
+  id: string;
+  entityId: string;
+  year: number;
+  total: Amount;
+  external: Amount;
+  group: Amount;
+  pending?: boolean;
+  reason: string;
+  actor: string;
+  at: string;
+  revokedAt?: string;
+};
+export type CorrectionVersion = {
+  id: string;
+  entityId: string;
+  year: number;
+  weeks: number[];
+  salesType: SalesType;
+  metric: "sales" | "orderbook" | "prospect" | "annual";
+  value: number;
+  reason: string;
+  actor: string;
+  at: string;
+  revokedAt?: string;
+};
 export type ImportBatch = {
   receivablesEntityIds?: string[];
+  adjustment?: {
+    kind: "budget" | "correction";
+    entityId: string;
+    year: number;
+    reason: string;
+    total?: number | null;
+    external?: number | null;
+    group?: number | null;
+    weeks?: number[];
+    salesType?: string;
+    metric?: string;
+    value?: number;
+  };
+  adjustedRecordId?: string;
+  adjustmentBase?: string;
   updateTeamReporting?: boolean;
   teamActualData?: TeamActualData;
+  fingerprint?: string;
+  templateVersion?: string;
+  publication?: Publication;
+  selectedScopes?: string[];
   customerAnalysis?: CustomerAnalysis;
   receivables?: ReceivableRecord[];
   receivablesKind?: "aging" | "payments";
   id: string;
   fileName: string;
   sourceType: "Excel" | "Manual";
-  status: "review" | "published" | "rejected";
+  status: "review" | "published" | "rejected" | "restored";
   entityIds: string[];
   submittedBy: string;
   submittedAt: string;
@@ -119,6 +199,8 @@ export type AuditEvent = {
 export type Store = {
   teamActualData?: TeamActualData;
   retainedTeamSource?: { snapshots: Snapshot[]; lines: OrderBookLine[]; retainedAt: string; reviewedScopes?: string[]; reviewedAt?: string };
+  budgetVersions?: BudgetVersion[];
+  correctionVersions?: CorrectionVersion[];
   customerAnalyses?: CustomerAnalysis[];
   receivables?: ReceivableRecord[];
   receivablesUpdatedAt?: string;
@@ -132,6 +214,7 @@ export type Store = {
   audit: AuditEvent[];
 };
 export type Filters = {
+  week?: number;
   salesTeam?: string;
   customer?: string;
   region: string;

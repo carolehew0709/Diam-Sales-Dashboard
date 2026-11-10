@@ -13,6 +13,7 @@ import { parseReceivablesWorkbook } from "@/lib/receivables-parser";
 import { parseCustomerAnalysisWorkbook } from "@/lib/customer-analysis-parser";
 import type { ImportBatch } from "@/lib/types";
 import { parseDdcAging } from "@/lib/ddc-aging-parser";
+import { parseDehkReceiveWorkbook } from "@/lib/dehk-receive-parser";
 export async function POST(request: Request) {
   return api(async () => {
     sameOrigin(request);
@@ -52,9 +53,18 @@ export async function POST(request: Request) {
             : kind === "sales"
               ? parseDashboardWorkbook(bytes, file.name)
               : { snapshots: [], lines: [], sheets: [], findings: [] };
-      if (kind === "aging" || kind === "payments" || kind === "ddc-aging") {
+      if (
+        kind === "aging" ||
+        kind === "payments" ||
+        kind === "ddc-aging" ||
+        kind === "dehk-receive-aging"
+      ) {
         const partial =
-          kind === "ddc-aging" ? parseDdcAging(bytes, file.name) : null;
+          kind === "ddc-aging"
+            ? parseDdcAging(bytes, file.name)
+            : kind === "dehk-receive-aging"
+              ? parseDehkReceiveWorkbook(bytes, file.name)
+              : null;
         const ar =
           partial ??
           parseReceivablesWorkbook(bytes, file.name, {

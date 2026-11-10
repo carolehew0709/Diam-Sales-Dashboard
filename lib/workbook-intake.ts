@@ -4,6 +4,7 @@ import fs from "node:fs/promises";
 import path from "node:path";
 import { createHash } from "node:crypto";
 import type { Snapshot } from "./types";
+import { isDehkReceiveWorkbook } from "./dehk-receive-parser";
 export function identifyWorkbook(bytes: Buffer) {
   const book = XLSX.read(bytes, { type: "buffer", cellFormula: true });
   const names = book.SheetNames;
@@ -14,6 +15,7 @@ export function identifyWorkbook(bytes: Buffer) {
       ? "customer"
       : null,
     names.some((n) => /^(DEHK|DDC) OVERDUE$/.test(n)) ? "aging" : null,
+    isDehkReceiveWorkbook(book) ? "dehk-receive-aging" : null,
     names.some(
       (n) =>
         book.Sheets[n].A1?.v === "序号" &&

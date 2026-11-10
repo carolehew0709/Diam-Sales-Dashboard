@@ -2,6 +2,8 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { UpdateStatus } from "./update-status";
 import { useDataReveal } from "./use-data-reveal";
+import { ReceiptBalances } from "./receipt-balances";
+import { receivableCurrencies } from "@/lib/receivables-types";
 import { Download, LoaderCircle, WalletCards } from "lucide-react";
 import { useI18n } from "./i18n-provider";
 import { agingBuckets, defaultReceivablesFilters } from "@/lib/receivables";
@@ -273,19 +275,25 @@ export function ReceivablesApp() {
                   <span>{tr(`ar.metric.${key}`)}</span>
                 </div>
                 <dl className="ar-kpi-values">
-                  {data.totals.length ? (
-                    data.totals.map((t) => (
-                      <div key={t.currency}>
-                        <dt>{t.currency}</dt>
-                        <dd
-                          className={
-                            t[key] === null ? "ar-kpi-missing" : undefined
-                          }
-                        >
-                          <strong>{amount(t[key])}</strong>
-                        </dd>
-                      </div>
-                    ))
+                  {data.totals.some((t) =>
+                    key === "unknown" ? t.unknown !== null : t.ar !== null,
+                  ) ? (
+                    data.totals
+                      .filter((t) =>
+                        key === "unknown" ? t.unknown !== null : t.ar !== null,
+                      )
+                      .map((t) => (
+                        <div key={t.currency}>
+                          <dt>{t.currency}</dt>
+                          <dd
+                            className={
+                              t[key] === null ? "ar-kpi-missing" : undefined
+                            }
+                          >
+                            <strong>{amount(t[key])}</strong>
+                          </dd>
+                        </div>
+                      ))
                   ) : (
                     <div>
                       <dt>{tr("ar.currency")}</dt>
@@ -355,28 +363,27 @@ export function ReceivablesApp() {
                       </td>
                     </tr>
                   )}
-                  {[
-                    ...data.ranking
-                      .filter((r) => r.currency === "EUR")
-                      .slice(0, 10),
-                    ...data.ranking
-                      .filter((r) => r.currency === "RMB")
-                      .slice(0, 10),
-                  ].map((row) => (
-                    <tr key={`${row.currency}:${row.customer}`}>
-                      <td>
-                        <button
-                          className="entity-link"
-                          onClick={() => select("customer", row.customer)}
-                        >
-                          {row.customer}
-                        </button>
-                      </td>
-                      <td>{row.currency}</td>
-                      <td className="numeric">{amount(row.amount)}</td>
-                      <td className="numeric">{amount(row.overdue)}</td>
-                    </tr>
-                  ))}
+                  {receivableCurrencies
+                    .flatMap((currency) =>
+                      data.ranking
+                        .filter((r) => r.currency === currency)
+                        .slice(0, 10),
+                    )
+                    .map((row) => (
+                      <tr key={`${row.currency}:${row.customer}`}>
+                        <td>
+                          <button
+                            className="entity-link"
+                            onClick={() => select("customer", row.customer)}
+                          >
+                            {row.customer}
+                          </button>
+                        </td>
+                        <td>{row.currency}</td>
+                        <td className="numeric">{amount(row.amount)}</td>
+                        <td className="numeric">{amount(row.overdue)}</td>
+                      </tr>
+                    ))}
                 </tbody>
               </table>
             </div>
@@ -485,15 +492,14 @@ export function ReceivablesApp() {
                 <h2>{tr("ar.payments")}</h2>
               </div>
               <span>
-                {tr("ar.advanceTotal")}:{" "}
-                {data.totals
-                  .filter((t) => t.currency === "EUR")
-                  .map((t) => amount(t.advance))
-                  .join(" ") || "—"}{" "}
-                EUR
+                {tr("ar.receiptCount", { count: data.payments.length })}
               </span>
             </div>
             {!data.paymentsAllowed && <p>{tr("ar.sharedAccess")}</p>}
+            <ReceiptBalances
+              rows={data.receiptSummary}
+              caption={tr("ar.receiptSummary")}
+            />
             <div className="table-wrap">
               <table className="bu-table ar-table">
                 <thead>
@@ -529,9 +535,7 @@ export function ReceivablesApp() {
                     <tr key={row.id}>
                       <td>
                         {tr(
-                          row.category === "unknown"
-                            ? "ar.category.unknown"
-                            : "ar.category.advance",
+                          `ar.category.${row.category === "invoice" ? "unknown" : row.category}`,
                         )}
                       </td>
                       <td>{row.receivedDate}</td>
@@ -541,7 +545,9 @@ export function ReceivablesApp() {
                       </td>
                       <td>{team(row.salesTeam)}</td>
                       <td>{row.pic || "—"}</td>
-                      <td className="numeric">{amount(row.amount)} EUR</td>
+                      <td className="numeric">
+                        {amount(row.amount)} {row.currency}
+                      </td>
                       <td className="ar-note-cell">{row.note || "—"}</td>
                     </tr>
                   ))}

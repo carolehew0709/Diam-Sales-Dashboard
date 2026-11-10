@@ -7,6 +7,36 @@ import type {
   ReceivableRecord,
   ReceivablesFilters,
 } from "./receivables-types";
+import { receivableCurrencies } from "./receivables-types";
+
+/** Receipt balances are independent of invoices and never netted across currencies or categories. */
+export function summarizeReceipts(records: ReceivableRecord[]) {
+  return receivableCurrencies.flatMap((currency) => {
+    const rows = records.filter(
+      (r) => r.category !== "invoice" && r.currency === currency,
+    );
+    if (!rows.length) return [];
+    const category = (kind: "unknown" | "advance" | "pending") => {
+      const selected = rows.filter((r) => r.category === kind);
+      return {
+        count: selected.length,
+        amount: selected.reduce((sum, r) => sum + r.amount, 0),
+      };
+    };
+    return [
+      {
+        currency,
+        unknown: category("unknown"),
+        advance: category("advance"),
+        pending: category("pending"),
+        total: {
+          count: rows.length,
+          amount: rows.reduce((sum, r) => sum + r.amount, 0),
+        },
+      },
+    ];
+  });
+}
 
 export const agingBuckets: AgingBucket[] = [
   "not-due",
@@ -111,7 +141,7 @@ export function getReceivables(
       r.category === "invoice" &&
       (filters.aging === "all" || r.aging === filters.aging),
   );
-  // Rank separately in EUR and RMB. No implicit exchange rate or cross-currency sum.
+  // Rank independently within each source currency; never assume exchange rates.
   const grouped = new Map<
     string,
     { customer: string; currency: string; amount: number; overdue: number }
@@ -136,7 +166,7 @@ export function getReceivables(
       a.customer.localeCompare(b.customer),
   );
   const top = new Set(
-    ["EUR", "RMB"].flatMap((c) =>
+    receivableCurrencies.flatMap((c) =>
       ranked
         .filter((r) => r.currency === c)
         .slice(0, 10)
@@ -149,7 +179,7 @@ export function getReceivables(
     paymentCohort.set(key, (paymentCohort.get(key) ?? 0) + r.amount);
   }
   const paymentTop = new Set(
-    ["EUR", "RMB"].flatMap((currency) =>
+    receivableCurrencies.flatMap((currency) =>
       [...paymentCohort]
         .filter(([key]) => key.startsWith(currency + ":"))
         .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
@@ -174,7 +204,7 @@ export function getReceivables(
   const payments = scope.filter(
     (r) => r.category !== "invoice" && customerMatch(r),
   );
-  const currencies = ["EUR", "RMB"].filter(
+  const currencies = receivableCurrencies.filter(
     (currency) =>
       rows.some((r) => r.currency === currency) ||
       payments.some((r) => r.currency === currency),
@@ -201,28 +231,39 @@ export function getReceivables(
         ? sum(subset.filter((r) => r.aging === "unclassified"))
         : null,
       unknown:
-        currency === "EUR" &&
         paymentsAllowed &&
-        permitted.some((r) => r.category === "unknown")
+        permitted.some(
+          (r) => r.category === "unknown" && r.currency === currency,
+        )
           ? sum(receipts.filter((r) => r.category === "unknown"))
           : null,
       advance:
-        currency === "EUR" &&
         paymentsAllowed &&
-        permitted.some((r) => r.category === "advance")
+        permitted.some(
+          (r) => r.category === "advance" && r.currency === currency,
+        )
           ? sum(receipts.filter((r) => r.category === "advance"))
+          : null,
+      pending:
+        paymentsAllowed &&
+        permitted.some(
+          (r) => r.category === "pending" && r.currency === currency,
+        )
+          ? sum(receipts.filter((r) => r.category === "pending"))
           : null,
     };
   });
-  const chart = currencies.map((currency) => ({
-    currency,
-    buckets: agingBuckets.map((bucket) => ({
-      bucket,
-      amount: rows
-        .filter((r) => r.currency === currency && r.aging === bucket)
-        .reduce((n, r) => n + r.amount, 0),
-    })),
-  }));
+  const chart = currencies
+    .filter((currency) => rows.some((r) => r.currency === currency))
+    .map((currency) => ({
+      currency,
+      buckets: agingBuckets.map((bucket) => ({
+        bucket,
+        amount: rows
+          .filter((r) => r.currency === currency && r.aging === bucket)
+          .reduce((n, r) => n + r.amount, 0),
+      })),
+    }));
   return {
     filters,
     entities: allowed,
@@ -231,6 +272,7 @@ export function getReceivables(
     chart,
     rows,
     payments,
+    receiptSummary: summarizeReceipts(payments),
     customers: [
       ...new Set(
         [...invoices, ...scope.filter((r) => r.category !== "invoice")]
@@ -246,7 +288,10 @@ export function getReceivables(
     ),
     asOfDates: [
       ...new Set(
-        scope.filter(r=>r.category==='invoice').map((r) => r.asOfDate).filter((d): d is string => !!d),
+        scope
+          .filter((r) => r.category === "invoice")
+          .map((r) => r.asOfDate)
+          .filter((d): d is string => !!d),
       ),
     ].sort(),
     sourceFiles: [...new Set(permitted.map((r) => r.sourceFile))],

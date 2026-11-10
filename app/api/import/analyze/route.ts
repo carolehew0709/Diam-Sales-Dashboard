@@ -14,6 +14,7 @@ import { parseCustomerAnalysisWorkbook } from "@/lib/customer-analysis-parser";
 import type { ImportBatch } from "@/lib/types";
 import { parseDdcAging } from "@/lib/ddc-aging-parser";
 import { parseDehkReceiveWorkbook } from "@/lib/dehk-receive-parser";
+import { parsePaymentStatusWorkbook } from "@/lib/payment-status-parser";
 export async function POST(request: Request) {
   return api(async () => {
     sameOrigin(request);
@@ -57,14 +58,17 @@ export async function POST(request: Request) {
         kind === "aging" ||
         kind === "payments" ||
         kind === "ddc-aging" ||
-        kind === "dehk-receive-aging"
+        kind === "dehk-receive-aging" ||
+        kind === "payments-status"
       ) {
         const partial =
           kind === "ddc-aging"
             ? parseDdcAging(bytes, file.name)
             : kind === "dehk-receive-aging"
               ? parseDehkReceiveWorkbook(bytes, file.name)
-              : null;
+              : kind === "payments-status"
+                ? parsePaymentStatusWorkbook(bytes, file.name)
+                : null;
         const ar =
           partial ??
           parseReceivablesWorkbook(bytes, file.name, {

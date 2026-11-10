@@ -287,3 +287,7 @@ Import permission/storage status loads independently of the sales dashboard, and
 ## DEHK complete month-end AR intake (2026-11-10)
 
 The owner confirms complete October invoices aged at 2026-10-31. The new receive-status contract reconciles ALL against dated prior invoices plus Oct Invoice, uses supplied EUR balances once and calculates aging from date + terms at that cutoff. External/Group reconciles with source controls; later settlement annotations never reduce October balances. Import review/publish/restore is DEHK-only and preserves DDC, shared receipts, Sales and team sources. See docs/receivables.md. Actual source publication is verified separately from Git deployment.
+
+## Combined receipt sheet support (2026-11-10)
+
+Unknown & Advance is now a standalone authoritative receipt template. It imports native USD/EUR remaining balances from G and uses Status L for Unknown, Advance and separately retained TBC. Review, report and CSV preserve currency, category, counts and source evidence; shared-payment permissions and scoped publication/restoration remain unchanged. Other receipt tabs are ignored for this template. The real workbook is only used for local acceptance; no production data publication is part of this code release. See docs/receivables.md.

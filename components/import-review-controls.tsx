@@ -4,6 +4,9 @@ import { useI18n } from "./i18n-provider";
 import type { ImportBatch, User } from "@/lib/types";
 import type { previewImport, previewRestore } from "@/lib/import-review";
 import { entities } from "@/lib/entities";
+import { summarizeReceipts } from "@/lib/receivables";
+import { ReceiptBalances } from "./receipt-balances";
+import { isMessageKey } from "@/lib/i18n";
 type Preview = ReturnType<typeof previewImport>;
 type Restore = ReturnType<typeof previewRestore>;
 export function ImportReviewControls({
@@ -185,7 +188,8 @@ export function ImportReviewControls({
                 </table>
               )}
               <p>
-                {preview.unit} · {tr("review.independent")}
+                {batch.receivablesKind ? tr("ar.reviewCurrency") : preview.unit}{" "}
+                · {tr("review.independent")}
               </p>
               {batch.receivablesKind && !batch.adjustedRecordId && (
                 <p className="apac-notice">
@@ -197,6 +201,12 @@ export function ImportReviewControls({
                       : "review.replacePayments",
                   )}
                 </p>
+              )}
+              {batch.receivablesKind === "payments" && (
+                <ReceiptBalances
+                  rows={summarizeReceipts(batch.receivables ?? [])}
+                  caption={tr("review.receiptSummary")}
+                />
               )}
               <h4>{tr("review.raw")}</h4>
               <div className="table-wrap">
@@ -256,6 +266,8 @@ export function ImportReviewControls({
                                           "arRecords",
                                           "arEUR",
                                           "arRMB",
+                                          "arUSD",
+                                          "pendingReceipts",
                                         ].includes(k)
                                       : batch.teamActualData
                                         ? [
@@ -272,6 +284,8 @@ export function ImportReviewControls({
                                               "arRecords",
                                               "arEUR",
                                               "arRMB",
+                                              "arUSD",
+                                              "pendingReceipts",
                                               "customerMonths",
                                               "customerCurrent",
                                               "teamRows",
@@ -384,7 +398,10 @@ export function ImportReviewControls({
               <ul>
                 {preview.findings.map((f, i) => (
                   <li key={i}>
-                    {display(f.severity)}: {display(f.message)}
+                    {display(f.severity)}:{" "}
+                    {f.code && isMessageKey(f.code)
+                      ? tr(f.code, f.params)
+                      : display(f.message)}
                   </li>
                 ))}
               </ul>

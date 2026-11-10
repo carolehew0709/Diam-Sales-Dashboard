@@ -38,6 +38,10 @@ export async function GET(request: Request) {
         "Source",
         "Sheet",
         "Row",
+        "Source status",
+        "Received amount (original currency)",
+        "Original currency",
+        "Bank slip",
       ],
     ];
     for (const r of [...data.rows, ...data.payments])
@@ -61,6 +65,10 @@ export async function GET(request: Request) {
         r.sourceFile,
         r.sourceSheet,
         r.sourceRow,
+        r.sourceStatus ?? "",
+        r.receivedAmount ?? "",
+        r.originalCurrency ?? "",
+        r.bankSlip ?? "",
       ]);
     return new Response(
       "\ufeff" + rows.map((row) => row.map(cell).join(",")).join("\r\n"),

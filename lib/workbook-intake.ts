@@ -5,9 +5,11 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import type { Snapshot } from "./types";
 import { isDehkReceiveWorkbook } from "./dehk-receive-parser";
+import { isPaymentStatusSheet } from "./payment-status-parser";
 export function identifyWorkbook(bytes: Buffer) {
   const book = XLSX.read(bytes, { type: "buffer", cellFormula: true });
   const names = book.SheetNames;
+  const hasPaymentStatus = names.some(isPaymentStatusSheet);
   const types = [
     names.some((n) => /^W\d+$/.test(n) || n === "Data Weekly") ? "sales" : null,
     names.includes("Customer Contribution & Focus") ||
@@ -24,6 +26,8 @@ export function identifyWorkbook(bytes: Buffer) {
     )
       ? "ddc-aging"
       : null,
+    hasPaymentStatus ? "payments-status" : null,
+    !hasPaymentStatus &&
     names.includes("Summary") &&
     names.some((n) => /^(Unknown|Advance)/i.test(n))
       ? "payments"

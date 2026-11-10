@@ -6,10 +6,13 @@ export type AgingBucket =
   | "91-120"
   | "over-120"
   | "unclassified";
+export const receivableCurrencies = ["EUR", "USD", "RMB"] as const;
+export type ReceivableCurrency = (typeof receivableCurrencies)[number];
+export type ReceiptCategory = "unknown" | "advance" | "pending";
 export type ReceivableRecord = {
   id: string;
   entityId: string;
-  category: "invoice" | "unknown" | "advance";
+  category: "invoice" | ReceiptCategory;
   customer: string;
   subCustomer: string;
   salesTeam: string;
@@ -25,10 +28,13 @@ export type ReceivableRecord = {
   sourceAging: string;
   customerType: "External" | "Group" | "Unclassified";
   amount: number;
-  currency: "EUR" | "RMB";
+  currency: ReceivableCurrency;
   originalBalance?: number;
   originalCurrency?: string;
   payer?: string;
+  sourceStatus?: string;
+  receivedAmount?: number;
+  bankSlip?: string;
   note: string;
   sourceFile: string;
   sourceSheet: string;

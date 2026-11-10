@@ -3,6 +3,9 @@ import zh from "@/locales/zh-CN.json";
 
 export type Locale = "en" | "zh-CN";
 export type MessageKey = keyof typeof en;
+export function isMessageKey(value: string): value is MessageKey {
+  return Object.prototype.hasOwnProperty.call(en, value);
+}
 export type MessageParams = Record<string, string | number>;
 export const messages: Record<Locale, Record<MessageKey, string>> = {
   en,

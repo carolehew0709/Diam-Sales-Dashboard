@@ -5,6 +5,7 @@ import { entities } from "./entities";
 import { canEdit, canPublish } from "./permissions";
 import { policyState } from "./governance";
 import { reportingState } from "./intercompany";
+import { receivableCurrencies } from "./receivables-types";
 import { entityMetric, defaultFilters } from "./dashboard";
 import {
   adjustmentPolicy,
@@ -205,6 +206,11 @@ function totals(data: PublicationSlice) {
     arRMB: sum(
       data.receivables.filter((r) => r.currency === "RMB").map((r) => r.amount),
     ),
+    arUSD: sum(
+      data.receivables.filter((r) => r.currency === "USD").map((r) => r.amount),
+    ),
+    pendingReceipts: data.receivables.filter((r) => r.category === "pending")
+      .length,
     customerCurrent: sum(
       data.customerAnalyses.flatMap((a) => a.breakdown.map((g) => g.values[3])),
     ),
@@ -409,7 +415,9 @@ export function previewImport(
               "Teams / customers",
               "Sales exports",
             ],
-    unit: batch.receivablesKind ? "EUR / RMB (separate currencies)" : "kEUR",
+    unit: batch.receivablesKind
+      ? `${receivableCurrencies.filter((currency) => batch.receivables?.some((r) => r.currency === currency)).join(" / ")} (separate currencies)`
+      : "kEUR",
   };
 }
 export function publishReviewed(

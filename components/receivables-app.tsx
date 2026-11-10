@@ -4,7 +4,8 @@ import { UpdateStatus } from "./update-status";
 import { useDataReveal } from "./use-data-reveal";
 import { ReceiptBalances } from "./receipt-balances";
 import { receivableCurrencies } from "@/lib/receivables-types";
-import { Download, LoaderCircle, WalletCards } from "lucide-react";
+import { Download, LoaderCircle } from "lucide-react";
+import { ReceivablesSourceDates } from "./receivables-source-dates";
 import { useI18n } from "./i18n-provider";
 import { agingBuckets, defaultReceivablesFilters } from "@/lib/receivables";
 import type { ReceivablesView } from "@/lib/receivables";
@@ -116,16 +117,7 @@ export function ReceivablesApp() {
           <h1>{tr("ar.title")}</h1>
           <p>{tr("ar.subtitle")}</p>
         </div>
-        <div className="ar-asof">
-          <WalletCards size={22} />
-          <span>
-            {tr("ar.asOf")}
-            <strong>
-              {data?.asOfDates.join(" / ") ||
-                (loading ? tr("ar.loadingShort") : "—")}
-            </strong>
-          </span>
-        </div>
+        <ReceivablesSourceDates data={data} loading={loading} />
       </section>
       {error && (
         <div role="alert" className="apac-notice ar-load-error">
@@ -496,6 +488,14 @@ export function ReceivablesApp() {
               </span>
             </div>
             {!data.paymentsAllowed && <p>{tr("ar.sharedAccess")}</p>}
+            {data.latestReceiptDate && (
+              <p className="ar-context">
+                {tr("ar.latestReceiptDate")}:{" "}
+                <time dateTime={data.latestReceiptDate}>
+                  {data.latestReceiptDate}
+                </time>
+              </p>
+            )}
             <ReceiptBalances
               rows={data.receiptSummary}
               caption={tr("ar.receiptSummary")}

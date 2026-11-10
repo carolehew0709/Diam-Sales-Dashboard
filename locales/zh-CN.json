@@ -1113,5 +1113,8 @@
   "weeklyHistory.noVersion": "所选历史版本不可用。",
   "weeklyHistory.noFiles": "请至少保留一份有效周报。",
   "weeklyHistory.badImportFile": "请先移除或修复无效文件，再确认导入。",
-  "weeklyHistory.databaseError": "无法打开本地历史库：{path}。未替换原有数据。详细信息：{reason}"
+  "weeklyHistory.databaseError": "无法打开本地历史库：{path}。未替换原有数据。详细信息：{reason}",
+  "ar.dataDates": "数据日期",
+  "ar.entityAgingDate": "{entity} · 发票账龄",
+  "ar.latestReceiptDate": "最新收款日期 · 共享收款"
 }

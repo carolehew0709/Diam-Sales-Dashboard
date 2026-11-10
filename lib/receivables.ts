@@ -264,6 +264,26 @@ export function getReceivables(
           .reduce((n, r) => n + r.amount, 0),
       })),
     }));
+  const invoiceSourceDates = allowed.flatMap((entity) => {
+    const dates = [
+      ...new Set(
+        scope
+          .filter((r) => r.category === "invoice" && r.entityId === entity.id)
+          .map((r) => r.asOfDate)
+          .filter((date): date is string => !!date),
+      ),
+    ].sort();
+    return dates.length
+      ? [{ entityId: entity.id, entityCode: entity.code, dates }]
+      : [];
+  });
+  // A receipt date is not an invoice-aging cutoff. Keep the two meanings separate.
+  const latestReceiptDate =
+    payments
+      .map((r) => r.receivedDate)
+      .filter((date): date is string => !!date)
+      .sort()
+      .at(-1) ?? null;
   return {
     filters,
     entities: allowed,
@@ -273,6 +293,8 @@ export function getReceivables(
     rows,
     payments,
     receiptSummary: summarizeReceipts(payments),
+    invoiceSourceDates,
+    latestReceiptDate,
     customers: [
       ...new Set(
         [...invoices, ...scope.filter((r) => r.category !== "invoice")]

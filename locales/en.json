@@ -1113,5 +1113,8 @@
   "weeklyHistory.noVersion": "The selected history version is unavailable.",
   "weeklyHistory.noFiles": "Choose at least one valid report.",
   "weeklyHistory.badImportFile": "Exclude or fix invalid files before confirming the import.",
-  "weeklyHistory.databaseError": "Cannot open local history at {path}. No existing data was replaced. Details: {reason}"
+  "weeklyHistory.databaseError": "Cannot open local history at {path}. No existing data was replaced. Details: {reason}",
+  "ar.dataDates": "Source dates",
+  "ar.entityAgingDate": "{entity} · invoice aging",
+  "ar.latestReceiptDate": "Latest receipt date · shared"
 }

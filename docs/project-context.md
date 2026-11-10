@@ -291,3 +291,7 @@ The owner confirms complete October invoices aged at 2026-10-31. The new receive
 ## Combined receipt sheet support (2026-11-10)
 
 Unknown & Advance is now a standalone authoritative receipt template. It imports native USD/EUR remaining balances from G and uses Status L for Unknown, Advance and separately retained TBC. Review, report and CSV preserve currency, category, counts and source evidence; shared-payment permissions and scoped publication/restoration remain unchanged. Other receipt tabs are ignored for this template. The real workbook is only used for local acceptance; no production data publication is part of this code release. See docs/receivables.md.
+
+## Separate AR invoice and receipt dates (2026-11-10)
+
+The AR header now labels each Entity's invoice-aging cutoff separately from the latest authorized, filtered receipt date. The November shared-receipt publication is visible as latest receipt 2026-11-09; it does not change the approved 2026-10-31 DEHK/DDC invoice ledgers. Filename dates and publication times do not substitute for accounting cutoffs. Date visibility follows existing scopes and shared-receipt permissions. This presentation correction leaves published records, amounts and history unchanged. See docs/receivables.md.

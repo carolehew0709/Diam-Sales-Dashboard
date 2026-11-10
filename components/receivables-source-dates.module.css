@@ -1,0 +1,60 @@
+.card {
+  align-items: flex-start;
+  min-width: 0;
+  max-width: 100%;
+  flex-shrink: 0;
+}
+.card > svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+}
+.body {
+  min-width: 0;
+}
+.card .title {
+  margin: 0 0 12px;
+  color: #d5c7a6;
+  font-size: 11px;
+}
+.rows {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+}
+.row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  gap: 20px;
+}
+.row dt {
+  color: #eeece4;
+  font-size: 11px;
+}
+.row dd {
+  margin: 0;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+.row time {
+  white-space: nowrap;
+}
+@media (max-width: 640px) {
+  .card {
+    width: 100%;
+    padding: 20px;
+    gap: 12px;
+  }
+  .body {
+    flex: 1;
+  }
+  .row {
+    gap: 12px;
+  }
+  .row dd {
+    font-size: 13px;
+  }
+}

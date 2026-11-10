@@ -1,4 +1,36 @@
-# Portable on-going-DDC project comparison (v2)
+# Portable weekly comparison and continuity (v3)
+
+The app shell has independent Two-week comparison and Continuity tracking pages. The v2 comparison engine and its data-only rules remain unchanged; comparing two files never writes snapshots into history. Existing v2 documentation below describes that first page. The shell version is 3.0; pairwise report metadata continues to identify the unchanged v2 engine.
+
+## Continuity history contract
+
+`lib/weekly_continuity.py` provides `HistoryStore`, typed immutable prepared snapshots, transactional import requests and project timelines. `tools/weekly-comparer/continuity_page.py` owns only desktop interaction. Parse the same on-going-DDC sheet with a single bytes snapshot for hash and cached values. Store original value types, precision, missing flags, file hash/name/path, sheet and Excel row numbers in SQLite. No source formulas are evaluated or copied into reports. Imported snapshots survive source moves/deletion.
+
+Use validated ISO week-year/week pairs; filename/parent-folder hints are suggestions shown in the review list. Missing periods must be filled, optionally with one batch year. Same-week identical hashes are idempotent. Changed content for an active week requires explicit replacement. A file already active in a different period is rejected to avoid fabricating observations; remove an incorrectly assigned active period before reassignment. Import an entire selected batch in a single transaction. Retain immutable versions and mutation events for replace/remove/restore. Unsupported schema versions fail without replacing the database.
+
+Packaged storage defaults to `history/continuity.sqlite` beside the executable. Source runs use `.local/continuity-history/continuity.sqlite`; `--history-db` overrides the location for QA or managed use. Never store data in PyInstaller's temporary extraction directory. Keep private history outside Git and release archives. Moving the whole history folder restores the same active snapshots and versions. The history manager supports reversible removal and restoring prior versions; original workbooks are never altered.
+
+## Timeline and filtering
+
+Compute E/K identity from all active snapshots, independent of date range or Team/Brand filters. Repeated job numbers use project name; unresolved missing identities remain marked Review. Filter original rows each week before project/currency aggregation. Defaults are latest 12 calendar weeks, clamped to the existing history span, and projects present in the latest imported week within that range. All-history mode includes removed/reappearing projects. Matrix columns include calendar gaps and retain job/project labels while horizontal scrolling.
+
+Distinguish unimported week, absent project, filtered-out rows and unavailable fields. No forward-fill, zero-fill or line connection over gaps. Status strings and multiplicities are preserved without spelling maps; no inactivity threshold or alert is computed. A selected project shows aligned status, independent RMB/USD/EUR amount plots, Invoice Date values (including text/TBC and supplied time) and per-week original row evidence. Numeric chart values are rendered only for complete comparable group amounts.
+
+Continuity CSV is long-form project/week data for the current range and scope, with separate currency columns, missingness labels and source rows. Continuity HTML contains only the chosen period's raw snapshots, plus full-history identity hints, and opens with the selected filters. It can filter again offline, select source weeks and download CSV. All source text is escaped/inert, network access is blocked, and decimal sums for downloaded numeric data use exact decimal arithmetic. First-page CSV/HTML behavior stays unchanged.
+
+## QA and CLI
+
+```powershell
+python -m unittest discover -s tools/weekly-comparer -p "test_*.py" -v
+python tools/weekly-comparer/app.py --history-db ".local/qa.sqlite" --history-import "2026-W44=old.xlsx" "2026-W45=new.xlsx" --history-html ".local/history.html" --history-csv ".local/history.csv"
+python tools/weekly-comparer/app.py --history-db ".local/qa.sqlite" --history-import "2026-W45=revised.xlsx" --replace-week 2026-W45
+python tools/weekly-comparer/app.py --history-db ".local/qa.sqlite" --history-start 2026-W44 --history-end 2026-W45 --history-all --history-summary ".local/history.json"
+python tools/weekly-comparer/app.py --history-db ".local/qa.sqlite" --history-ui-smoke-test ".local/history-gui.json"
+```
+
+Synthetic fixtures cover three or more periods, cross-year ISO weeks, missing weeks/projects/fields, reappearance, duplicate projects, multi-Brand projections, typed values, precision, restore, repeated imports and rollback on real database errors. Browser tests compare native/HTML observations under multiple scopes and verify gap-aware line segments and CSV. Existing W44/W45 pairwise CSV must remain byte-identical. Packaged smoke tests cover both pages, independent state and persistent reload. Build output is `.local/weekly-comparer-release-v3/`; deliver the executable, reproducible source, instructions and real two-period example to the owner's Weekly Report Comparison folder, preserving v2.
+
+## Unchanged two-week comparison rules (v2)
 
 The offline tool in `tools/weekly-comparer/` now compares the named `on-going-DDC` sheet, replacing v1's first-sheet summary contract. Its v2 business engine is `lib/weekly_order_comparison.py`. Shared value/export helpers remain in the previous engine module. UI/report copy uses bilingual `weeklyOrders.*` semantic keys, with shared desktop copy falling back to `weeklyComparer.*`. Private sources, reports, binaries and QA evidence stay outside public Git. Nothing is imported or published into the dashboard.
 
@@ -32,4 +64,4 @@ python tools/weekly-comparer/app.py --ui-smoke-test "old.xlsx" "new.xlsx" ".loca
 powershell -ExecutionPolicy Bypass -File tools/weekly-comparer/build.ps1
 ```
 
-Build on Windows x64/Python 3.12. The executable bundles Python, Tk, openpyxl, both locales, the report template and the supplied logo. Runtime does not require Python, Excel or a network. Build output is `.local/weekly-comparer-release-v2/`. Deliverables and reproducible source live in the owner's `Weekly Report Comparison` directory, with v1.2 preserved under `previous-v1.2`. Keep supplied workbooks intact. Synthetic tests cover identity disambiguation, grouping, currency separation, missing values, same-status semantics, filter scope changes and safe exports. Private regression verifies the real files, packaged CLI/GUI and browser filters/downloads without committing workbook details. The executable remains unsigned.
+Build on Windows x64/Python 3.12. The executable bundles Python, Tk, openpyxl, both locales, the report template and the supplied logo. Runtime does not require Python, Excel or a network. The prior v2 build output was `.local/weekly-comparer-release-v2/`. Deliverables and reproducible source live in the owner's `Weekly Report Comparison` directory, with v1.2 preserved under `previous-v1.2`. Keep supplied workbooks intact. Synthetic tests cover identity disambiguation, grouping, currency separation, missing values, same-status semantics, filter scope changes and safe exports. Private regression verifies the real files, packaged CLI/GUI and browser filters/downloads without committing workbook details. The executable remains unsigned.

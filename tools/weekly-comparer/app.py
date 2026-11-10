@@ -10,8 +10,9 @@ from weekly_order_comparison import VERSION,CURRENCIES,Translator,CompareError,c
 MODES=('changed','modified','same','status','date','amount','added','removed','review','all')
 
 class App:
-    def __init__(self,root,language='zh-CN',smoke=None):
+    def __init__(self,root,language='zh-CN',smoke=None,parent=None):
         self.root=root;self.tr=Translator(ROOT,language).tr;self.smoke=smoke
+        self.host=parent if parent is not None else root
         self.old=tk.StringVar();self.new=tk.StringVar();self.team=tk.StringVar();self.brand=tk.StringVar();self.currency=tk.StringVar(value='EUR');self.mode=tk.StringVar();self.search=tk.StringVar();self.status=tk.StringVar(value=self.tr('ready'))
         self.result=None;self.scoped=[];self.shown=[];self.busy=False;self.generation=0;self.events=queue.Queue();self.controls=[]
         self.build();self.old.trace_add('write',self.invalidate);self.new.trace_add('write',self.invalidate);self.search.trace_add('write',lambda *args:self.refresh())
@@ -20,7 +21,7 @@ class App:
     def build(self):
         tr=self.tr;root=self.root;root.title(tr('title')+' '+VERSION);root.geometry('1320x880');root.minsize(1050,720)
         root.configure(bg='#f3f6f9');style=ttk.Style(root);style.theme_use('clam');style.configure('.',font=('Microsoft YaHei UI',10));style.configure('TFrame',background='#f3f6f9');style.configure('TLabel',background='#f3f6f9',foreground='#193349');style.configure('TButton',padding=(9,5));style.configure('Treeview',font=('Microsoft YaHei UI',11),rowheight=32);style.configure('Treeview.Heading',background='#193f59',foreground='white',padding=6)
-        main=ttk.Frame(root,padding=(20,12));main.pack(fill='both',expand=True);main.columnconfigure(0,weight=1);main.rowconfigure(4,weight=1)
+        main=ttk.Frame(self.host,padding=(20,12));main.pack(fill='both',expand=True);main.columnconfigure(0,weight=1);main.rowconfigure(4,weight=1)
         head=ttk.Frame(main);head.grid(row=0,column=0,sticky='ew',pady=(0,9));head.columnconfigure(0,weight=1)
         ttk.Label(head,text=tr('title'),font=('Microsoft YaHei UI',18,'bold')).grid(row=0,column=0,sticky='w')
         self.html_button=ttk.Button(head,text=tr('exportHtml'),command=lambda:self.export('html'),state='disabled');self.html_button.grid(row=0,column=1,padx=6)
@@ -154,7 +155,27 @@ class App:
         Path(self.smoke[2]).write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf-8');self.root.after(200,self.root.destroy)
 
 def main():
-    parser=argparse.ArgumentParser();parser.add_argument('--lang',choices=('en','zh-CN'),default='zh-CN');parser.add_argument('--old');parser.add_argument('--new');parser.add_argument('--html');parser.add_argument('--csv');parser.add_argument('--summary');parser.add_argument('--team',default='');parser.add_argument('--brand',default='');parser.add_argument('--mode',choices=MODES,default='changed');parser.add_argument('--currency',choices=CURRENCIES,default='EUR');parser.add_argument('--preview',nargs=2);parser.add_argument('--ui-smoke-test',nargs=3);args=parser.parse_args()
+    parser=argparse.ArgumentParser();parser.add_argument('--lang',choices=('en','zh-CN'),default='zh-CN');parser.add_argument('--old');parser.add_argument('--new');parser.add_argument('--html');parser.add_argument('--csv');parser.add_argument('--summary');parser.add_argument('--team',default='');parser.add_argument('--brand',default='');parser.add_argument('--mode',choices=MODES,default='changed');parser.add_argument('--currency',choices=CURRENCIES,default='EUR');parser.add_argument('--preview',nargs=2);parser.add_argument('--ui-smoke-test',nargs=3)
+    parser.add_argument('--history-db');parser.add_argument('--history-import',nargs='*');parser.add_argument('--replace-week',action='append',default=[]);parser.add_argument('--history-html');parser.add_argument('--history-csv');parser.add_argument('--history-summary');parser.add_argument('--history-start');parser.add_argument('--history-end');parser.add_argument('--history-all',action='store_true');parser.add_argument('--history-ui-smoke-test')
+    args=parser.parse_args()
+    from weekly_continuity import HistoryStore,HistoryTranslator,ImportRequest,prepare_snapshot,parse_period,monday,build_timeline,export_timeline_csv,export_timeline_html,VERSION as APP_VERSION
+    database=Path(args.history_db).resolve() if args.history_db else ((Path(sys.executable).parent/'history/continuity.sqlite') if getattr(sys,'frozen',False) else ROOT/'.local/continuity-history/continuity.sqlite')
+    if args.history_import is not None or args.history_html or args.history_csv or args.history_summary:
+        try:
+            store=HistoryStore(database);tr=HistoryTranslator(ROOT,args.lang).tr
+            if args.history_import:
+                requests=[]
+                for item in args.history_import:
+                    label,path=item.split('=',1);year,week=parse_period(label);requests.append(ImportRequest(prepare_snapshot(path),year,week,label in args.replace_week))
+                store.import_batch(requests)
+            snapshots=store.snapshots();timeline=build_timeline(snapshots,monday(*parse_period(args.history_start)) if args.history_start else None,monday(*parse_period(args.history_end)) if args.history_end else None,args.team,args.brand,latest_only=not args.history_all)
+            if args.history_html:export_timeline_html(snapshots,args.history_html,tr,timeline)
+            if args.history_csv:export_timeline_csv(timeline,args.history_csv,tr)
+            if args.history_summary:write_output(args.history_summary,json.dumps({'version':APP_VERSION,'activeWeeks':len(snapshots),'weeks':[list(w) for w in timeline.weeks],'projects':len(timeline.projects),'latest':timeline.latest,'latestOnly':timeline.latest_only},ensure_ascii=False,indent=2),None,'.json')
+            return 0
+        except Exception as error:
+            if sys.stderr:print(str(error),file=sys.stderr)
+            return 1
     if args.old or args.new:
         if not args.old or not args.new:parser.error('--old and --new are required together')
         try:
@@ -169,7 +190,25 @@ def main():
     if os.name=='nt':
         try:ctypes.windll.shcore.SetProcessDpiAwareness(1)
         except (AttributeError,OSError):pass
-    root=tk.Tk();app=App(root,args.lang,args.ui_smoke_test)
+    root=tk.Tk();navigation=ttk.Notebook(root);navigation.pack(fill='both',expand=True);two=ttk.Frame(navigation);continuous=ttk.Frame(navigation);history_tr=HistoryTranslator(ROOT,args.lang).tr
+    navigation.add(two,text=history_tr('twoPage'));navigation.add(continuous,text=history_tr('historyPage'));app=App(root,args.lang,args.ui_smoke_test,parent=two)
+    from continuity_page import ContinuityPage
+    try:history=ContinuityPage(continuous,root,HistoryStore(database),ROOT,args.lang)
+    except Exception as error:
+        messagebox.showerror(history_tr('historyPage'),history_tr('databaseError',path=database,reason=str(error)));root.destroy();return 1
+    root.title(history_tr('appTitle')+' '+APP_VERSION)
     if args.preview:app.old.set(args.preview[0]);app.new.set(args.preview[1]);root.after(200,app.start)
+    if args.history_ui_smoke_test:
+        navigation.select(continuous)
+        def verify(attempt=0):
+            if history.busy and attempt<150:root.after(100,lambda:verify(attempt+1));return
+            try:
+                initial=history.timeline;count=len(initial.projects);active=len(history.store.active_list());history.project_scope.set(history.tr('allHistory'));history.refresh();all_count=len(history.timeline.projects)
+                history.pick_week(0);source_text=history.raw.get('1.0','end');history.project_scope.set(history.tr('latestOnly'));history.refresh()
+                navigation.select(two);app.old.set('independent-old.xlsx');app.new.set('independent-new.xlsx');navigation.select(continuous)
+                evidence={'version':APP_VERSION,'tabs':len(navigation.tabs()),'activeWeeks':active,'defaultLatestOnly':initial.latest_only,'defaultProjects':count,'allProjects':all_count,'matrixRows':len(history.matrix.get_children()),'sourceEvidence':bool(source_text.strip()),'twoPageIndependent':active==len(history.store.active_list()) and app.old.get()=='independent-old.xlsx','htmlEnabled':str(history.html_button['state'])=='normal'}
+            except Exception as error:evidence={'error':str(error)}
+            Path(args.history_ui_smoke_test).write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf-8');root.destroy()
+        root.after(300,verify)
     root.mainloop();return 0
 if __name__=='__main__':raise SystemExit(main())

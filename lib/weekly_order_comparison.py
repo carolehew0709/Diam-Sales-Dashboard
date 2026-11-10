@@ -154,12 +154,12 @@ def delta(old,new,column):
     return b-a if a is not None and b is not None else None
 
 
-def load_source(path,side):
+def load_source(path,side,payload=None):
     path=Path(path).resolve()
     if not path.is_file() or path.suffix.lower()!='.xlsx': raise CompareError('errorFile',file=path.name)
     books=[]
     try:
-        payload=path.read_bytes()
+        payload=path.read_bytes() if payload is None else payload
         for values in (False,True): books.append(openpyxl.load_workbook(io.BytesIO(payload),data_only=values,keep_links=False))
         names=[name for name in books[0].sheetnames if norm(name)==norm(SHEET)]
         if len(names)!=1: raise CompareError('errorSheet',file=path.name)

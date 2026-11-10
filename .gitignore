@@ -166,3 +166,9 @@ Dashboard/W43-- Dashboard 2026 - DCP(1).xlsx
 __pycache__/
 *.py[cod]
 tools/order-matcher/*.spec
+
+# Portable continuity history contains private weekly snapshots.
+history/
+*.sqlite-journal
+*.sqlite-wal
+*.sqlite-shm

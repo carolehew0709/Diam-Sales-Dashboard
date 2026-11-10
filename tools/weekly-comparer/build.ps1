@@ -1,7 +1,7 @@
 param([string]$Python = "python", [string]$OutputDirectory = "")
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
-if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repoRoot ".local/weekly-comparer-release-v2" }
+if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repoRoot ".local/weekly-comparer-release-v3" }
 $buildDirectory = Join-Path $repoRoot ".local/weekly-comparer-build"
 $arguments = @(
     "-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", "--windowed", "--noupx",
@@ -14,6 +14,7 @@ $arguments = @(
     "--add-data", ((Join-Path $repoRoot "locales/zh-CN.json") + ";locales"),
     "--add-data", ((Join-Path $repoRoot "DIAM Logos/DIAM triangle (1).png") + ";DIAM Logos"),
     "--add-data", ((Join-Path $PSScriptRoot "report.html") + ";templates"),
+    "--add-data", ((Join-Path $PSScriptRoot "continuity-report.html") + ";templates"),
     "--distpath", $OutputDirectory, "--workpath", $buildDirectory,
     "--specpath", $buildDirectory,
     (Join-Path $PSScriptRoot "app.py")

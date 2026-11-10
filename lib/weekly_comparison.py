@@ -318,7 +318,7 @@ TranslatorKeys = ('title','visualTitle','visualHint','old','new','oldFcst','newF
 
 def write_output(path, content, result, extension):
     target = Path(path).resolve()
-    if target in (result.old.path, result.new.path) or target.suffix.lower() != extension:
+    if (result is not None and target in (result.old.path, result.new.path)) or target.suffix.lower() != extension:
         raise CompareError('errorOutput')
     # Replace atomically; an interrupted export never leaves a partial report.
     fd, temp = tempfile.mkstemp(dir=target.parent, prefix='.weekly-', suffix='.tmp')

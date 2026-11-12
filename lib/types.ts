@@ -104,6 +104,7 @@ export type Finding = {
   params?: Record<string, string | number>;
 };
 export type PublicationSlice = {
+  monthlySalesCloses?: MonthlySalesClose[];
   budgetVersions?: BudgetVersion[];
   correctionVersions?: CorrectionVersion[];
   teamActualData?: TeamActualData;
@@ -111,6 +112,16 @@ export type PublicationSlice = {
   lines: OrderBookLine[];
   customerAnalyses: CustomerAnalysis[];
   receivables: ReceivableRecord[];
+};
+export type MonthlySalesClose = {
+  entityId: string;
+  year: number;
+  /** Closed monthly invoiced amounts from January, in kEUR. */
+  monthly: number[];
+  sourceFile: string;
+  sourceSheet: string;
+  sourceRange: string;
+  sourceNote: string;
 };
 export type Publication = {
   teamReference?: { before: Store["retainedTeamSource"]; after: Store["retainedTeamSource"] };
@@ -149,6 +160,7 @@ export type CorrectionVersion = {
   revokedAt?: string;
 };
 export type ImportBatch = {
+  monthlySalesCloses?: MonthlySalesClose[];
   receivablesEntityIds?: string[];
   adjustment?: {
     kind: "budget" | "correction";
@@ -197,6 +209,7 @@ export type AuditEvent = {
   subject: string;
 };
 export type Store = {
+  monthlySalesCloses?: MonthlySalesClose[];
   teamActualData?: TeamActualData;
   retainedTeamSource?: { snapshots: Snapshot[]; lines: OrderBookLine[]; retainedAt: string; reviewedScopes?: string[]; reviewedAt?: string };
   budgetVersions?: BudgetVersion[];

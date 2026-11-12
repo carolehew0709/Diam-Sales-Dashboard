@@ -82,11 +82,15 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
       selectedRows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
     ),
   ].join("; ");
-  const sourceFor = () =>
+  const closeFiles = [...new Set(selectedRows.flatMap((r) =>
+    r.monthlyClose ? [r.monthlyClose.sourceFile] : [],
+  ))];
+  const sourceFor = (monthIndex: number) =>
     selectedRows
       .map(
-        (r) =>
-          `${r.entity.code}: ${r.snapshot?.teamActualSource ? `Actual W${r.snapshot.teamActualSource.week??"—"} · ${r.snapshot.teamActualSource.sourceFile} · ${r.snapshot.teamActualSource.sourceSheet}; Prospect ` : ""}${r.snapshot ? `W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}` : "—"}`,
+        (r) => r.monthlyClose && monthIndex < r.monthlyClose.monthly.length
+          ? `${r.entity.code}: ${r.monthlyClose.sourceFile} · ${r.monthlyClose.sourceSheet} · ${r.monthlyClose.sourceRange}`
+          : `${r.entity.code}: ${r.snapshot?.teamActualSource ? `Actual W${r.snapshot.teamActualSource.week??"—"} · ${r.snapshot.teamActualSource.sourceFile} · ${r.snapshot.teamActualSource.sourceSheet}; Prospect ` : ""}${r.snapshot ? `W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}` : "—"}`,
       )
       .join("; ");
   const scopeName =
@@ -109,7 +113,8 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
             : "graphics.partialPlanning",
         )
       : "";
-  const note = `${actualScoped ? tr("teamKpi.scope",data.graphics.teamKpiSource!) : ""} ${teamScoped ? tr("graphics.scopedOBRule") : `${tr("graphics.planningRule")} ${tr("graphics.periodColorsRule")}`} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
+  const closeNote = closeFiles.length ? tr("graphics.monthlyCloseRule", { source: closeFiles.join(" · ") }) : "";
+  const note = `${closeNote} ${actualScoped ? tr("teamKpi.scope",data.graphics.teamKpiSource!) : ""} ${teamScoped ? tr("graphics.scopedOBRule") : `${tr("graphics.planningRule")} ${tr("graphics.periodColorsRule")}`} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
   const exact = (v: number | null) =>
     v === null
       ? "—"
@@ -141,7 +146,7 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
             display(months[i]),
             p.monthly,
             p.ytd,
-            sourceFor(),
+            sourceFor(i),
           ]),
         }}
         table={
@@ -160,7 +165,7 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
                   <td>{display(months[i])}</td>
                   <td className="numeric">{exact(p.monthly)}</td>
                   <td className="numeric">{exact(p.ytd)}</td>
-                  <td>{sourceFor()}</td>
+                  <td>{sourceFor(i)}</td>
                 </tr>
               ))}
             </tbody>

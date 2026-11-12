@@ -305,6 +305,7 @@ export async function GET(request: Request) {
         "Cumulative budget",
         translate("en", "graphics.cumulativeConfirmed"),
         "Cumulative scenario",
+        "Month-close source",
       ],
       ...d.totals.monthly.map((m, i) => [
         m.label,
@@ -314,6 +315,11 @@ export async function GET(request: Request) {
         d.totals.cumulative[i].budget,
         d.totals.cumulative[i].base,
         d.totals.cumulative[i].scenario,
+        d.rows.flatMap(({ entity, monthlyClose }) =>
+          monthlyClose && i < monthlyClose.monthly.length
+            ? [`${entity.code} · ${monthlyClose.sourceFile} · ${monthlyClose.sourceSheet} · ${monthlyClose.sourceRange}`]
+            : [],
+        ).join(" / "),
       ]),
     ]);
     add("Management Checks", [

@@ -15,6 +15,7 @@ import type { ImportBatch } from "@/lib/types";
 import { parseDdcAging } from "@/lib/ddc-aging-parser";
 import { parseDehkReceiveWorkbook } from "@/lib/dehk-receive-parser";
 import { parsePaymentStatusWorkbook } from "@/lib/payment-status-parser";
+import { parseMonthlySalesWorkbook } from "@/lib/monthly-sales-parser";
 export async function POST(request: Request) {
   return api(async () => {
     sameOrigin(request);
@@ -42,12 +43,17 @@ export async function POST(request: Request) {
       | "receivablesEntityIds"
       | "customerAnalysis"
       | "teamActualData"
+      | "monthlySalesCloses"
     >;
     const bytes = Buffer.from(await file.arrayBuffer());
-    const kind = identifyWorkbook(bytes);
+    const kind = form.get("sourceKind") === "monthly-sales"
+      ? "monthly-sales"
+      : identifyWorkbook(bytes);
     try {
       parsed =
-        kind === "team-actual"
+        kind === "monthly-sales"
+          ? parseMonthlySalesWorkbook(bytes, file.name)
+          : kind === "team-actual"
           ? parseTeamActualWorkbook(bytes, file.name)!
           : kind === "customer"
             ? parseCustomerAnalysisWorkbook(bytes, file.name)!
@@ -140,7 +146,9 @@ export async function POST(request: Request) {
         fileName: file.name,
         sourceType: "Excel",
         status: "review",
-        entityIds: parsed.teamActualData
+        entityIds: parsed.monthlySalesCloses
+          ? parsed.monthlySalesCloses.map((close) => close.entityId)
+          : parsed.teamActualData
           ? [...new Set(parsed.teamActualData.rows.map((r) => r.entityId))]
           : parsed.customerAnalysis
             ? parsed.customerAnalysis.entityIds

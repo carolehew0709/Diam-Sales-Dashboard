@@ -25,6 +25,10 @@ export function ImportReviewControls({
     const parts = scope.split(":");
     if (parts[0] === "sales")
       return `${entities.find((e) => e.id === parts[1])?.code ?? parts[1]} · ${parts[2]} · W${parts[3]}`;
+    if (parts[0] === "monthly-sales") {
+      const close = batch.monthlySalesCloses?.find((row) => row.entityId === parts[1]);
+      return `${tr("review.monthlySales")} · ${entities.find((e) => e.id === parts[1])?.code ?? parts[1]} · ${parts[2]}${close ? `-01 → ${parts[2]}-${String(close.monthly.length).padStart(2, "0")}` : ""}`;
+    }
     if (parts[0] === "policy")
       return `${entities.find((e) => e.id === parts[2])?.code ?? parts[2]} · ${parts[3]}${parts[1] === "correction" ? ` · W${parts[4]} · ${display(parts[5])}` : ""}`;
     if (parts[0] === "ar-row") return tr("adjust.record");
@@ -259,7 +263,9 @@ export function ImportReviewControls({
                             <td key={i}>
                               {Object.entries(v)
                                 .filter(([k]) =>
-                                  batch.adjustment
+                                  batch.monthlySalesCloses
+                                    ? k === "sales"
+                                    : batch.adjustment
                                     ? false
                                     : batch.receivablesKind
                                       ? [

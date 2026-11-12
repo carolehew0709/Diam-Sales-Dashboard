@@ -1,7 +1,7 @@
 import {teamNamesState,teamActualView} from "./team-actuals";
 import { teamReportingState, retainedTeamView } from "./team-reporting";
 import { policyState } from "./governance";
-import { reportingPeriod, availableReportingWeeks } from './reporting-period';
+import { reportingPeriod, availableReportingWeeks, reportingMonthClosed } from './reporting-period';
 import { lineYear, latestFiscalSnapshot, sourceYear } from "./fiscal-years";
 import { reportingState } from "./intercompany";
 import {
@@ -28,6 +28,7 @@ import type {
   User,
   Split,
   SalesType,
+  MonthlySalesClose,
 } from "./types";
 export const months = [
   "Jan",
@@ -93,6 +94,7 @@ export function entityMetric(
   s: Snapshot | undefined,
   filters: Filters,
   entityId = s?.entityId,
+  monthlyClose?: MonthlySalesClose,
 ) {
   if (s && !s.teamScope)
     s = applyReportingOverrides(applyApprovedBudget(s), filters.salesType);
@@ -198,17 +200,20 @@ export function entityMetric(
         : s
           ? 0
           : null;
-    const base =
+    const closedSales = monthlyClose?.monthly[i];
+    const base = closedSales ?? (
       s && !future && s.monthlyBaseOverride && type === "all"
         ? s.monthlyBaseOverride[i]
-        : sumComplete([actual, ob]);
+        : sumComplete([actual, ob]));
     const upside = s && !future && type === "all" ? s.monthlyProspect[i] : null;
     return {
       label,
       base,
       prospect: upside,
       scenario:
-        filters.scenario === "Sales" ? base : sumComplete([base, upside]),
+        filters.scenario === "Sales" || closedSales !== undefined
+          ? base
+          : sumComplete([base, upside]),
       budget: s && !future && type === "all" ? s.monthlyBudget[i] : null,
       orderbook: ob,
     };
@@ -216,16 +221,17 @@ export function entityMetric(
   // Anchor the current cumulative point to YTD + current-month OB; don't allocate YTD across missing historical months.
   const cumulative = monthly.map((m, i) => {
     let base = sumComplete(monthly.slice(0, i + 1).map((x) => x.base));
-    if (s && !future && !s.monthlyBaseOverride && i >= s.month - 1)
+    const closed = i < (monthlyClose?.monthly.length ?? 0);
+    if (s && !future && !closed && !s.monthlyBaseOverride && i >= s.month - 1)
       base = sumComplete([
         sales,
         ...monthly.slice(s.month - 1, i + 1).map((x) => x.orderbook),
       ]);
-    const p = sumComplete(monthly.slice(0, i + 1).map((x) => x.prospect));
+    const p = sumComplete(monthly.slice(monthlyClose?.monthly.length ?? 0, i + 1).map((x) => x.prospect));
     return {
       label: m.label,
       base,
-      scenario: filters.scenario === "Sales" ? base : sumComplete([base, p]),
+      scenario: filters.scenario === "Sales" || closed ? base : sumComplete([base, p]),
       budget: sumComplete(monthly.slice(0, i + 1).map((x) => x.budget)),
     };
   });
@@ -401,10 +407,17 @@ export function getDashboardSnapshot(
         ? raw
         : applyApprovedBudget(raw)
       : undefined;
+    const monthlyClose = snapshot?.year === filters.year &&
+      filters.salesType === "all" && (!filters.salesTeam || filters.salesTeam === "all") &&
+      (!filters.customer || filters.customer === "all")
+      ? state.monthlySalesCloses?.find((close) => close.entityId === entity.id &&
+          close.year === snapshot.year && close.monthly.length <= snapshot.month - (reportingMonthClosed(snapshot) ? 0 : 1))
+      : undefined;
     return {
       entity,
       snapshot,
-      metrics: entityMetric(snapshot, filters, entity.id),
+      monthlyClose,
+      metrics: entityMetric(snapshot, filters, entity.id, monthlyClose),
     };
   });
   const actualKpi = !!filters.salesTeam && filters.salesTeam !== 'all' && (!filters.customer || filters.customer==='all') && state.teamActualData?.year===filters.year && Object.values(state.teamActualData.mappings).includes(filters.salesTeam);

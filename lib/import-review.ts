@@ -19,11 +19,14 @@ import type {
   PublicationSlice,
   Snapshot,
   OrderBookLine,
+  MonthlySalesClose,
 } from "./types";
 
 export const snapshotScope = (
   s: Pick<Snapshot, "entityId" | "year" | "week">,
 ) => `sales:${s.entityId}:${s.year}:${s.week}`;
+const monthlySalesScope = (close: MonthlySalesClose) =>
+  `monthly-sales:${close.entityId}:${close.year}`;
 export const digest = (value: unknown) =>
   createHash("sha256").update(JSON.stringify(value)).digest("hex");
 function content(value: unknown): unknown {
@@ -43,6 +46,7 @@ export function batchScopes(batch: ImportBatch) {
   if (batch.adjustment) return policyScopes(adjustmentPolicy(batch));
   if (batch.adjustedRecordId) return [`ar-row:${batch.adjustedRecordId}`];
   if (batch.teamActualData) return ["team-actual:current"];
+  if (batch.monthlySalesCloses) return batch.monthlySalesCloses.map(monthlySalesScope);
   if (batch.customerAnalysis)
     return [`customer:${batch.customerAnalysis.month}`];
   if (batch.receivablesKind)
@@ -61,12 +65,20 @@ export function slice(
     | "customerAnalyses"
     | "receivables"
     | "teamActualData"
+    | "monthlySalesCloses"
     | "budgetVersions"
     | "correctionVersions"
   >,
   scopes: string[],
 ): PublicationSlice {
   return {
+    ...(scopes.some((scope) => scope.startsWith("monthly-sales:"))
+      ? {
+          monthlySalesCloses: (state.monthlySalesCloses ?? []).filter((close) =>
+            scopes.includes(monthlySalesScope(close)),
+          ),
+        }
+      : {}),
     ...(scopes.some((k) => k.startsWith("policy:budget:"))
       ? {
           budgetVersions: (state.budgetVersions ?? []).filter((v) =>
@@ -127,6 +139,10 @@ export function replaceSlice(
       .concat(data.correctionVersions);
   if (scopes.includes("team-actual:current"))
     state.teamActualData = data.teamActualData;
+  if (data.monthlySalesCloses)
+    state.monthlySalesCloses = (state.monthlySalesCloses ?? [])
+      .filter((close) => !scopes.includes(monthlySalesScope(close)))
+      .concat(data.monthlySalesCloses);
   state.snapshots = state.snapshots
     .filter((s) => !scopes.includes(snapshotScope(s)))
     .concat(data.snapshots);
@@ -170,7 +186,8 @@ function totals(data: PublicationSlice) {
       ? values.reduce<number>((a, b) => a + (b ?? 0), 0)
       : null;
   const sales = sum(
-    data.snapshots.flatMap((s) => [s.turnover.external, s.turnover.group]),
+    data.monthlySalesCloses?.flatMap((close) => close.monthly) ??
+      data.snapshots.flatMap((s) => [s.turnover.external, s.turnover.group]),
   );
   const prospect = sum(
     data.snapshots.flatMap((s) => [s.orderbook.external, s.orderbook.group]),
@@ -373,6 +390,15 @@ export function previewImport(
   );
   const findings = [...batch.findings];
   for (const o of options.filter((o) => changedScopes.includes(o.scope))) {
+    if (o.scope.startsWith("monthly-sales:")) {
+      const before = slice(state, [o.scope]).monthlySalesCloses?.[0];
+      const after = sourceSlice(batch, [o.scope]).monthlySalesCloses?.[0];
+      if (before && after && after.monthly.length < before.monthly.length)
+        findings.push({
+          severity: "error",
+          message: `${o.scope}: the source ends before the latest published month`,
+        });
+    }
     if (
       o.before.sales !== null &&
       o.after.sales !== null &&
@@ -399,7 +425,9 @@ export function previewImport(
     selectedScopes: changedScopes,
     reviewVersion,
     findings,
-    affected: batch.teamActualData
+    affected: batch.monthlySalesCloses
+      ? ["Monthly / cumulative charts", "Sales exports"]
+      : batch.teamActualData
       ? [
           "Team actual Sales / Annual Budget",
           "Sales Team2 names",
@@ -496,7 +524,7 @@ export function publishReviewed(
   batch.publishedAt = now;
   batch.publishedBy = actor.id;
   batch.revision = ++state.revision;
-  if (batch.snapshots.length) state.dataUpdatedAt = now;
+  if (batch.snapshots.length || batch.monthlySalesCloses) state.dataUpdatedAt = now;
   if (batch.receivablesKind) state.receivablesUpdatedAt = now;
   state.audit.push({
     id: randomUUID(),
@@ -626,7 +654,7 @@ export function restoreReviewed(
   batch.publication!.restoredBy = actor.id;
   batch.status = "restored";
   state.revision++;
-  if (batch.snapshots.length) state.dataUpdatedAt = now;
+  if (batch.snapshots.length || batch.monthlySalesCloses) state.dataUpdatedAt = now;
   if (batch.receivablesKind) state.receivablesUpdatedAt = now;
   state.audit.push({
     id: randomUUID(),

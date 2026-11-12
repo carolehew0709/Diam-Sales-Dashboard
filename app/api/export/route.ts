@@ -9,6 +9,7 @@ import { currentUser, ApiError } from "@/lib/auth";
 import { repository } from "@/lib/repository";
 import { filtersFrom, getDashboardSnapshot, months } from "@/lib/dashboard";
 import { translate } from "@/lib/i18n";
+import { monthlyPerformanceSeries } from "@/lib/performance-chart";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
@@ -296,25 +297,28 @@ export async function GET(request: Request) {
         ]),
       ),
     ]);
+    const dimensionScoped = !!(filters.salesTeam && filters.salesTeam !== "all") ||
+      !!(filters.customer && filters.customer !== "all");
+    const planning = monthlyPerformanceSeries(d.totals, "Sales + Prospect", dimensionScoped);
     add("Chart Data", [
       [
         "Month",
         "Monthly budget",
-        translate("en", "graphics.monthlyConfirmed"),
-        "Monthly scenario",
+        translate("en", "graphics.monthlySales"),
+        translate("en", planning.key === "orderbook" ? "graphics.monthlyScopedOB" : "graphics.monthlyConfirmed"),
         "Cumulative budget",
-        translate("en", "graphics.cumulativeConfirmed"),
-        "Cumulative scenario",
+        translate("en", "graphics.cumulativeSales"),
+        translate("en", planning.key === "orderbook" ? "graphics.cumulativeScopedOB" : "graphics.cumulativeConfirmed"),
         "Month-close source",
       ],
       ...d.totals.monthly.map((m, i) => [
         m.label,
         m.budget,
-        m.base,
-        m.scenario,
+        m.sales,
+        planning.points[i].monthly,
         d.totals.cumulative[i].budget,
-        d.totals.cumulative[i].base,
-        d.totals.cumulative[i].scenario,
+        d.totals.cumulative[i].sales,
+        planning.points[i].ytd,
         d.rows.flatMap(({ entity, monthlyClose }) =>
           monthlyClose && i < monthlyClose.monthly.length
             ? [`${entity.code} · ${monthlyClose.sourceFile} · ${monthlyClose.sourceSheet} · ${monthlyClose.sourceRange}`]

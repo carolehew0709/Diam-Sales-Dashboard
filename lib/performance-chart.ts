@@ -55,65 +55,24 @@ export function firstOpenMonth(
   );
 }
 
-/** Original planning curves combined without substituting zero for missing Prospect. */
+/** Trend scenarios use invoiced Sales and committed Prospect, excluding additional P1. */
 export function monthlyPerformanceSeries(
   metrics: Pick<Metric, "monthly" | "cumulative">,
   scenario: Scenario,
-  salesTeam = "all",
-  actualMonthly?: Amount[],
+  dimensionScoped = false,
 ) {
-  const teamScoped = salesTeam !== "all";
-  if (actualMonthly)
+  const hasSales = metrics.monthly.some((m) => m.sales != null) ||
+    metrics.cumulative.some((m) => m.sales != null);
+  if (scenario === "Sales + Prospect" && dimensionScoped && !hasSales) {
+    const points = teamMonthlyPerformance([{ monthly: metrics.monthly.map((m) => m.orderbook) }]);
     return {
-      key: "base" as const,
-      partial: false,
-      points: metrics.monthly.map((m, i) => ({
-        label: m.label,
-        monthly: scenario === "Sales" ? actualMonthly[i] : m.base,
-        ytd:
-          scenario === "Sales"
-            ? actualMonthly[i] === null
-              ? null
-              : actualMonthly.slice(0, i + 1).every((v) => v !== null)
-                ? actualMonthly
-                    .slice(0, i + 1)
-                    .reduce<number>((a, b) => a + b!, 0)
-                : null
-            : metrics.cumulative[i].base,
-      })),
+      key: "orderbook" as const,
+      points: metrics.monthly.map((m, i) => ({ label: m.label, ...points[i] })),
     };
-  if (teamScoped)
-    return {
-      key: "base" as const,
-      partial: false,
-      points: metrics.monthly.map((m, i) => {
-        const amounts = metrics.monthly.slice(0, i + 1).map((x) => x.orderbook);
-        return {
-          label: m.label,
-          monthly: m.orderbook,
-          ytd: amounts.every((v) => v !== null)
-            ? amounts.reduce<number>((sum, v) => sum + v!, 0)
-            : null,
-        };
-      }),
-    };
-  const wantsProspect = scenario === "Sales + Prospect";
-  const hasScenario =
-    metrics.monthly.some((m) => m.scenario !== null) ||
-    metrics.cumulative.some((m) => m.scenario !== null);
-  const key: PerformanceSeriesKey =
-    wantsProspect && hasScenario ? "scenario" : "base";
-  const partial =
-    wantsProspect &&
-    metrics.monthly.some(
-      (m, i) =>
-        (m.base !== null && m.scenario === null) ||
-        (metrics.cumulative[i].base !== null &&
-          metrics.cumulative[i].scenario === null),
-    );
+  }
+  const key: "sales" | "base" = scenario === "Sales" ? "sales" : "base";
   return {
     key,
-    partial,
     points: metrics.monthly.map((m, i) => ({
       label: m.label,
       monthly: m[key],

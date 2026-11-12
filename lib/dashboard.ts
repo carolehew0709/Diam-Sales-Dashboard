@@ -186,21 +186,14 @@ export function entityMetric(
               type,
             )
           : null;
-    const actual =
-      s && !future
-        ? i >= s.month
-          ? 0
-          : splitValue(
-              {
-                external: s.monthlySales.external[i],
-                group: s.monthlySales.group[i],
-              },
-              type,
-            )
-        : s
-          ? 0
-          : null;
     const closedSales = monthlyClose?.monthly[i];
+    const invoiced = closedSales ?? (s && !future && i < s.month
+      ? splitValue({
+          external: s.monthlySales.external[i],
+          group: s.monthlySales.group[i],
+        }, type)
+      : null);
+    const actual = s && (future || i >= s.month) ? 0 : invoiced;
     const base = closedSales ?? (
       s && !future && s.monthlyBaseOverride && type === "all"
         ? s.monthlyBaseOverride[i]
@@ -208,6 +201,7 @@ export function entityMetric(
     const upside = s && !future && type === "all" ? s.monthlyProspect[i] : null;
     return {
       label,
+      sales: invoiced,
       base,
       prospect: upside,
       scenario:
@@ -222,7 +216,7 @@ export function entityMetric(
   const cumulative = monthly.map((m, i) => {
     let base = sumComplete(monthly.slice(0, i + 1).map((x) => x.base));
     const closed = i < (monthlyClose?.monthly.length ?? 0);
-    if (s && !future && !closed && !s.monthlyBaseOverride && i >= s.month - 1)
+    if (s && !future && !monthlyClose && !s.monthlyBaseOverride && i >= s.month - 1)
       base = sumComplete([
         sales,
         ...monthly.slice(s.month - 1, i + 1).map((x) => x.orderbook),
@@ -230,6 +224,11 @@ export function entityMetric(
     const p = sumComplete(monthly.slice(monthlyClose?.monthly.length ?? 0, i + 1).map((x) => x.prospect));
     return {
       label: m.label,
+      sales: !s || future || i >= s.month
+        ? null
+        : i === s.month - 1 && !monthlyClose
+          ? sales
+          : sumComplete(monthly.slice(0, i + 1).map((x) => x.sales)),
       base,
       scenario: filters.scenario === "Sales" || closed ? base : sumComplete([base, p]),
       budget: sumComplete(monthly.slice(0, i + 1).map((x) => x.budget)),
@@ -334,6 +333,7 @@ export function combine(metrics: Metric[], showKnownBudget = false): Metric {
     monthEstimate: total("monthEstimate"),
     monthly: months.map((label, i) => ({
       label,
+      sales: sumComplete(metrics.map((m) => m.monthly[i].sales)),
       base: sumComplete(metrics.map((m) => m.monthly[i].base)),
       prospect: sumComplete(metrics.map((m) => m.monthly[i].prospect)),
       scenario: sumComplete(metrics.map((m) => m.monthly[i].scenario)),
@@ -342,6 +342,7 @@ export function combine(metrics: Metric[], showKnownBudget = false): Metric {
     })),
     cumulative: months.map((label, i) => ({
       label,
+      sales: sumComplete(metrics.map((m) => m.cumulative[i].sales)),
       base: sumComplete(metrics.map((m) => m.cumulative[i].base)),
       scenario: sumComplete(metrics.map((m) => m.cumulative[i].scenario)),
       budget: sumComplete(metrics.map((m) => m.cumulative[i].budget)),

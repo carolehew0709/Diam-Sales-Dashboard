@@ -115,33 +115,33 @@ test("forecast card appears only for a supplied, different Prospect result in th
   );
 });
 
-test("planning combo retains old monthly and cumulative numbers, gaps and supplied zero", () => {
+test("trend scenarios select invoicing or invoicing plus committed Prospect independently of P1", () => {
   const m = getDashboardSnapshot(state, admin, defaultFilters).totals;
   const metrics = {
     ...m,
     monthly: m.monthly.map((r, i) => ({
       ...r,
+      sales: i === 0 ? 0 : i === 1 ? 4 : null,
       base: i + 1,
-      scenario: i === 0 ? 0 : i === 1 ? 5 : null,
+      scenario: null,
     })),
     cumulative: m.cumulative.map((r, i) => ({
       ...r,
+      sales: i === 0 ? 0 : i === 1 ? 4 : null,
       base: (i + 1) * 10,
-      scenario: i === 0 ? 0 : i === 1 ? 5 : null,
+      scenario: null,
     })),
   };
   const forecast = monthlyPerformanceSeries(metrics, "Sales + Prospect");
-  assert.equal(forecast.key, "scenario");
-  assert.equal(forecast.partial, true);
-  assert.equal(forecast.points[0].monthly, 0);
-  assert.equal(forecast.points[1].ytd, 5);
-  assert.equal(forecast.points[2].monthly, null);
-  assert.equal(forecast.points[2].ytd, null);
+  assert.equal(forecast.key, "base");
+  assert.equal(forecast.points[2].monthly, 3);
+  assert.equal(forecast.points[2].ytd, 30);
   const baseline = monthlyPerformanceSeries(metrics, "Sales");
-  assert.equal(baseline.key, "base");
-  assert.equal(baseline.partial, false);
-  assert.equal(baseline.points[2].monthly, 3);
-  assert.equal(baseline.points[2].ytd, 30);
+  assert.equal(baseline.key, "sales");
+  assert.equal(baseline.points[0].monthly, 0);
+  assert.equal(baseline.points[1].ytd, 4);
+  assert.equal(baseline.points[2].monthly, null);
+  assert.equal(baseline.points[2].ytd, null);
 });
 
 test("scope-linked main planning chart uses the same reviewed monthly metrics as the matrix", () => {
@@ -158,15 +158,18 @@ test("scope-linked main planning chart uses the same reviewed monthly metrics as
     const filters = { ...defaultFilters, ...patch };
     const data = getDashboardSnapshot(state, admin, filters);
     const view = monthlyPerformanceSeries(data.totals, filters.scenario);
+    assert.notEqual(view.key, "orderbook");
+    if (view.key === "orderbook") throw new Error("Unexpected scoped Prospect");
+    const key = view.key;
     assert.deepEqual(
       view.points.map((p) => p.monthly),
-      data.totals.monthly.map((m) => m[view.key]),
+      data.totals.monthly.map((m) => m[key]),
     );
     assert.deepEqual(
       view.points.map((p) => p.ytd),
-      data.totals.cumulative.map((m) => m[view.key]),
+      data.totals.cumulative.map((m) => m[key]),
     );
-    if (filters.scenario === "Sales") assert.equal(view.key, "base");
+    if (filters.scenario === "Sales") assert.equal(view.key, "sales");
     assert.ok(
       data.rows.every(
         (r) => filters.bu === "all" || r.entity.businessUnit === filters.bu,
@@ -176,7 +179,6 @@ test("scope-linked main planning chart uses the same reviewed monthly metrics as
   const china = getDashboardSnapshot(state, admin, defaultFilters);
   const view = monthlyPerformanceSeries(china.totals, "Sales + Prospect");
   assert.equal(view.key, "base");
-  assert.equal(view.partial, true);
   assert.equal(view.points[11].ytd, china.totals.base);
   // The retained invoices-only provenance series is not silently substituted for planning.
   assert.equal(china.graphics.series[0].points[11].monthly, null);
@@ -199,7 +201,9 @@ test("team monthly chart shows only its source OB, without inventing invoiced pe
     salesTeam: team,
   });
   assert.equal(data.totals.sales, null);
-  const points = monthlyPerformanceSeries(data.totals, "Sales", team).points;
+  const sales = monthlyPerformanceSeries(data.totals, "Sales", true);
+  assert.ok(sales.points.every((point) => point.monthly === null && point.ytd === null));
+  const points = monthlyPerformanceSeries(data.totals, "Sales + Prospect", true).points;
   assert.equal(data.totals.budget, null);
   assert.equal(data.totals.prospect, null);
   assert.deepEqual(

@@ -252,16 +252,13 @@ const DashboardView = memo(function DashboardView({
   const monthlyView = monthlyPerformanceSeries(
     t,
     filters.scenario,
-    dimensionScoped ? "selection" : "all",
+    dimensionScoped,
   );
   const monthlyMatrixKey = monthlyView.key;
-  const monthlyMatrixLabel = dimensionScoped
-    ? tr("metric.ob")
-    : tr(
-        monthlyMatrixKey === "scenario"
-          ? "chart.salesOBProspect"
-          : "chart.salesOB",
-      );
+  const monthlyMatrixLabel = tr(
+    monthlyMatrixKey === "sales" ? "metric.sales" :
+      monthlyMatrixKey === "orderbook" ? "metric.ob" : "chart.salesOB",
+  );
   const weeks = [
     ...new Set(data.history.flatMap((h) => h.records.map((r) => r.week))),
   ].sort((a, b) => a - b);
@@ -790,7 +787,11 @@ const DashboardView = memo(function DashboardView({
                         <td className="numeric">
                           {formatK(
                             frequency === "month"
-                              ? r.metrics[monthlyMatrixKey]
+                              ? monthlyMatrixKey === "sales"
+                                ? r.metrics.cumulative.findLast((m) => m.sales !== null)?.sales ?? null
+                                : monthlyMatrixKey === "base"
+                                  ? r.metrics.cumulative.at(-1)?.base ?? null
+                                  : r.metrics.orderbook
                               : r.metrics.scenario,
                           )}
                         </td>
@@ -801,12 +802,7 @@ const DashboardView = memo(function DashboardView({
               </div>
               <p className="muted">
                 {frequency === "month" ? (
-                  <>
-                    {monthlyView.partial && monthlyMatrixKey === "base" && (
-                      <>{tr("chart.scenarioUnavailable")} </>
-                    )}
-                    {tr("matrix.monthNote")}
-                  </>
+                  tr("matrix.monthNote")
                 ) : (
                   tr("matrix.note")
                 )}

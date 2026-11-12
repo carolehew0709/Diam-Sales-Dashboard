@@ -36,17 +36,19 @@ test("team trend preserves missing months, partial allocations and empty scopes 
   assert.equal(points[11].monthly, null);
 });
 
-test("team monthly OB is scenario independent and cumulative gaps remain missing", () => {
+test("dimension selection shows Prospect only in the combined trend when invoices are missing", () => {
   const metrics = {
     monthly: [0, 12.25, null, 3].map((orderbook, i) => ({
       label: String(i),
       orderbook,
+      sales: null,
       base: 999,
       scenario: 1999,
     })),
-    cumulative: [0, 0, 0, 0].map(() => ({ base: 999, scenario: 1999 })),
+    cumulative: [0, 0, 0, 0].map(() => ({ sales: null, base: 999, scenario: 1999 })),
   } as Pick<Metric, "monthly" | "cumulative">;
-  const view = monthlyPerformanceSeries(metrics, "Sales", "Team A");
+  const view = monthlyPerformanceSeries(metrics, "Sales + Prospect", true);
+  assert.equal(view.key, "orderbook");
   assert.deepEqual(
     view.points.map((p) => p.monthly),
     [0, 12.25, null, 3],
@@ -55,10 +57,8 @@ test("team monthly OB is scenario independent and cumulative gaps remain missing
     view.points.map((p) => p.ytd),
     [0, 12.25, null, null],
   );
-  assert.deepEqual(
-    view,
-    monthlyPerformanceSeries(metrics, "Sales + Prospect", "Team A"),
-  );
+  const sales = monthlyPerformanceSeries(metrics, "Sales", true);
+  assert.ok(sales.points.every((point) => point.monthly === null && point.ytd === null));
 });
 
 test("current reporting month stays unfinished alongside future months", () => {

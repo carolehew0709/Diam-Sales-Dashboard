@@ -132,16 +132,14 @@ test("team monthly curves follow actual Sales scenario and combined annual base,
   const sales = monthlyPerformanceSeries(
     d.totals,
     "Sales",
-    "Elly Team",
-    d.graphics.teamActuals!.monthly,
+    true,
   );
   assert.equal(sales.points[9].ytd, 30);
   assert.equal(sales.points[10].monthly, null);
   const combined = monthlyPerformanceSeries(
     d.totals,
     "Sales + Prospect",
-    "Elly Team",
-    d.graphics.teamActuals!.monthly,
+    true,
   );
   assert.equal(combined.points[11].ytd, 34);
   assert.ok(d.totals.monthly.every((m) => m.budget === null));

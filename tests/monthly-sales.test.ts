@@ -2,7 +2,8 @@ import assert from "node:assert/strict";
 import test from "node:test";
 import * as XLSX from "xlsx";
 import seed from "../data/apac-dashboard.json";
-import { defaultFilters, getDashboardSnapshot } from "../lib/dashboard";
+import { defaultFilters, entityMetric, getDashboardSnapshot } from "../lib/dashboard";
+import { monthlyPerformanceSeries } from "../lib/performance-chart";
 import {
   previewImport,
   previewRestore,
@@ -59,6 +60,23 @@ test("month-close parser reconciles Entity totals and keeps zero distinct from a
     () => parseMonthlySalesWorkbook(workbook(true), "monthly.xlsx"),
     /cached number/,
   );
+});
+
+test("both cumulative trends continue from the finance close through weekly invoicing and Prospect", () => {
+  const close = parseMonthlySalesWorkbook(workbook(), "monthly.xlsx").monthlySalesCloses[1];
+  const snapshot = (seed.snapshots as Store["snapshots"]).find((s) => s.entityId === "dhk" && s.year === 2026)!;
+  const metric = entityMetric({
+    ...snapshot,
+    month: 3,
+    turnover: { external: 50, group: 40 },
+    monthlySales: { external: [1, 1, 3, ...Array(9).fill(null)], group: [1, 1, 4, ...Array(9).fill(null)] },
+    monthlyOrderbook: { external: [0, 0, 2, 5, ...Array(8).fill(0)], group: [0, 0, 0, 1, ...Array(8).fill(0)] },
+    monthlyBaseOverride: null,
+  }, defaultFilters, "dhk", close);
+  const sales = monthlyPerformanceSeries(metric, "Sales");
+  const planning = monthlyPerformanceSeries(metric, "Sales + Prospect");
+  assert.deepEqual(sales.points.slice(1, 4).map((p) => [p.monthly, p.ytd]), [[0, 2], [7, 9], [null, null]]);
+  assert.deepEqual(planning.points.slice(1, 4).map((p) => [p.monthly, p.ytd]), [[0, 2], [9, 11], [6, 17]]);
 });
 
 test("reviewed month close affects only authorized closed-month All sales chart data and can be restored", () => {

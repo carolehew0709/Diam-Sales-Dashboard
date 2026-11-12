@@ -377,6 +377,40 @@ test("monthly import reads source evidence and rejects missing amounts, inconsis
     );
 });
 
+test("reviewed customer close reconciles the current mix to detail and preserves source evidence", () => {
+  const reviseDetail = (b: XLSX.WorkBook) => {
+    const sheet = b.Sheets[analysis.customerSheet];
+    sheet.C5.v = Number(sheet.C5.v) + 3.125;
+    sheet.C11.v = Number(sheet.C11.v) + 3.125;
+  };
+  const options = { confirmedMonth: "2026-10", useKeyCustomerDetail: true };
+  const workbook = customerWorkbook(reviseDetail);
+  const ordinary = parseCustomerAnalysisWorkbook(workbook, "graphics.xlsx")!;
+  assert.ok(ordinary.findings.some((finding) => finding.severity === "error"));
+  const reviewed = parseCustomerAnalysisWorkbook(workbook, "graphics.xlsx", options)!;
+  assert.ok(reviewed.findings.every((finding) => finding.severity !== "error"));
+  assert.equal(reviewed.customerAnalysis.month, "2026-10");
+  assert.equal(reviewed.customerAnalysis.sourceLabel, "Tiger Plan Aug data");
+  assert.deepEqual(reviewed.customerAnalysis.sourceReview, {
+    reportedMonth: "2026-08",
+    keyCustomerYtd: { breakdown: 11923, detail: 11926.125 },
+  });
+  assert.deepEqual(reviewed.customerAnalysis.breakdown[0].values, [15898, 11873, 15267, 11926.125]);
+  assert.equal(reviewed.customerAnalysis.breakdown.reduce((sum, group) => sum + group.values[3], 0), 29185.125);
+
+  for (const cell of ["B11", "C11", "E11"]) {
+    const badWorkbook = customerWorkbook((book) => {
+      reviseDetail(book);
+      const sheet = cell === "E11" ? analysis.breakdownSheet : analysis.customerSheet;
+      book.Sheets[sheet][cell].v = 1;
+    });
+    const bad = parseCustomerAnalysisWorkbook(badWorkbook, "graphics.xlsx", options)!;
+    assert.ok(bad.findings.some((finding) => finding.severity === "error"), cell);
+  }
+  const invalidYear = parseCustomerAnalysisWorkbook(workbook, "graphics.xlsx", { ...options, confirmedMonth: "2027-10" })!;
+  assert.ok(invalidYear.findings.some((finding) => finding.code === "graphics.validation.confirmedMonth"));
+});
+
 test("export metadata wraps Chinese and long source names without dropping characters", () => {
   for (const text of [
     "中国区客户来源月份为2026年8月".repeat(12),

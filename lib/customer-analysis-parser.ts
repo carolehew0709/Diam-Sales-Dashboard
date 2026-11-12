@@ -24,6 +24,7 @@ const monthNames = [
 export function parseCustomerAnalysisWorkbook(
   bytes: Buffer,
   sourceFile: string,
+  review?: { confirmedMonth?: string; useKeyCustomerDetail?: boolean },
 ) {
   const sheetNames = XLSX.read(bytes, {
     type: "buffer",
@@ -54,6 +55,9 @@ export function parseCustomerAnalysisWorkbook(
     monthNames.findIndex((m) => new RegExp(`\\b${m}[a-z]*\\b`, "i").test(s)) +
     1;
   const month = sourceMonth(sources[0]);
+  const reportedMonth = `${year}-${String(month).padStart(2, "0")}`;
+  const sourceReview: NonNullable<CustomerAnalysis["sourceReview"]> = {};
+  let analysisMonth = reportedMonth;
   if (
     !month ||
     sourceMonth(sources[1]) !== month ||
@@ -66,6 +70,28 @@ export function parseCustomerAnalysisWorkbook(
         "Customer source month and comparable YTD years must be explicit and consistent on both sheets",
       code: "graphics.validation.period",
     });
+  if (review?.confirmedMonth) {
+    if (
+      !/^20\d{2}-(0[1-9]|1[0-2])$/.test(review.confirmedMonth) ||
+      Number(review.confirmedMonth.slice(0, 4)) !== year
+    ) {
+      findings.push({
+        severity: "error",
+        message:
+          "Confirmed customer month must belong to the workbook's fiscal year",
+        code: "graphics.validation.confirmedMonth",
+      });
+    } else if (review.confirmedMonth !== reportedMonth) {
+      sourceReview.reportedMonth = reportedMonth;
+      analysisMonth = review.confirmedMonth;
+      findings.push({
+        severity: "review",
+        message: `Use confirmed customer YTD month ${analysisMonth} instead of the workbook label ${reportedMonth}`,
+        code: "graphics.review.confirmedMonth",
+        params: { reported: reportedMonth, confirmed: analysisMonth },
+      });
+    }
+  }
   const headers = [
     text(breakdown.B4?.v),
     text(breakdown.C4?.v),
@@ -193,22 +219,37 @@ export function parseCustomerAnalysisWorkbook(
     ["current", 3, "C"],
   ] as const) {
     const sum = clients.reduce((n, c) => n + c[key], 0);
+    const detailCell = `${col}${clients.length + 5}`;
+    const detailTotal = required(
+      customers[detailCell]?.v,
+      `${customerSheet}!${detailCell}`,
+    );
+    const detailMatches = Math.abs(sum - detailTotal) <= 0.01;
+    const breakdownTotal = groups[0].values[index];
+    const breakdownMatches = Math.abs(sum - breakdownTotal) <= 0.01;
     if (
-      Math.abs(sum - groups[0].values[index]) > 0.01 ||
-      Math.abs(
-        sum -
-          required(
-            customers[`${col}${clients.length + 5}`]?.v,
-            `${customerSheet}!${col}${clients.length + 5}`,
-          ),
-      ) > 0.01
-    )
+      Math.abs(sum - breakdownTotal) > 1e-9 &&
+      detailMatches &&
+      key === "current" &&
+      review?.useKeyCustomerDetail &&
+      !findings.some((finding) => finding.severity === "error")
+    ) {
+      sourceReview.keyCustomerYtd = { breakdown: breakdownTotal, detail: sum };
+      groups[0].values[index] = sum;
+      findings.push({
+        severity: "review",
+        message: `Recompute customer mix using the sum of key customer detail (${sum} kEUR) in place of the breakdown key customer total (${breakdownTotal} kEUR)`,
+        code: "graphics.review.keyCustomerDetail",
+        params: { breakdown: breakdownTotal, detail: sum },
+      });
+    } else if (!detailMatches || !breakdownMatches) {
       findings.push({
         severity: "error",
         message: `Key customer total does not reconcile: ${key}`,
         code: "graphics.validation.total",
-        params: { cell: `${customerSheet}!${col}${clients.length + 5}` },
+        params: { cell: `${customerSheet}!${detailCell}` },
       });
+    }
   }
   findings.push({
     severity: "review",
@@ -217,12 +258,13 @@ export function parseCustomerAnalysisWorkbook(
     code: "graphics.customerRule",
   });
   const analysis: CustomerAnalysis = {
-    month: `${year}-${String(month).padStart(2, "0")}`,
+    month: analysisMonth,
     year,
     priorYear,
     entityIds: ["dhk", "dcp", "ddc"],
     sourceFile,
     sourceLabel,
+    ...(Object.keys(sourceReview).length ? { sourceReview } : {}),
     customerSheet,
     breakdownSheet,
     breakdown: groups,

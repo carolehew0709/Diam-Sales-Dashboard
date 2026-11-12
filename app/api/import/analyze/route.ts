@@ -49,6 +49,15 @@ export async function POST(request: Request) {
     const kind = form.get("sourceKind") === "monthly-sales"
       ? "monthly-sales"
       : identifyWorkbook(bytes);
+    const customerMonth = form.get("customerMonth");
+    const customerBasis = form.get("customerBasis");
+    if (
+      (customerMonth !== null || customerBasis !== null) &&
+      (kind !== "customer" ||
+        (customerMonth !== null && (typeof customerMonth !== "string" ||
+          !/^20\d{2}-(0[1-9]|1[0-2])$/.test(customerMonth))) ||
+        (customerBasis !== null && customerBasis !== "key-customer-detail"))
+    ) throw new ApiError(400, "Invalid customer source review options");
     try {
       parsed =
         kind === "monthly-sales"
@@ -56,7 +65,10 @@ export async function POST(request: Request) {
           : kind === "team-actual"
           ? parseTeamActualWorkbook(bytes, file.name)!
           : kind === "customer"
-            ? parseCustomerAnalysisWorkbook(bytes, file.name)!
+            ? parseCustomerAnalysisWorkbook(bytes, file.name, {
+                confirmedMonth: typeof customerMonth === "string" ? customerMonth : undefined,
+                useKeyCustomerDetail: customerBasis === "key-customer-detail",
+              })!
             : kind === "sales"
               ? parseDashboardWorkbook(bytes, file.name)
               : { snapshots: [], lines: [], sheets: [], findings: [] };

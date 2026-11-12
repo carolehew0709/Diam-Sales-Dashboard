@@ -7,6 +7,10 @@ export type CustomerAnalysis = {
   entityIds: string[];
   sourceFile: string;
   sourceLabel: string;
+  sourceReview?: {
+    reportedMonth?: string;
+    keyCustomerYtd?: { breakdown: number; detail: number };
+  };
   breakdownSheet: string;
   customerSheet: string;
   breakdown: {

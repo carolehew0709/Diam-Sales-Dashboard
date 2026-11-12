@@ -137,11 +137,23 @@ function CustomerGraphicsView({
   const currentLabel = analysis
     ? tr("graphics.ytdYear", { year: analysis.year })
     : "";
+  const sourceReview = analysis?.sourceReview;
+  const sourceAmount = new Intl.NumberFormat(locale, { maximumFractionDigits: 3 });
+  const reviewNotes = [
+    analysis && sourceReview?.reportedMonth && tr("graphics.review.confirmedMonth", {
+      reported: sourceReview.reportedMonth,
+      confirmed: analysis.month,
+    }),
+    sourceReview?.keyCustomerYtd && tr("graphics.review.keyCustomerDetail", {
+      breakdown: sourceAmount.format(sourceReview.keyCustomerYtd.breakdown),
+      detail: sourceAmount.format(sourceReview.keyCustomerYtd.detail),
+    }),
+  ].filter(Boolean).join(" ");
   const context = analysis
-    ? `${tr("graphics.monthlySource", { month: monthLabel(analysis.month) })} · ${tr("regions.China")} (DEHK + DCP + DDC) · ${view?.customerScoped ? `${view.customer} · ` : ""}kEUR · ${analysis.sourceLabel}`
+    ? `${tr("graphics.monthlySource", { month: monthLabel(analysis.month) })} · ${tr("regions.China")} (DEHK + DCP + DDC) · ${view?.customerScoped ? `${view.customer} · ` : ""}kEUR${sourceReview?.reportedMonth ? "" : ` · ${analysis.sourceLabel}`}`
     : "";
   const sourceNote = analysis
-    ? `${tr("graphics.customerRule")} ${tr("graphics.source", { source: `${analysis.sourceFile} · ${analysis.breakdownSheet}!A4:E11; ${analysis.customerSheet}!A4:E${(analysis.customers.at(-1)?.sourceRow ?? 4) + 1}` })}`
+    ? `${tr("graphics.customerRule")} ${reviewNotes} ${tr("graphics.source", { source: `${analysis.sourceFile} · ${analysis.breakdownSheet}!A4:E11; ${analysis.customerSheet}!A4:E${(analysis.customers.at(-1)?.sourceRow ?? 4) + 1}` })}`
     : "";
   const groupLabel = (name: string) =>
     groupKeys[name] ? tr(groupKeys[name]) : name;

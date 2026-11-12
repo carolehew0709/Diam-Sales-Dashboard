@@ -1,5 +1,6 @@
 "use client";
 import { usePathname, useRouter } from "next/navigation";
+import dynamic from "next/dynamic";
 import {
   loginDestination,
   pagePath,
@@ -58,6 +59,8 @@ import {
 } from "@/lib/dashboard";
 import type { Dashboard, Metric } from "@/lib/dashboard";
 import type { Amount, Filters, User, Entity } from "@/lib/types";
+
+const QuotationApp = dynamic(() => import("@/components/quotation-app"));
 
 function MetricCard({
   label,
@@ -880,7 +883,7 @@ export default function Home() {
   const [renderPending, startTransition] = useTransition();
   const contentRoot = useRef<HTMLDivElement>(null);
   useDataReveal(contentRoot, data, ".china-strip, .kpi-card");
-  const requiresDashboard = !["home", "login", "ar-aging", "imports"].includes(view);
+  const requiresDashboard = !["home", "login", "ar-aging", "imports", "quotation"].includes(view);
   const pending =
     loading ||
     renderPending ||
@@ -1062,6 +1065,8 @@ export default function Home() {
             />
           ) : view === "admin" ? (
             <AdminPanel onClose={() => setView("overview")} />
+          ) : view === "quotation" ? (
+            <QuotationApp />
           ) : view === "ar-aging" ? (
             hasReceivablesAccess(user) ? (
               <ReceivablesApp />

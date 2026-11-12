@@ -5,6 +5,8 @@ import {
   ArrowRight,
   ArrowUpRight,
   BarChart3,
+  Calculator,
+  FileSpreadsheet,
   Globe2,
   Layers3,
   Target,
@@ -120,6 +122,28 @@ export function WorkspaceHome({ user }: { user: User }) {
             <div className="home-module-features"><span>{tr("ar.featureAging")}</span><span>{tr("ar.featureTeams")}</span><span>{tr("ar.featureReceipts")}</span></div>
             <div className="home-card-footer"><span>{tr("ar.homeOpen")}</span><span className="home-card-action"><ArrowRight size={19} aria-hidden="true" /></span></div>
           </Link>}
+          <Link
+            className="home-module-card"
+            href={pagePath(locale, "quotation")}
+            aria-labelledby="home-quote-title"
+            aria-describedby="home-quote-description"
+          >
+            <div className="home-card-top">
+              <span className="home-module-icon"><Calculator size={28} strokeWidth={1.6} aria-hidden="true" /></span>
+              <span className="home-module-tag">{tr("quote.homeTag")}</span>
+              <ArrowUpRight className="home-card-arrow" size={23} aria-hidden="true" />
+            </div>
+            <h3 id="home-quote-title">{tr("quote.title")}</h3>
+            <p id="home-quote-description">{tr("quote.homeDescription")}</p>
+            <div className="home-module-features">
+              <span><FileSpreadsheet size={15} aria-hidden="true" />{tr("quote.homeTemplates")}</span>
+              <span><Calculator size={15} aria-hidden="true" />{tr("quote.rates")}</span>
+            </div>
+            <div className="home-card-footer">
+              <span>{tr("quote.open")}</span>
+              <span className="home-card-action"><ArrowRight size={19} aria-hidden="true" /></span>
+            </div>
+          </Link>
         </div>
       </section>
       <footer className="home-footer">

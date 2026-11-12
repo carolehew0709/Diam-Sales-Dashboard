@@ -1,6 +1,12 @@
-# Portable weekly comparison and continuity (v3)
+# Portable weekly comparison and continuity (v3.1)
 
-The app shell has independent Two-week comparison and Continuity tracking pages. The v2 comparison engine and its data-only rules remain unchanged; comparing two files never writes snapshots into history. Existing v2 documentation below describes that first page. The shell version is 3.0; pairwise report metadata continues to identify the unchanged v2 engine.
+The app shell has independent Two-week comparison and Continuity tracking pages. Comparing two files never writes snapshots into history. Two regular weekly reports use the v2 rules and report metadata. The v3.1 shell also accepts a CRM opportunity export as the previous file, with v2.1 metadata for mixed-source reports.
+
+## Previous opportunity export
+
+Only the previous-file picker and equivalent pairwise CLI argument accept this format. An XLSX filename must contain `导入列表` or `导出列表`, and exactly one worksheet must supply the supported first-row headers. Read `项目编号.项目编码` (also `项目编号/项目编码`, `项目编码` or `项目编号`) as Job Number and `商机名称` as Project Name. Use `销售组` and `品牌.名称` for Team and Brand when supplied. Use existing Job Number/Project Name grouping and retain source row numbers.
+
+Assign `预计收入` to its `结算币别.名称` column for RMB/CNY, USD or EUR. Exclude other currencies on that row from old-side aggregation. An unreported currency has no matched-project delta. Missing amounts stay unavailable, and unsupported currency values are reported as source issues. Compare `销售阶段` against L Quotation Status as written and `预计成交日期` against B Order Date. Label the mixed-source date and status fields in the UI, CSV and HTML. The current file must still contain on-going-DDC, and continuity imports still require regular weekly reports.
 
 ## Continuity history contract
 
@@ -28,9 +34,9 @@ python tools/weekly-comparer/app.py --history-db ".local/qa.sqlite" --history-st
 python tools/weekly-comparer/app.py --history-db ".local/qa.sqlite" --history-ui-smoke-test ".local/history-gui.json"
 ```
 
-Synthetic fixtures cover three or more periods, cross-year ISO weeks, missing weeks/projects/fields, reappearance, duplicate projects, multi-Brand projections, typed values, precision, restore, repeated imports and rollback on real database errors. Browser tests compare native/HTML observations under multiple scopes and verify gap-aware line segments and CSV. Existing W44/W45 pairwise CSV must remain byte-identical. Packaged smoke tests cover both pages, independent state and persistent reload. Build output is `.local/weekly-comparer-release-v3/`; deliver the executable, reproducible source, instructions and real two-period example to the owner's Weekly Report Comparison folder, preserving v2.
+Synthetic fixtures cover three or more periods, cross-year ISO weeks, missing weeks/projects/fields, reappearance, duplicate projects, multi-Brand projections, typed values, precision, restore, repeated imports and rollback on real database errors. Browser tests compare native/HTML observations under multiple scopes and verify gap-aware line segments and CSV. Existing W44/W45 pairwise CSV must remain byte-identical. Packaged smoke tests cover both pages, independent state and persistent reload. Build output is `.local/weekly-comparer-release-v3.1/`. The owner's Weekly Report Comparison folder contains the executable, reproducible source, instructions and prior two-period examples.
 
-## Unchanged two-week comparison rules (v2)
+## Regular two-week comparison rules (v2)
 
 The offline tool in `tools/weekly-comparer/` now compares the named `on-going-DDC` sheet, replacing v1's first-sheet summary contract. Its v2 business engine is `lib/weekly_order_comparison.py`. Shared value/export helpers remain in the previous engine module. UI/report copy uses bilingual `weeklyOrders.*` semantic keys, with shared desktop copy falling back to `weeklyComparer.*`. Private sources, reports, binaries and QA evidence stay outside public Git. Nothing is imported or published into the dashboard.
 
@@ -64,4 +70,4 @@ python tools/weekly-comparer/app.py --ui-smoke-test "old.xlsx" "new.xlsx" ".loca
 powershell -ExecutionPolicy Bypass -File tools/weekly-comparer/build.ps1
 ```
 
-Build on Windows x64/Python 3.12. The executable bundles Python, Tk, openpyxl, both locales, the report template and the supplied logo. Runtime does not require Python, Excel or a network. The prior v2 build output was `.local/weekly-comparer-release-v2/`. Deliverables and reproducible source live in the owner's `Weekly Report Comparison` directory, with v1.2 preserved under `previous-v1.2`. Keep supplied workbooks intact. Synthetic tests cover identity disambiguation, grouping, currency separation, missing values, same-status semantics, filter scope changes and safe exports. Private regression verifies the real files, packaged CLI/GUI and browser filters/downloads without committing workbook details. The executable remains unsigned.
+Build on Windows x64/Python 3.12. The executable bundles Python, Tk, openpyxl, both locales, the report templates and the supplied logo. Runtime does not require Python, Excel or a network. Keep supplied workbooks intact. Synthetic tests cover identity disambiguation, grouping, currency separation, missing values, same-status semantics, filter scope changes and safe exports. Private regression verifies the real files, packaged CLI/GUI and browser filters/downloads without committing workbook details. The executable remains unsigned.

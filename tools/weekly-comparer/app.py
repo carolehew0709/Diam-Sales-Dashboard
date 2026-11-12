@@ -8,10 +8,11 @@ ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parents[2]))
 if not getattr(sys,'frozen',False):sys.path.insert(0,str(ROOT/'lib'))
 from weekly_order_comparison import VERSION,CURRENCIES,Translator,CompareError,compare,stats,visible,joined,described,display,text,exact,export_csv,export_html,write_output
 MODES=('changed','modified','same','status','date','amount','added','removed','review','all')
+APP_VERSION = '3.1.0'
 
 class App:
     def __init__(self,root,language='zh-CN',smoke=None,parent=None):
-        self.root=root;self.tr=Translator(ROOT,language).tr;self.smoke=smoke
+        self.root=root;self.base_tr=Translator(ROOT,language).tr;self.tr=self.base_tr;self.smoke=smoke
         self.host=parent if parent is not None else root
         self.old=tk.StringVar();self.new=tk.StringVar();self.team=tk.StringVar();self.brand=tk.StringVar();self.currency=tk.StringVar(value='EUR');self.mode=tk.StringVar();self.search=tk.StringVar();self.status=tk.StringVar(value=self.tr('ready'))
         self.result=None;self.scoped=[];self.shown=[];self.busy=False;self.generation=0;self.events=queue.Queue();self.controls=[]
@@ -60,8 +61,15 @@ class App:
         if path:var.set(path)
     def invalidate(self,*args):
         self.generation+=1;self.result=None;self.scoped=[];self.shown=[];self.tree.delete(*self.tree.get_children());self.html_button.configure(state='disabled');self.csv_button.configure(state='disabled')
+        self.set_comparison_labels(self.base_tr)
         for value in self.card_values:value.set('—')
         self.draw();self.status.set(self.tr('ready'))
+    def set_comparison_labels(self, tr):
+        mode = next((key for key in MODES if self.mode.get() == self.tr('mode.' + key)), 'changed')
+        self.tr = tr
+        self.tree.heading('date', text=tr('date'))
+        self.mode_box.configure(values=[tr('mode.' + key) for key in MODES])
+        self.mode.set(tr('mode.' + mode))
     def start(self):
         if self.busy:return
         if not self.old.get() or not self.new.get():messagebox.showerror(self.tr('title'),self.tr('chooseBoth'));return
@@ -82,6 +90,7 @@ class App:
                     messagebox.showerror(self.tr('title'),message)
                 else:
                     self.result=result
+                    self.set_comparison_labels(result.translator(self.base_tr))
                     for c,var,box in ((3,self.team,self.team_box),(6,self.brand,self.brand_box)):
                         values=sorted({str(r.values[c]).replace('\n',' ') for r in result.old.rows+result.new.rows if r.values[c] is not None});box.configure(values=[self.tr('all')]+values);var.set(self.tr('all'))
                     self.html_button.configure(state='normal');self.csv_button.configure(state='normal');self.refresh()
@@ -98,9 +107,13 @@ class App:
         self.draw();self.status.set(self.tr('loaded',old=len(self.result.old.rows),new=len(self.result.new.rows),count=len(self.shown),review=s['review']))
     def render_rows(self):
         self.tree.delete(*self.tree.get_children())
+        dates = self.result.date_columns
         for i,c in enumerate(self.shown):
-            transition=lambda col:(described(c['old'],col)+' → '+described(c['new'],col)) if c['old'] and c['new'] and described(c['old'],col)!=described(c['new'],col) else described(c['new'] or c['old'],col)
-            self.tree.insert('','end',iid=str(i),values=(self.tr('kind.'+c['kind']),c['job'],c['project'],c['team'],c['brand'],*[display(c['amounts'][v]['delta']) for v in CURRENCIES],transition(11),transition(19),self.tr('yes') if c['same'] else ''),tags=(c['kind'],))
+            def transition(old_column, new_column):
+                old = described(c['old'], old_column)
+                new = described(c['new'], new_column)
+                return old + ' → ' + new if c['old'] and c['new'] and old != new else new if c['new'] else old
+            self.tree.insert('','end',iid=str(i),values=(self.tr('kind.'+c['kind']),c['job'],c['project'],c['team'],c['brand'],*[display(c['amounts'][v]['delta']) for v in CURRENCIES],transition(11,11),transition(dates['old'],dates['new']),self.tr('yes') if c['same'] else ''),tags=(c['kind'],))
         if self.shown:self.tree.selection_set('0');self.details()
     def sort(self,column):
         if column in ('rmb','usd','eur'):self.shown.sort(key=lambda c:(c['amounts'][column.upper()]['delta'] is None,-abs(c['amounts'][column.upper()]['delta'] or 0)))
@@ -114,11 +127,12 @@ class App:
         selection=self.tree.selection()
         if not selection:return
         c=self.shown[int(selection[0])];tr=self.tr;lines=[c['job']+' / '+c['project'],tr('groupNote'),'']
+        dates = self.result.date_columns
         for currency in CURRENCIES:
             a=c['amounts'][currency];lines.append(currency+': '+a['old']['text']+' → '+a['new']['text']+'   Δ '+display(a['delta']))
-        lines.extend([tr('oldStatus')+': '+described(c['old'],11),tr('newStatus')+': '+described(c['new'],11),tr('oldDate')+': '+described(c['old'],19),tr('newDate')+': '+described(c['new'],19),'',tr('sourceRows')])
+        lines.extend([tr('oldStatus')+': '+described(c['old'],11),tr('newStatus')+': '+described(c['new'],11),tr('oldDate')+': '+described(c['old'],dates['old']),tr('newDate')+': '+described(c['new'],dates['new']),'',tr('sourceRows')])
         for side in ('old','new'):
-            for r in c[side]:lines.append(f"{tr(side)} / {tr('row')} {r.row} / {text(r.values[3])} / {text(r.values[6])} / {text(r.values[11])} / {text(r.values[19])} / RMB {text(r.values[13])} / USD {text(r.values[14])} / EUR {text(r.values[15])}")
+            for r in c[side]:lines.append(f"{tr(side)} / {tr('row')} {r.row} / {text(r.values[3])} / {text(r.values[6])} / {text(r.values[11])} / {text(r.values[dates[side]])} / RMB {text(r.values[13])} / USD {text(r.values[14])} / EUR {text(r.values[15])}")
         self.detail_text.configure(state='normal');self.detail_text.delete('1.0','end');self.detail_text.insert('end','\n'.join(lines));self.detail_text.configure(state='disabled')
     def draw(self):
         cv=self.canvas;cv.delete('all');w=max(cv.winfo_width(),900);tr=self.tr
@@ -145,20 +159,20 @@ class App:
         if not path:return
         try:
             args=self.args()
-            if kind=='html':export_html(self.result,path,self.tr,**args,currency=self.currency.get())
-            else:export_csv(self.result,path,self.tr,**args)
+            if kind=='html':export_html(self.result,path,self.base_tr,**args,currency=self.currency.get())
+            else:export_csv(self.result,path,self.base_tr,**args)
             self.status.set(self.tr('saved',path=path))
         except Exception as e:messagebox.showerror(self.tr('title'),self.tr(e.key,**e.params) if isinstance(e,CompareError) else str(e))
     def finish_smoke(self):
         s=stats(self.scoped);self.show_same();same=len(self.shown);self.mode.set(self.tr('mode.all'));self.team.set(self.team_box['values'][1]);self.refresh();filtered=len(self.scoped);self.team.set(self.tr('all'));self.refresh();self.focus(self.scoped[0]);self.root.update_idletasks()
-        evidence={'version':VERSION,'summary':{k:str(v) for k,v in s.items()},'sameList':same,'teamFiltered':filtered,'detailVisible':self.views.select()==str(self.data_view),'formulaAbsent':'SUM(' not in self.detail_text.get('1.0','end'),'pickersSameRow':self.file_entries[0].winfo_rooty()==self.file_entries[1].winfo_rooty(),'htmlEnabled':str(self.html_button['state'])=='normal'}
+        evidence={'version':self.result.version,'summary':{k:str(v) for k,v in s.items()},'sameList':same,'teamFiltered':filtered,'detailVisible':self.views.select()==str(self.data_view),'formulaAbsent':'SUM(' not in self.detail_text.get('1.0','end'),'pickersSameRow':self.file_entries[0].winfo_rooty()==self.file_entries[1].winfo_rooty(),'htmlEnabled':str(self.html_button['state'])=='normal'}
         Path(self.smoke[2]).write_text(json.dumps(evidence,ensure_ascii=False,indent=2),encoding='utf-8');self.root.after(200,self.root.destroy)
 
 def main():
     parser=argparse.ArgumentParser();parser.add_argument('--lang',choices=('en','zh-CN'),default='zh-CN');parser.add_argument('--old');parser.add_argument('--new');parser.add_argument('--html');parser.add_argument('--csv');parser.add_argument('--summary');parser.add_argument('--team',default='');parser.add_argument('--brand',default='');parser.add_argument('--mode',choices=MODES,default='changed');parser.add_argument('--currency',choices=CURRENCIES,default='EUR');parser.add_argument('--preview',nargs=2);parser.add_argument('--ui-smoke-test',nargs=3)
     parser.add_argument('--history-db');parser.add_argument('--history-import',nargs='*');parser.add_argument('--replace-week',action='append',default=[]);parser.add_argument('--history-html');parser.add_argument('--history-csv');parser.add_argument('--history-summary');parser.add_argument('--history-start');parser.add_argument('--history-end');parser.add_argument('--history-all',action='store_true');parser.add_argument('--history-ui-smoke-test')
     args=parser.parse_args()
-    from weekly_continuity import HistoryStore,HistoryTranslator,ImportRequest,prepare_snapshot,parse_period,monday,build_timeline,export_timeline_csv,export_timeline_html,VERSION as APP_VERSION
+    from weekly_continuity import HistoryStore,HistoryTranslator,ImportRequest,prepare_snapshot,parse_period,monday,build_timeline,export_timeline_csv,export_timeline_html
     database=Path(args.history_db).resolve() if args.history_db else ((Path(sys.executable).parent/'history/continuity.sqlite') if getattr(sys,'frozen',False) else ROOT/'.local/continuity-history/continuity.sqlite')
     if args.history_import is not None or args.history_html or args.history_csv or args.history_summary:
         try:
@@ -182,7 +196,7 @@ def main():
             result=compare(args.old,args.new);tr=Translator(ROOT,args.lang).tr
             if args.html:export_html(result,args.html,tr,args.team,args.brand,args.mode,currency=args.currency)
             if args.csv:export_csv(result,args.csv,tr,args.team,args.brand,args.mode)
-            if args.summary:write_output(args.summary,json.dumps({'version':VERSION,'oldRows':len(result.old.rows),'newRows':len(result.new.rows),'stats':stats(result.changes(args.team,args.brand),args.currency)},ensure_ascii=False,indent=2,default=str),result,'.json')
+            if args.summary:write_output(args.summary,json.dumps({'version':result.version,'oldRows':len(result.old.rows),'newRows':len(result.new.rows),'stats':stats(result.changes(args.team,args.brand),args.currency)},ensure_ascii=False,indent=2,default=str),result,'.json')
             return 0
         except Exception as error:
             if sys.stderr:print(str(error),file=sys.stderr)

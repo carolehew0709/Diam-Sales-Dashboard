@@ -11,22 +11,23 @@ from unittest.mock import patch
 from xml.sax.saxutils import escape
 import zipfile
 import shutil
+from openpyxl import Workbook
 
 ROOT=Path(__file__).resolve().parents[2]
 sys.path.insert(0,str(ROOT/'lib'))
 from weekly_order_comparison import Row,Source,Result,Translator,CompareError,compare,stats,visible,export_csv,export_html,report_payload
 
 
-def row(job='J1',project='Project',team='A',brand='B',status='Production',rmb=None,usd=10,eur=8,invoice=None):
+def row(job='J1',project='Project',team='A',brand='B',status='Production',rmb=None,usd=10,eur=8,invoice=None,order=None):
     values=[None]*24
-    for c,v in ((3,team),(4,job),(6,brand),(10,project),(11,status),(13,rmb),(14,usd),(15,eur),(19,invoice)):values[c]=v
+    for c,v in ((1,order),(3,team),(4,job),(6,brand),(10,project),(11,status),(13,rmb),(14,usd),(15,eur),(19,invoice)):values[c]=v
     return values
 
 
 def workbook(path,rows,sheet='on-going-DDC',bad_header=False):
     from openpyxl.utils import get_column_letter
     headers=[None]*24
-    for c,v in ((3,'Team'),(4,'Job Number'),(6,'Brand'),(10,'Project Name'),(11,'Quotation \nStatus'),(13,'Order Amount (RMB)'),(14,'Order Amount (USD)'),(15,'Order Amount (EUR)'),(19,'Invoice Date')):headers[c]=v
+    for c,v in ((1,'Order Date'),(3,'Team'),(4,'Job Number'),(6,'Brand'),(10,'Project Name'),(11,'Quotation \nStatus'),(13,'Order Amount (RMB)'),(14,'Order Amount (USD)'),(15,'Order Amount (EUR)'),(19,'Invoice Date')):headers[c]=v
     if bad_header:headers[19]='Unexpected'
     def cell(r,c,value):
         if value is None:return ''
@@ -43,6 +44,16 @@ def workbook(path,rows,sheet='on-going-DDC',bad_header=False):
         z.writestr('xl/_rels/workbook.xml.rels','<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships"><Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/blank.xml"/><Relationship Id="rId2" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/worksheet" Target="worksheets/sheet1.xml"/></Relationships>')
         z.writestr('xl/worksheets/blank.xml','<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData/></worksheet>')
         z.writestr('xl/worksheets/sheet1.xml','<worksheet xmlns="http://schemas.openxmlformats.org/spreadsheetml/2006/main"><sheetData>'+xml+'</sheetData></worksheet>')
+
+
+def opportunity_workbook(path, rows, job_header='项目编号.项目编码'):
+    book = Workbook()
+    sheet = book.create_sheet('列表数据')
+    sheet.append(['商机名称', job_header, '预计成交日期', '结算币别.名称', '预计收入', '销售阶段', '销售组', '品牌.名称'])
+    for values in rows:
+        sheet.append(values)
+    book.save(path)
+    book.close()
 
 
 class OrderTests(unittest.TestCase):
@@ -83,6 +94,49 @@ class OrderTests(unittest.TestCase):
         c=self.pair([a],[b]).changes()[0];self.assertEqual(c['kind'],'unchanged')
     def test_missing_date_not_taken_from_neighbor(self):
         a=row();b=row();a[18]='2026-01-01';b[18]='2026-02-01';self.assertEqual(self.pair([a],[b]).changes()[0]['kind'],'unchanged')
+    def test_opportunity_export_maps_dates_currencies_and_duplicate_projects(self):
+        previous = self.folder / '导出列表_商业机会.xlsx'
+        opportunity_workbook(previous, [
+            ('Project A', 'J1', '2026-11-12', '美元', 10, '报价', 'A', 'B'),
+            ('Project A', 'J1', '2026-11-12', '人民币', 21, '报价', 'A', 'B'),
+            ('Project B', 'J1', '2026-11-15', '欧元', 6, '生产', 'A', 'B'),
+        ])
+        workbook(self.b, [
+            row(project='Project A', status='Quotation', rmb=21, usd=11, eur=9, invoice='2026-12-01', order='2026-11-12'),
+            row(project='Project A', status='Quotation', rmb=0, usd=0, eur=3, invoice='2026-12-01', order='2026-11-12'),
+            row(project='Project B', status='生产', eur=6, invoice='2026-11-15', order='2026-11-16'),
+        ])
+        result = compare(previous, self.b)
+        self.assertEqual(result.old.sheet, '列表数据')
+        a, b = result.changes(team='A', brand='B')
+        self.assertEqual(a['flags'], ['14', 'status'])
+        self.assertEqual(a['amounts']['USD']['delta'], 1)
+        self.assertEqual(a['amounts']['RMB']['delta'], 0)
+        self.assertIsNone(a['amounts']['EUR']['delta'])
+        self.assertEqual(b['flags'], ['date'])
+        self.assertTrue(b['same'])
+        report = report_payload(result, self.tr)
+        self.assertEqual(report['dateColumns'], {'old': 19, 'new': 1})
+        self.assertEqual(report['oldRows'][0]['row'], 2)
+        self.assertEqual(report['oldRows'][0]['unreportedAmounts'], (13, 15))
+        target = self.folder / 'comparison.csv'
+        export_csv(result, target, self.tr)
+        with target.open(encoding='utf-8-sig', newline='') as stream:
+            rows = list(csv.DictReader(stream))
+        self.assertEqual(rows[0]['本周 Order Date'], '2026-11-12 × 2')
+        self.assertEqual(rows[1]['上周预计成交日期'], '2026-11-15')
+
+    def test_opportunity_import_alias_only_accepted_as_previous_file(self):
+        from weekly_continuity import prepare_snapshot
+        previous = self.folder / '导入列表.xlsx'
+        opportunity_workbook(previous, [('Project', 'J1', None, 'USD', None, None, 'A', 'B')], '项目编码')
+        workbook(self.b, [row()])
+        change = compare(previous, self.b).changes()[0]
+        self.assertIsNone(change['amounts']['USD']['delta'])
+        with self.assertRaises(CompareError):
+            compare(self.b, previous)
+        with self.assertRaises(CompareError):
+            prepare_snapshot(previous)
     def test_footer_not_a_project(self):
         footer=[None]*24;footer[15]=999999;result=self.pair([row(),footer],[row(),footer]);self.assertEqual(len(result.old.rows),1)
     def test_missing_cache_keeps_status_unknown(self):

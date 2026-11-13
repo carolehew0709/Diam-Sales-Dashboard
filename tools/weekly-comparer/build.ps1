@@ -1,7 +1,7 @@
 param([string]$Python = "python", [string]$OutputDirectory = "")
 $ErrorActionPreference = "Stop"
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot "../..")).Path
-if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repoRoot ".local/weekly-comparer-release-v3.1" }
+if (-not $OutputDirectory) { $OutputDirectory = Join-Path $repoRoot ".local/weekly-comparer-release-v3.2" }
 $buildDirectory = Join-Path $repoRoot ".local/weekly-comparer-build"
 $arguments = @(
     "-m", "PyInstaller", "--noconfirm", "--clean", "--onefile", "--windowed", "--noupx",

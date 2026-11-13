@@ -18,9 +18,9 @@ sys.path.insert(0,str(ROOT/'lib'))
 from weekly_order_comparison import Row,Source,Result,Translator,CompareError,compare,stats,visible,export_csv,export_html,report_payload
 
 
-def row(job='J1',project='Project',team='A',brand='B',status='Production',rmb=None,usd=10,eur=8,invoice=None,order=None):
+def row(job='J1',project='Project',team='A',brand='B',status='Production',rmb=None,usd=10,eur=8,invoice=None,order=None,pic=None,customer=None,entity=None):
     values=[None]*24
-    for c,v in ((1,order),(3,team),(4,job),(6,brand),(10,project),(11,status),(13,rmb),(14,usd),(15,eur),(19,invoice)):values[c]=v
+    for c,v in ((1,order),(2,pic),(3,team),(4,job),(5,customer),(6,brand),(8,entity),(10,project),(11,status),(13,rmb),(14,usd),(15,eur),(19,invoice)):values[c]=v
     return values
 
 
@@ -102,29 +102,54 @@ class OrderTests(unittest.TestCase):
             ('Project B', 'J1', '2026-11-15', '欧元', 6, '生产', 'A', 'B'),
         ])
         workbook(self.b, [
-            row(project='Project A', status='Quotation', rmb=21, usd=11, eur=9, invoice='2026-12-01', order='2026-11-12'),
-            row(project='Project A', status='Quotation', rmb=0, usd=0, eur=3, invoice='2026-12-01', order='2026-11-12'),
-            row(project='Project B', status='生产', eur=6, invoice='2026-11-15', order='2026-11-16'),
+            row(project='Project A', status='On going-Quotation', rmb=21, usd=11, eur=9, invoice='2026-11-12', order='2026-12-01',
+                pic='Owner A', customer='Customer A', entity='DDC'),
+            row(project='Project A', status='On going-Quotation', rmb=0, usd=0, eur=3, invoice='2026-11-12', order='2026-12-01',
+                pic='Owner B', customer='Customer A', entity='DEHK'),
+            row(project='Project B', status='Order-Production', eur=6, invoice='2026-11-16', order='2026-11-15'),
         ])
         result = compare(previous, self.b)
         self.assertEqual(result.old.sheet, '列表数据')
         a, b = result.changes(team='A', brand='B')
-        self.assertEqual(a['flags'], ['14', 'status'])
+        self.assertEqual(a['flags'], ['14'])
+        self.assertTrue(a['same'])
         self.assertEqual(a['amounts']['USD']['delta'], 1)
         self.assertEqual(a['amounts']['RMB']['delta'], 0)
         self.assertIsNone(a['amounts']['EUR']['delta'])
         self.assertEqual(b['flags'], ['date'])
         self.assertTrue(b['same'])
         report = report_payload(result, self.tr)
-        self.assertEqual(report['dateColumns'], {'old': 19, 'new': 1})
+        self.assertEqual(report['copy']['newDate'], '本周 Invoice Date')
         self.assertEqual(report['oldRows'][0]['row'], 2)
         self.assertEqual(report['oldRows'][0]['unreportedAmounts'], (13, 15))
         target = self.folder / 'comparison.csv'
         export_csv(result, target, self.tr)
         with target.open(encoding='utf-8-sig', newline='') as stream:
             rows = list(csv.DictReader(stream))
-        self.assertEqual(rows[0]['本周 Order Date'], '2026-11-12 × 2')
+        self.assertEqual(rows[0]['本周 Invoice Date'], '2026-11-12 × 2')
+        self.assertEqual(rows[0]['上周销售阶段'], '报价 × 2')
+        self.assertEqual(rows[0]['DDC/DEHK'], 'DDC / DEHK')
+        self.assertEqual(rows[0]['PIC'], 'Owner A / Owner B')
+        self.assertEqual(rows[0]['Customer / Group'], 'Customer A')
         self.assertEqual(rows[1]['上周预计成交日期'], '2026-11-15')
+
+    def test_bilingual_status_matches_preserve_row_counts_and_unmapped_statuses(self):
+        previous = [
+            row('J1', status='设计'), row('J1', status='生产'),
+            row('J2', status='打样'), row('J3', status='已完成'),
+            row('J4', status='打样'), row('J4', status='打样'),
+        ]
+        current = [
+            row('J1', status='Order-Porduction'), row('J1', status='On going-in design'),
+            row('J2', status='On going-On Prototype'), row('J3', status='Order-Done'),
+            row('J4', status='On going-On Prototype'),
+        ]
+        changes = {c['job']: c for c in self.pair(previous, current).changes()}
+        self.assertTrue(changes['J1']['same'])
+        self.assertTrue(changes['J2']['same'])
+        for job in ('J3', 'J4'):
+            self.assertFalse(changes[job]['same'])
+            self.assertIn('status', changes[job]['flags'])
 
     def test_opportunity_import_alias_only_accepted_as_previous_file(self):
         from weekly_continuity import prepare_snapshot

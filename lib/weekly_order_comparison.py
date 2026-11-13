@@ -16,18 +16,26 @@ import sys
 import openpyxl
 from weekly_comparison import CompareError, display, exact, number, safe_csv, write_output
 
-VERSION = '2.0.0'
-OPPORTUNITY_VERSION = '2.1.0'
+VERSION = '2.0.1'
+OPPORTUNITY_VERSION = '2.2.0'
 SHEET = 'on-going-DDC'
 CURRENCIES = ('RMB','USD','EUR')
 AMOUNT_COLUMNS = (13, 14, 15)
+PROJECT_EXPORT_COLUMNS = (('ddcDehk', 8), ('pic', 2), ('customerGroup', 5))
+PREVIOUS_STATUS_ALIASES = {
+    '设计': 'on going-in design',
+    '打样': 'on going-on prototype',
+    '报价': 'on going-quotation',
+    '生产': 'order-porduction',
+}
+PRODUCTION_VARIANTS = {'order-production': PREVIOUS_STATUS_ALIASES['生产']}
 OPPORTUNITY_FILENAME_MARKERS = ('导入列表', '导出列表')
 OPPORTUNITY_CURRENCIES = {
     '人民币': 13, 'rmb': 13, 'cny': 13,
     '美元': 14, 'usd': 14,
     '欧元': 15, 'eur': 15,
 }
-OPPORTUNITY_COPY = {'date', 'mode.date', 'oldDate', 'newDate', 'oldStatus',
+OPPORTUNITY_COPY = {'date', 'mode.date', 'oldDate', 'oldStatus',
                     'newStatus', 'scope', 'subtitle', 'amountNote'}
 EPSILON = Decimal('0.000001')
 
@@ -90,10 +98,6 @@ class Result:
     def issues(self): return self.old.issues+self.new.issues
 
     @property
-    def date_columns(self):
-        return {'old': 19, 'new': 1 if self.old.opportunity_export else 19}
-
-    @property
     def version(self):
         return OPPORTUNITY_VERSION if self.old.opportunity_export else VERSION
 
@@ -103,7 +107,6 @@ class Result:
         return lambda key, **params: tr('opportunity.' + key if key in OPPORTUNITY_COPY else key, **params)
 
     def changes(self,team='',brand='',search=''):
-        date_columns = self.date_columns
         grouped={}
         for side,source in (('old',self.old),('new',self.new)):
             for row in source.rows:
@@ -119,12 +122,13 @@ class Result:
             rows=group['new'] or group['old']
             if search and norm(search) not in norm(' '.join(str(r.values[c] or '') for r in group['old']+group['new'] for c in (3,4,6,10))): continue
             old,new=group['old'],group['new']
+            same_status = statuses_equal(old, new)
             flags=[]
             for c in AMOUNT_COLUMNS:
                 a,b=amount(old,c),amount(new,c)
                 if old and new and a['signature'] and not amounts_equal(a,b): flags.append(str(c))
-            if old and new and state_values(old,date_columns['old'])!=state_values(new,date_columns['new']): flags.append('date')
-            if old and new and state_values(old,11)!=state_values(new,11): flags.append('status')
+            if old and new and state_values(old,19)!=state_values(new,19): flags.append('date')
+            if old and new and not same_status: flags.append('status')
             if old and new and len(old)!=len(new): flags.append('rows')
             if group['review']: kind='review'
             elif not group['oldAll']: kind='added'
@@ -132,7 +136,7 @@ class Result:
             elif not old or not new: kind='scope'
             elif flags: kind='modified'
             else: kind='unchanged'
-            same=bool(old and new and not group['review'] and status_known(old) and status_known(new) and state_values(old,11)==state_values(new,11))
+            same=bool(old and new and not group['review'] and status_known(old) and status_known(new) and same_status)
             changes.append({**group,'job':text(rows[0].values[4]),'project':text(rows[0].values[10]),
                 'team':joined(rows,3),'brand':joined(rows,6),'kind':kind,'flags':flags,'same':same,
                 'amounts':{currency:{'old':amount(old,13+i),'new':amount(new,13+i),'delta':delta(old,new,13+i)} for i,currency in enumerate(CURRENCIES)}})
@@ -152,6 +156,23 @@ def described(rows,column):
 def state_values(rows,column):
     # Preserve multiplicity without inventing correspondence between duplicate lines.
     return sorted(canonical(r.values[column]) for r in rows)
+
+
+def statuses_equal(old, new):
+    previous, current = state_values(old, 11), state_values(new, 11)
+    if previous == current:
+        return True
+    aliases = PREVIOUS_STATUS_ALIASES
+    # The two English production spellings are interchangeable when comparing with 生产.
+    if '生产' in previous:
+        aliases = {**aliases, **PRODUCTION_VARIANTS}
+        current = sorted(PRODUCTION_VARIANTS.get(status, status) for status in current)
+    return sorted(aliases.get(status, status) for status in previous) == current
+
+
+def project_field(rows, column):
+    values = (r.values[column] for r in rows)
+    return ' / '.join(dict.fromkeys(text(value).replace('\n', ' ').strip() for value in values if norm(value)))
 
 
 def status_known(rows):
@@ -244,7 +265,7 @@ def load_opportunity_export(path, formulas, cached):
     return Source(path, rows, issues, sheet.title, opportunity_export=True)
 
 
-def load_source(path,side,payload=None,*,order_date=False):
+def load_source(path,side,payload=None):
     path=Path(path).resolve()
     if not path.is_file() or path.suffix.lower()!='.xlsx': raise CompareError('errorFile',file=path.name)
     books=[]
@@ -260,10 +281,8 @@ def load_source(path,side,payload=None,*,order_date=False):
         expected={3:'team',4:'job number',6:'brand',10:'project name',11:'quotation status',19:'invoice date'}
         if any(norm(sv.cell(2,c+1).value)!=label for c,label in expected.items()): raise CompareError('errorTemplate',file=path.name)
         if any(currency.casefold() not in norm(sv.cell(2,c+14).value) for c,currency in enumerate(CURRENCIES)): raise CompareError('errorTemplate',file=path.name)
-        if order_date and norm(sv['B2'].value) != 'order date':
-            raise CompareError('opportunity.errorOrderDate', file=path.name)
         rows=[];issues=[]
-        compared_columns = (11, *AMOUNT_COLUMNS, 1 if order_date else 19)
+        compared_columns = (11, *AMOUNT_COLUMNS, 19)
         for r in range(3,sf.max_row+1):
             values=tuple(sv.cell(r,c).value for c in range(1,25))
             if values[4] is None and values[10] is None: continue # blank, notes or footer total
@@ -283,7 +302,7 @@ def load_source(path,side,payload=None,*,order_date=False):
 def compare(old_path,new_path):
     if Path(old_path).resolve()==Path(new_path).resolve(): raise CompareError('errorSame')
     old = load_source(old_path, 'old')
-    new = load_source(new_path, 'new', order_date=old.opportunity_export)
+    new = load_source(new_path, 'new')
     counts=[Counter(row.job for row in source.rows if row.job) for source in (old,new)]
     duplicate={job for count in counts for job,n in count.items() if n>1}
     for side,source in (('old',old),('new',new)):
@@ -310,17 +329,17 @@ def visible(change,mode):
 
 def export_csv(result,path,tr,team='',brand='',mode='all',search=''):
     tr = result.translator(tr)
-    dates = result.date_columns
     stream=io.StringIO(newline='');writer=csv.writer(stream)
     keys=['team','brand','job','project','kind','same','oldStatus','newStatus','oldDate','newDate']
-    writer.writerow([tr(k) for k in keys]+[f'{tr(side)} {currency}' for currency in CURRENCIES for side in ('old','new','delta')]+[tr('oldRows'),tr('newRows')])
+    writer.writerow([tr(k) for k in keys]+[f'{tr(side)} {currency}' for currency in CURRENCIES for side in ('old','new','delta')]+[tr('oldRows'),tr('newRows')]+[tr(key) for key, _ in PROJECT_EXPORT_COLUMNS])
     for c in result.changes(team,brand,search):
         if not visible(c,mode): continue
-        values=[c['team'],c['brand'],c['job'],c['project'],tr('kind.'+c['kind']),tr('yes') if c['same'] else tr('no'),described(c['old'],11),described(c['new'],11),described(c['old'],dates['old']),described(c['new'],dates['new'])]
+        values=[c['team'],c['brand'],c['job'],c['project'],tr('kind.'+c['kind']),tr('yes') if c['same'] else tr('no'),described(c['old'],11),described(c['new'],11),described(c['old'],19),described(c['new'],19)]
         for currency in CURRENCIES:
             m=c['amounts'][currency]
             values.extend([m[s]['total'] if m[s]['total'] is not None else m[s]['text'] for s in ('old','new')]+[m['delta']])
         values.extend([', '.join(str(r.row) for r in c[s]) for s in ('old','new')])
+        values.extend(project_field(c['new'] or c['old'], column) for _, column in PROJECT_EXPORT_COLUMNS)
         writer.writerow([safe_csv(v) for v in values])
     write_output(path,stream.getvalue(),result,'.csv')
 
@@ -335,10 +354,12 @@ def report_payload(result,tr,team='',brand='',mode='changed',search='',currency=
         return data
     data = {'version':result.version,'sheet':SHEET,'old':result.old.path.name,'new':result.new.path.name,
             'duplicates':sorted(result.duplicate_jobs),'oldRows':[row(r) for r in result.old.rows],'newRows':[row(r) for r in result.new.rows],
+            'previousStatusAliases':PREVIOUS_STATUS_ALIASES,'productionVariants':PRODUCTION_VARIANTS,
+            'projectColumns':PROJECT_EXPORT_COLUMNS,
             'copy':{k:tr(k) for k in COPY_KEYS},'initial':{'team':team,'brand':brand,'mode':mode,'search':search,'currency':currency},
             'issues':[{**i,'message':tr(i['key'])} for i in result.issues]}
     if result.old.opportunity_export:
-        data.update(dateColumns=result.date_columns, oldSheet=result.old.sheet, newSheet=result.new.sheet)
+        data.update(oldSheet=result.old.sheet, newSheet=result.new.sheet)
     return data
 
 
@@ -347,6 +368,7 @@ COPY_KEYS=('title','subtitle','team','brand','job','project','kind','same','oldS
            'search','reset','yes','no','oldRows','newRows','summary','rankTitle','statusTitle','detail','sourceRows',
            'scope','sameNote','groupNote','amountNote','chooseProject','noRows','knownNet','notes','downloadCsv',
            'dataChanges','oldSource','newSource','projects','dataOnly','close','sourceSide','row','rawAmount',
+           *(key for key, _ in PROJECT_EXPORT_COLUMNS),
            *('mode.'+k for k in ('changed','modified','all','same','amount','date','status','added','removed','review')),
            *('kind.'+k for k in ('added','removed','modified','unchanged','review','scope')))
 

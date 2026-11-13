@@ -8,7 +8,7 @@ ROOT=Path(getattr(sys,'_MEIPASS',Path(__file__).resolve().parents[2]))
 if not getattr(sys,'frozen',False):sys.path.insert(0,str(ROOT/'lib'))
 from weekly_order_comparison import VERSION,CURRENCIES,Translator,CompareError,compare,stats,visible,joined,described,display,text,exact,export_csv,export_html,write_output
 MODES=('changed','modified','same','status','date','amount','added','removed','review','all')
-APP_VERSION = '3.1.0'
+APP_VERSION = '3.2.0'
 
 class App:
     def __init__(self,root,language='zh-CN',smoke=None,parent=None):
@@ -107,13 +107,12 @@ class App:
         self.draw();self.status.set(self.tr('loaded',old=len(self.result.old.rows),new=len(self.result.new.rows),count=len(self.shown),review=s['review']))
     def render_rows(self):
         self.tree.delete(*self.tree.get_children())
-        dates = self.result.date_columns
         for i,c in enumerate(self.shown):
-            def transition(old_column, new_column):
-                old = described(c['old'], old_column)
-                new = described(c['new'], new_column)
-                return old + ' → ' + new if c['old'] and c['new'] and old != new else new if c['new'] else old
-            self.tree.insert('','end',iid=str(i),values=(self.tr('kind.'+c['kind']),c['job'],c['project'],c['team'],c['brand'],*[display(c['amounts'][v]['delta']) for v in CURRENCIES],transition(11,11),transition(dates['old'],dates['new']),self.tr('yes') if c['same'] else ''),tags=(c['kind'],))
+            def transition(column, separator=' → '):
+                old = described(c['old'], column)
+                new = described(c['new'], column)
+                return old + separator + new if c['old'] and c['new'] and old != new else new if c['new'] else old
+            self.tree.insert('','end',iid=str(i),values=(self.tr('kind.'+c['kind']),c['job'],c['project'],c['team'],c['brand'],*[display(c['amounts'][v]['delta']) for v in CURRENCIES],transition(11, ' = ' if c['same'] else ' → '),transition(19),self.tr('yes') if c['same'] else ''),tags=(c['kind'],))
         if self.shown:self.tree.selection_set('0');self.details()
     def sort(self,column):
         if column in ('rmb','usd','eur'):self.shown.sort(key=lambda c:(c['amounts'][column.upper()]['delta'] is None,-abs(c['amounts'][column.upper()]['delta'] or 0)))
@@ -127,12 +126,11 @@ class App:
         selection=self.tree.selection()
         if not selection:return
         c=self.shown[int(selection[0])];tr=self.tr;lines=[c['job']+' / '+c['project'],tr('groupNote'),'']
-        dates = self.result.date_columns
         for currency in CURRENCIES:
             a=c['amounts'][currency];lines.append(currency+': '+a['old']['text']+' → '+a['new']['text']+'   Δ '+display(a['delta']))
-        lines.extend([tr('oldStatus')+': '+described(c['old'],11),tr('newStatus')+': '+described(c['new'],11),tr('oldDate')+': '+described(c['old'],dates['old']),tr('newDate')+': '+described(c['new'],dates['new']),'',tr('sourceRows')])
+        lines.extend([tr('oldStatus')+': '+described(c['old'],11),tr('newStatus')+': '+described(c['new'],11),tr('oldDate')+': '+described(c['old'],19),tr('newDate')+': '+described(c['new'],19),'',tr('sourceRows')])
         for side in ('old','new'):
-            for r in c[side]:lines.append(f"{tr(side)} / {tr('row')} {r.row} / {text(r.values[3])} / {text(r.values[6])} / {text(r.values[11])} / {text(r.values[dates[side]])} / RMB {text(r.values[13])} / USD {text(r.values[14])} / EUR {text(r.values[15])}")
+            for r in c[side]:lines.append(f"{tr(side)} / {tr('row')} {r.row} / {text(r.values[3])} / {text(r.values[6])} / {text(r.values[11])} / {text(r.values[19])} / RMB {text(r.values[13])} / USD {text(r.values[14])} / EUR {text(r.values[15])}")
         self.detail_text.configure(state='normal');self.detail_text.delete('1.0','end');self.detail_text.insert('end','\n'.join(lines));self.detail_text.configure(state='disabled')
     def draw(self):
         cv=self.canvas;cv.delete('all');w=max(cv.winfo_width(),900);tr=self.tr

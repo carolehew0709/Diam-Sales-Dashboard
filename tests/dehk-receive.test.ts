@@ -302,3 +302,70 @@ test("signed EUR balances are preserved and matched repeated invoice lines are n
     500,
   );
 });
+
+test("revised DEHK classifications join to the full ledger while current-month rows retain their own team", () => {
+  const book = fixture();
+  const name = "NEW Aging 20261031";
+  const classified = XLSX.utils.aoa_to_sheet([
+    ["Excluded October Invoices", ...Array(15).fill(null), "2026-10-31"],
+    [
+      "Date",
+      "Invoice Number",
+      "Customer Group",
+      "Customer修改",
+      "Customer",
+      "Sales Type",
+      "Sub-Customer",
+      "Project",
+      "Quantity",
+      "Amount(EUR)",
+      "Amount(USD)",
+      "Amount(HKD)",
+      "Amount(CNY)",
+      "Divers in EUR",
+      "Job No.",
+      "Terms",
+      "Overdue",
+      "Aging",
+      "Sale Team",
+    ],
+    [
+      "2026-08-31",
+      "INV-OLD",
+      "Portfolio A",
+      "New customer",
+      "New customer",
+      "Group",
+      "Legal A",
+      "Item",
+      1,
+      100,
+      null,
+      null,
+      null,
+      100,
+      "Job A",
+      30,
+      999,
+      ">120days",
+      "Revised team",
+    ],
+    [],
+    ["Group", 0, null, null, 100, null, 100],
+    ["External", 200, null, null, 0, null, 200],
+  ]);
+  classified.N4 = { t: "n", f: "SUM(N3:N3)", v: 100 };
+  book.Sheets[name] = classified;
+  const result = parse(book);
+  assert.deepEqual(errors(book), []);
+  const [prior, current] = result.records;
+  assert.equal(prior.customer, "Test Group");
+  assert.equal(prior.customerGroup, "Portfolio A");
+  assert.equal(prior.salesTeam, "Revised team");
+  assert.deepEqual(prior.classificationSource, { sheet: name, row: 3 });
+  assert.equal(current.customerGroup, undefined);
+  assert.equal(current.salesTeam, "Team B");
+  assert.equal(prior.amount + current.amount, 300);
+  classified.N3.v = 99;
+  assert.ok(errors(book).length);
+});

@@ -1,6 +1,7 @@
 import { entities, matchesRegion } from "./entities";
 import { canView } from "./permissions";
 import { teamName } from "./sales-teams";
+import { teamReportingName } from "./team-actuals";
 import type { Store, User } from "./types";
 import type {
   AgingBucket,
@@ -65,6 +66,7 @@ export function receivablesFiltersFrom(url: URL): ReceivablesFilters {
     bu: p.get("bu") ?? "all",
     salesTeam: p.get("salesTeam") ?? "all",
     customer: p.get("customer") ?? "all",
+    sourceCustomerGroup: p.get("sourceCustomerGroup") || undefined,
     customerGroup:
       p.get("customerGroup") === "top10"
         ? "top10"
@@ -84,6 +86,16 @@ export function receivablesFiltersFrom(url: URL): ReceivablesFilters {
 }
 const customerKey = (value: string) =>
   value.replace(/\s+/g, " ").trim().toLowerCase();
+function arTeamName(value: string, state: Store) {
+  if (teamName(value) === "预收") return "";
+  const name = teamReportingName(
+    teamName(value) === "BD Team" ? "BD" : value,
+    state.teamActualData,
+  );
+  if (/^panny team-[ls]$/i.test(name)) return "Panny Team";
+  if (/^lynn-team$/i.test(name)) return "Lynn Team";
+  return name;
+}
 export function getReceivables(
   state: Store,
   user: User,
@@ -114,9 +126,15 @@ export function getReceivables(
   }
   const records = permitted.map((r) => {
     const types = classification.get(customerKey(r.customer));
-    return r.category !== "invoice" && types?.size === 1
-      ? { ...r, customerType: [...types][0] }
-      : r;
+    return {
+      ...r,
+      sourceSalesTeam: r.salesTeam,
+      salesTeam: arTeamName(r.salesTeam, state),
+      customerType:
+        r.category !== "invoice" && types?.size === 1
+          ? [...types][0]
+          : r.customerType,
+    };
   });
   const context = records.filter(
     (r) =>
@@ -141,12 +159,31 @@ export function getReceivables(
       r.category === "invoice" &&
       (filters.aging === "all" || r.aging === filters.aging),
   );
+  const sourceCustomerGroups = [
+    ...new Set(
+      records
+        .filter(
+          (r) =>
+            r.category === "invoice" &&
+            (filters.region === "China" || filters.region === "APAC") &&
+            (filters.bu === "all" ||
+              allowed.some(
+                (e) => e.id === r.entityId && e.code === filters.bu,
+              )),
+        )
+        .map((r) => r.customerGroup)
+        .filter((value): value is string => !!value),
+    ),
+  ].sort((a, b) => a.localeCompare(b));
+  const groupedInvoices = filters.sourceCustomerGroup
+    ? invoices.filter((r) => r.customerGroup === filters.sourceCustomerGroup)
+    : invoices;
   // Rank independently within each source currency; never assume exchange rates.
   const grouped = new Map<
     string,
     { customer: string; currency: string; amount: number; overdue: number }
   >();
-  for (const r of invoices) {
+  for (const r of groupedInvoices) {
     const key = `${r.currency}:${r.customer}`;
     const item = grouped.get(key) ?? {
       customer: r.customer,
@@ -199,7 +236,7 @@ export function getReceivables(
   const customerMatch = (r: ReceivableRecord) =>
     inCohort(r) &&
     (filters.customer === "all" || r.customer === filters.customer);
-  const rows = invoices.filter(customerMatch);
+  const rows = groupedInvoices.filter(customerMatch);
   // Aging applies to invoices only. BU never filters the shared receipt pool.
   const payments = scope.filter(
     (r) => r.category !== "invoice" && customerMatch(r),
@@ -297,11 +334,17 @@ export function getReceivables(
     latestReceiptDate,
     customers: [
       ...new Set(
-        [...invoices, ...scope.filter((r) => r.category !== "invoice")]
+        [
+          ...groupedInvoices,
+          ...scope.filter(
+            (r) => !filters.sourceCustomerGroup && r.category !== "invoice",
+          ),
+        ]
           .filter(inCohort)
           .map((r) => r.customer),
       ),
     ].sort(),
+    sourceCustomerGroups,
     salesTeams: [...new Set(records.map((r) => teamName(r.salesTeam)))].sort(),
     ranking: ranked.filter((r) =>
       rows.some(

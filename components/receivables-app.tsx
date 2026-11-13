@@ -28,7 +28,10 @@ export function ReceivablesApp() {
   useDataReveal(root, data, ".ar-kpi-card, .ar-chart-grid > .panel");
   const [invoicePage, setInvoicePage] = useState(0);
   const query = useMemo(
-    () => new URLSearchParams(Object.entries(filters)).toString(),
+    () =>
+      new URLSearchParams(
+        Object.entries(filters).filter(([, value]) => value !== undefined),
+      ).toString(),
     [filters],
   );
   const pending = loading || renderPending || query !== appliedQuery;
@@ -75,16 +78,21 @@ export function ReceivablesApp() {
   ) =>
     setFilters({
       ...filters,
-      [key]: value,
+      [key]:
+        key === "sourceCustomerGroup" && value === "all" ? undefined : value,
       ...([
         "region",
         "bu",
         "salesTeam",
         "customerGroup",
+        "sourceCustomerGroup",
         "salesType",
         "aging",
       ].includes(key)
         ? { customer: "all" }
+        : {}),
+      ...(["region", "bu"].includes(key)
+        ? { sourceCustomerGroup: undefined }
         : {}),
     });
   const field = (
@@ -96,7 +104,7 @@ export function ReceivablesApp() {
       <label htmlFor={`ar-${key}`}>{label}</label>
       <select
         id={`ar-${key}`}
-        value={filters[key]}
+        value={filters[key] ?? "all"}
         disabled={!data}
         onChange={(e) => select(key, e.target.value as never)}
       >
@@ -153,7 +161,16 @@ export function ReceivablesApp() {
             label: team(t),
           })),
         ])}
-        {field("customerGroup", tr("ar.customerGroup"), [
+        {data?.sourceCustomerGroups.length || filters.sourceCustomerGroup
+          ? field("sourceCustomerGroup", tr("ar.customerGroup"), [
+              all,
+              ...(data?.sourceCustomerGroups ?? []).map((value) => ({
+                value,
+                label: value,
+              })),
+            ])
+          : null}
+        {field("customerGroup", tr("ar.customerRanking"), [
           all,
           { value: "top10", label: tr("ar.top10") },
           { value: "other", label: tr("ar.other") },
@@ -234,6 +251,9 @@ export function ReceivablesApp() {
                 data.filters.customer === "all"
                   ? tr("ar.allCustomers")
                   : data.filters.customer,
+                ...(data.filters.sourceCustomerGroup
+                  ? [data.filters.sourceCustomerGroup]
+                  : []),
                 data.filters.customerGroup === "all"
                   ? tr("ar.allGroups")
                   : tr(
@@ -436,6 +456,11 @@ export function ReceivablesApp() {
                         <td>{row.invoiceNumber}</td>
                         <td>
                           {row.customer}
+                          {row.customerGroup && (
+                            <small>
+                              {tr("ar.customerGroup")}: {row.customerGroup}
+                            </small>
+                          )}
                           <small>{row.subCustomer}</small>
                         </td>
                         <td>{team(row.salesTeam)}</td>

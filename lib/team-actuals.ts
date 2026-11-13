@@ -1,6 +1,21 @@
 import type { Store, Filters, User, Snapshot } from "./types";
 import { entities, matchesRegion } from "./entities";
 import { canView } from "./permissions";
+
+export function teamReportingName(
+  value: string | undefined,
+  data?: Store["teamActualData"],
+) {
+  const name = value?.replace(/\s+/g, " ").trim() ?? "";
+  const key =
+    name === "LVMH+Exclusive Team"
+      ? "LVMH Team"
+      : name === "BD-Trading"
+        ? "BD"
+        : name;
+  return data && Object.hasOwn(data.mappings, key) ? data.mappings[key] : name;
+}
+
 /** Rename reporting copies only, preserving raw weekly and retained-source evidence. */
 export function teamNamesState(state: Store): Store {
   const data = state.teamActualData;
@@ -8,15 +23,10 @@ export function teamNamesState(state: Store): Store {
   const rename = (lines: Store["lines"]) =>
     lines.map((l) => {
       if (!["dhk", "ddc"].includes(l.entityId)) return l;
-      const name = l.salesTeam?.replace(/\s+/g, " ").trim() ?? "";
-      const key =
-        name === "LVMH+Exclusive Team"
-          ? "LVMH Team"
-          : name === "BD-Trading"
-            ? "BD"
-            : name;
-      const mapped = data.mappings[key];
-      return mapped ? { ...l, salesTeam: mapped } : l;
+      const name = teamReportingName(l.salesTeam, data);
+      return name !== (l.salesTeam ?? "").replace(/\s+/g, " ").trim()
+        ? { ...l, salesTeam: name }
+        : l;
     });
   return {
     ...state,

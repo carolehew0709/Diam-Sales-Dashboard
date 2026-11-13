@@ -81,6 +81,99 @@ test("DDC ledger rejects foreign organization/currency/missing balance rather th
   assert.equal(p.records[0].aging, "not-due");
   assert.equal(p.records[0].amount, -2);
 });
+test("DDC supplemental groups and teams match the ledger and preserve uncovered signed balances", () => {
+  const wb = X.read(book(), { type: "buffer" });
+  X.utils.sheet_add_aoa(
+    wb.Sheets.sheet1,
+    [
+      [
+        null,
+        null,
+        "迪亚姆展示设备（昆山）有限公司",
+        null,
+        null,
+        "Other",
+        "欧元",
+        null,
+        null,
+        "INV-2",
+        "2026-09-01",
+        "2026-10-01",
+        30,
+        null,
+        null,
+        null,
+        -42,
+        "Prior team",
+      ],
+    ],
+    { origin: "A3" },
+  );
+  const classifications = X.utils.aoa_to_sheet([
+    [
+      "序号",
+      "合计列",
+      "结算组织",
+      "往来类型",
+      "往来单位编码",
+      "往来单位名称",
+      "Customer Group",
+      "币种",
+      "数据范围",
+      "收款条件",
+      "单据编号",
+      "业务日期",
+      "最后到期日",
+      "逾期天数",
+      "即将到期天数",
+      "记账日期",
+      "应收金额",
+      "余额",
+      "Sales Team",
+    ],
+    [
+      null,
+      null,
+      "迪亚姆展示设备（昆山）有限公司",
+      null,
+      null,
+      "Client",
+      "Portfolio A",
+      "人民币",
+      null,
+      null,
+      "INV-1",
+      "2026-09-01",
+      "2026-10-01",
+      30,
+      null,
+      null,
+      null,
+      123,
+      "New team",
+    ],
+  ]);
+  X.utils.book_append_sheet(wb, classifications, "Classified details");
+  const run = () =>
+    parseDdcAging(
+      X.write(wb, { type: "buffer", bookType: "xlsx" }),
+      "DDC-20261031.xlsx",
+    );
+  const [classified, other] = run().records;
+  assert.equal(classified.customerGroup, "Portfolio A");
+  assert.equal(classified.salesTeam, "New team");
+  assert.deepEqual(classified.classificationSource, {
+    sheet: "Classified details",
+    row: 2,
+  });
+  assert.equal(other.amount, -42);
+  assert.equal(other.currency, "EUR");
+  assert.equal(other.customerGroup, undefined);
+  classifications.R2.v = 124;
+  assert.throws(run, /does not uniquely reconcile/);
+  wb.SheetNames = ["Classified details"];
+  assert.throws(run, /full invoice ledger/);
+});
 test("scoped DDC publication preserves DEHK invoices and shared receipts", async () => {
   const fs = await import("node:fs/promises"),
     os = await import("node:os"),

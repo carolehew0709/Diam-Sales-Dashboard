@@ -59,7 +59,9 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
     aging = book.Sheets[agingName];
   const suffix = agingName.slice(-8),
     sourceDate = `${suffix.slice(0, 4)}-${suffix.slice(4, 6)}-${suffix.slice(6)}`;
-  const cutoff = excelDate(aging.O1?.v);
+  const grouped = header(aging.C2?.v) === "customergroup";
+  const cutoffCell = grouped ? "Q1" : "O1";
+  const cutoff = excelDate(aging[cutoffCell]?.v);
   const stamp = Date.parse(sourceDate + "T00:00:00Z");
   if (
     !cutoff ||
@@ -69,7 +71,7 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
     new Date(stamp + 86400000).getUTCDate() !== 1
   ) {
     error(
-      "DEHK receive status: dated sheet and O1 must agree on a valid month-end cutoff",
+      `DEHK receive status: dated sheet and ${cutoffCell} must agree on a valid month-end cutoff`,
     );
     return finish();
   }
@@ -121,18 +123,38 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
     12: "jobno",
     13: "salesteam",
   });
-  checkHeaders(aging, agingName, 1, {
-    0: "date",
-    1: "invoicenumber",
-    2: "customer",
-    3: "subcustomer",
-    10: "diversineur",
-    11: "jobno",
-    12: "salesteam",
-    13: "terms",
-    14: "overdue",
-    15: "aging",
-  });
+  checkHeaders(
+    aging,
+    agingName,
+    1,
+    grouped
+      ? {
+          0: "date",
+          1: "invoicenumber",
+          2: "customergroup",
+          4: "customer",
+          5: "salestype",
+          6: "subcustomer",
+          13: "diversineur",
+          14: "jobno",
+          15: "terms",
+          16: "overdue",
+          17: "aging",
+          18: "saleteam",
+        }
+      : {
+          0: "date",
+          1: "invoicenumber",
+          2: "customer",
+          3: "subcustomer",
+          10: "diversineur",
+          11: "jobno",
+          12: "salesteam",
+          13: "terms",
+          14: "overdue",
+          15: "aging",
+        },
+  );
   checkHeaders(current, currentName, 0, {
     0: "date",
     1: "invoicenumber",
@@ -144,8 +166,7 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
     13: "jobno",
     14: "salesteam",
   });
-  if (aging.O1?.t === "e" || (aging.O1?.f && aging.O1.v == null))
-    error(`${agingName}!O1: invalid reporting date cache`);
+  validCell(aging, agingName, 0, XLSX.utils.decode_cell(cutoffCell).c);
   if (findings.length) return finish();
 
   type Line = {
@@ -158,6 +179,7 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
     terms: number;
     job: string;
     team: string;
+    customerGroup?: string;
     type?: "External" | "Group";
     note: string;
   };
@@ -171,6 +193,7 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
       terms: number;
       job: number;
       team: number;
+      group?: number;
       type?: number;
       note?: number;
     },
@@ -233,6 +256,8 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
         terms,
         job: text(get(cols.job)),
         team: text(get(cols.team)),
+        customerGroup:
+          cols.group === undefined ? undefined : text(get(cols.group)),
         type: kind as Line["type"],
         note: cols.note === undefined ? "" : text(get(cols.note)),
       });
@@ -243,15 +268,31 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
       );
     return result;
   };
-  const old = read(agingName, 2, {
-    customer: 2,
-    sub: 3,
-    amount: 10,
-    terms: 13,
-    job: 11,
-    team: 12,
-    note: 18,
-  });
+  const old = read(
+    agingName,
+    2,
+    grouped
+      ? {
+          group: 2,
+          customer: 4,
+          type: 5,
+          sub: 6,
+          amount: 13,
+          job: 14,
+          terms: 15,
+          team: 18,
+          note: 23,
+        }
+      : {
+          customer: 2,
+          sub: 3,
+          amount: 10,
+          terms: 13,
+          job: 11,
+          team: 12,
+          note: 18,
+        },
+  );
   const added = read(currentName, 1, {
     customer: 3,
     sub: 5,
@@ -272,44 +313,61 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
   // The dated sheet explicitly maps customers to classifications in its summary.
   // Use the map only if unique and reconciled, never infer company ownership.
   const classes = new Map<string, Set<"External" | "Group">>();
-  for (
-    let r = 2;
-    r <= XLSX.utils.decode_range(aging["!ref"] ?? "A1").e.r;
-    r++
-  ) {
-    const kind = text(aging[`B${r + 1}`]?.v),
-      customer = text(aging[`C${r + 1}`]?.v);
-    if ((kind === "External" || kind === "Group") && customer) {
-      validCell(aging, agingName, r, 1);
-      validCell(aging, agingName, r, 2);
-      classes.set(
-        normalized(customer),
-        new Set([...(classes.get(normalized(customer)) ?? []), kind]),
-      );
+  if (!grouped)
+    for (
+      let r = 2;
+      r <= XLSX.utils.decode_range(aging["!ref"] ?? "A1").e.r;
+      r++
+    ) {
+      const kind = text(aging[`B${r + 1}`]?.v),
+        customer = text(aging[`C${r + 1}`]?.v);
+      if ((kind === "External" || kind === "Group") && customer) {
+        validCell(aging, agingName, r, 1);
+        validCell(aging, agingName, r, 2);
+        classes.set(
+          normalized(customer),
+          new Set([...(classes.get(normalized(customer)) ?? []), kind]),
+        );
+      }
     }
-  }
-  for (const line of old) {
-    const choices = classes.get(normalized(line.customer));
-    if (choices?.size !== 1)
-      error(
-        `${agingName} row ${line.row}: missing or conflicting source customer classification`,
-      );
-    else line.type = [...choices][0];
-  }
+  if (!grouped)
+    for (const line of old) {
+      const choices = classes.get(normalized(line.customer));
+      if (choices?.size !== 1)
+        error(
+          `${agingName} row ${line.row}: missing or conflicting source customer classification`,
+        );
+      else line.type = [...choices][0];
+    }
   const key = (line: Line) =>
     JSON.stringify([
       line.date,
       line.invoice,
-      normalized(line.customer),
+      ...(!grouped || line.date.slice(0, 7) === cutoff.slice(0, 7)
+        ? [normalized(line.customer), normalized(line.team)]
+        : []),
       normalized(line.sub),
       Number(line.amount.toFixed(6)),
       line.terms,
       normalized(line.job),
-      normalized(line.team),
     ]);
   const sourceLines = new Map<string, Line[]>();
   for (const line of [...old, ...added])
     sourceLines.set(key(line), [...(sourceLines.get(key(line)) ?? []), line]);
+  if (
+    grouped &&
+    [...sourceLines.values()].some(
+      (lines) =>
+        new Set(
+          lines.map((line) =>
+            JSON.stringify([line.customerGroup, line.team, line.type]),
+          ),
+        ).size > 1,
+    )
+  )
+    error(
+      `${agingName}: conflicting classifications for identical invoice detail`,
+    );
   for (const line of ledger) {
     const source = sourceLines.get(key(line))?.shift();
     if (!source) {
@@ -339,8 +397,12 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
       entityId: "dhk",
       category: "invoice",
       customer: line.customer,
+      ...(source.customerGroup ? { customerGroup: source.customerGroup } : {}),
+      ...(grouped && source.customerGroup
+        ? { classificationSource: { sheet: agingName, row: source.row } }
+        : {}),
       subCustomer: line.sub,
-      salesTeam: line.team,
+      salesTeam: grouped ? source.team : line.team,
       pic: "",
       invoiceNumber: line.invoice,
       invoiceDate: line.date,
@@ -365,15 +427,16 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
   if ([...sourceLines.values()].some((list) => list.length))
     error("DEHK receive status: source invoices are missing from ALL ledger");
   for (const kind of ["External", "Group"] as const) {
+    const [currentCol, priorCol, fullCol] = grouped ? [1, 4, 6] : [1, 2, 3];
     const controls = Array.from(
       { length: XLSX.utils.decode_range(aging["!ref"] ?? "A1").e.r + 1 },
       (_, r) => r,
     ).filter(
       (r) =>
         text(aging[`A${r + 1}`]?.v) === kind &&
-        numeric(aging[`B${r + 1}`]?.v) &&
-        numeric(aging[`C${r + 1}`]?.v) &&
-        numeric(aging[`D${r + 1}`]?.v),
+        [currentCol, priorCol, fullCol].every((c) =>
+          numeric(aging[XLSX.utils.encode_cell({ r, c })]?.v),
+        ),
     );
     if (controls.length !== 1) {
       error(
@@ -386,9 +449,9 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
         .filter((line) => line.type === kind)
         .reduce((n, line) => n + line.amount, 0);
     for (const [column, expected] of [
-      [1, sum(added)],
-      [2, sum(old)],
-      [3, sum(added) + sum(old)],
+      [currentCol, sum(added)],
+      [priorCol, sum(old)],
+      [fullCol, sum(added) + sum(old)],
     ]) {
       const actual = validCell(aging, agingName, controls[0], column);
       if (!numeric(actual) || Math.abs(actual - expected) > 0.005)
@@ -416,5 +479,10 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
     severity: "review",
     message: `DEHK only: ${records.length} complete invoices including ${currentName}; aging calculated from invoice date + terms at ${cutoff}. Old/forecast sheets are not added; subsequent settlement notes do not reduce the month-end balance. DDC and shared receipts remain unchanged.`,
   });
+  if (grouped)
+    findings.push({
+      severity: "info",
+      message: `DEHK Customer Group and updated Sales Team come from ${agingName} (${old.length} prior-month lines). ${currentName} retains its own team values and has no Customer Group column.`,
+    });
   return finish();
 }

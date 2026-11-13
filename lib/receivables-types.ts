@@ -14,6 +14,8 @@ export type ReceivableRecord = {
   entityId: string;
   category: "invoice" | ReceiptCategory;
   customer: string;
+  customerGroup?: string;
+  classificationSource?: { sheet: string; row: number };
   subCustomer: string;
   salesTeam: string;
   pic: string;
@@ -46,6 +48,7 @@ export type ReceivablesFilters = {
   bu: string;
   salesTeam: string;
   customerGroup: "all" | "top10" | "other";
+  sourceCustomerGroup?: string;
   customer: string;
   salesType: "all" | "external" | "group";
   aging: "all" | AgingBucket;

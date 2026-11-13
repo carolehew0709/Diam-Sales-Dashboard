@@ -394,7 +394,7 @@
   "ar.agingFilter": "到期／账龄",
   "ar.currency": "币种",
   "ar.currencyNote": "余额保留来源币种（EUR / USD / RMB），金额按币种分别显示；Top 10 按同币种发票应收余额排名。",
-  "ar.receiptNote": "未知／预收款不受 实体 或发票账龄筛选影响，也不自动抵减应收账款。",
+  "ar.receiptNote": "实体、客户分组和账龄只筛选发票。未知／预收款单独列示。",
   "ar.metric.ar": "应收总额",
   "ar.metric.due": "未到期金额",
   "ar.metric.overdue": "逾期金额",

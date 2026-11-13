@@ -394,7 +394,7 @@
   "ar.agingFilter": "Due / aging",
   "ar.currency": "Currency",
   "ar.currencyNote": "Balances retain their source currency (EUR / USD / RMB). Amounts are shown separately; Top 10 uses invoice AR within each currency.",
-  "ar.receiptNote": "Receipts are not filtered by Entity or invoice aging and are not deducted from AR.",
+  "ar.receiptNote": "Entity, Customer Group and aging apply only to invoices. Receipts are shown separately from AR.",
   "ar.metric.ar": "Total AR",
   "ar.metric.due": "Not due",
   "ar.metric.overdue": "Overdue",

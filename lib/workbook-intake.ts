@@ -5,6 +5,7 @@ import path from "node:path";
 import { createHash } from "node:crypto";
 import type { Snapshot } from "./types";
 import { isDehkReceiveWorkbook } from "./dehk-receive-parser";
+import { isDdcAgingWorkbook } from "./ddc-aging-parser";
 import { isPaymentStatusSheet } from "./payment-status-parser";
 export function identifyWorkbook(bytes: Buffer) {
   const book = XLSX.read(bytes, { type: "buffer", cellFormula: true });
@@ -18,14 +19,7 @@ export function identifyWorkbook(bytes: Buffer) {
       : null,
     names.some((n) => /^(DEHK|DDC) OVERDUE$/.test(n)) ? "aging" : null,
     isDehkReceiveWorkbook(book) ? "dehk-receive-aging" : null,
-    names.some(
-      (n) =>
-        book.Sheets[n].A1?.v === "序号" &&
-        book.Sheets[n].Q1?.v === "余额" &&
-        book.Sheets[n].L1?.v === "最后到期日",
-    )
-      ? "ddc-aging"
-      : null,
+    isDdcAgingWorkbook(book) ? "ddc-aging" : null,
     hasPaymentStatus ? "payments-status" : null,
     !hasPaymentStatus &&
     names.includes("Summary") &&

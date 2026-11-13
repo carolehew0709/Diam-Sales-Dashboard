@@ -285,3 +285,58 @@ test("per-currency top10 and other cohorts partition customers without conversio
   assert.equal(other.rows.length, 4);
   assert.ok(other.rows.every((r) => !top.rows.some((t) => t.id === r.id)));
 });
+
+test("AR uses Sales Team2 labels and filters source Customer Group within permitted invoices", () => {
+  const fixture = state();
+  fixture.teamActualData = {
+    year: 2026,
+    month: 10,
+    currency: "EUR",
+    unit: "kEUR",
+    sourceFile: "Team allocations.xlsx",
+    sourceSheet: "Sheet1",
+    mappings: { "Sephora Team": "Panny Team", "French Group": "Lynn Team" },
+    rows: [],
+  };
+  const invoices = fixture.receivables!.filter((r) => r.category === "invoice");
+  Object.assign(invoices[0], {
+    salesTeam: "Panny Team-S",
+    customerGroup: "Portfolio A",
+  });
+  Object.assign(invoices[1], {
+    salesTeam: "Sephora Team",
+    customerGroup: "Portfolio A",
+  });
+  Object.assign(invoices[2], {
+    salesTeam: "Lynn-Team",
+    customerGroup: "Portfolio B",
+  });
+  const view = getReceivables(fixture, admin, {
+    ...defaultReceivablesFilters,
+    salesTeam: "Panny Team",
+    sourceCustomerGroup: "Portfolio A",
+  });
+  assert.deepEqual(
+    view.rows.map((r) => [r.salesTeam, r.sourceSalesTeam]),
+    [
+      ["Panny Team", "Panny Team-S"],
+      ["Panny Team", "Sephora Team"],
+    ],
+  );
+  assert.deepEqual(view.sourceCustomerGroups, ["Portfolio A", "Portfolio B"]);
+  assert.equal(invoices[0].salesTeam, "Panny Team-S");
+  const authorized = getReceivables(
+    fixture,
+    { ...india, permissions: { dhk: ["view"] } },
+    defaultReceivablesFilters,
+  );
+  assert.deepEqual(authorized.sourceCustomerGroups, ["Portfolio A"]);
+  assert.deepEqual(authorized.payments, []);
+  const unfiltered = getReceivables(fixture, admin, defaultReceivablesFilters);
+  const groupOnly = getReceivables(fixture, admin, {
+    ...defaultReceivablesFilters,
+    sourceCustomerGroup: "Portfolio A",
+  });
+  assert.deepEqual(groupOnly.payments, unfiltered.payments);
+  assert.ok(unfiltered.salesTeams.includes("Lynn Team"));
+});

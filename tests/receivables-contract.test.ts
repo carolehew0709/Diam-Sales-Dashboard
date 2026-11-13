@@ -340,3 +340,22 @@ test("AR uses Sales Team2 labels and filters source Customer Group within permit
   assert.deepEqual(groupOnly.payments, unfiltered.payments);
   assert.ok(unfiltered.salesTeams.includes("Lynn Team"));
 });
+
+test("TBC in the team column is unassigned and keeps its pending receipt balance", () => {
+  const fixture = state();
+  const receipt = fixture.receivables!.find((r) => r.category === "unknown")!;
+  receipt.category = "pending";
+  receipt.salesTeam = " Tbc ";
+
+  const view = getReceivables(fixture, admin, defaultReceivablesFilters);
+  assert.ok(!view.salesTeams.some((name) => name.toLowerCase() === "tbc"));
+  assert.ok(view.salesTeams.includes("__unassigned__"));
+  const unassigned = getReceivables(fixture, admin, {
+    ...defaultReceivablesFilters,
+    salesTeam: "__unassigned__",
+  });
+  const visible = unassigned.payments.find((r) => r.id === receipt.id);
+  assert.equal(visible?.category, "pending");
+  assert.equal(visible?.amount, receipt.amount);
+  assert.equal(visible?.sourceSalesTeam, " Tbc ");
+});

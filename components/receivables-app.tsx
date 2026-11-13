@@ -11,6 +11,7 @@ import { agingBuckets, defaultReceivablesFilters } from "@/lib/receivables";
 import type { ReceivablesView } from "@/lib/receivables";
 import type { ReceivablesFilters } from "@/lib/receivables-types";
 import { formatUpdateDate } from "@/lib/dashboard";
+import styles from "./receivables-filters.module.css";
 
 export function ReceivablesApp() {
   const { tr, locale } = useI18n();
@@ -139,7 +140,7 @@ export function ReceivablesApp() {
         </div>
       )}
       <section
-        className="filter-bar ar-filter-bar"
+        className={`filter-bar ar-filter-bar ${styles.sticky}`}
         data-updating={(pending && !error) || undefined}
         aria-label={tr("filters.global")}
       >

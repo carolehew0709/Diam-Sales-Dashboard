@@ -1,0 +1,11 @@
+.sticky:global(.ar-filter-bar) {
+  position: sticky;
+  top: var(--dashboard-header-height);
+  min-width: 0;
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(130px, 1fr);
+  align-items: end;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}

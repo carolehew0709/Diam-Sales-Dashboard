@@ -87,9 +87,10 @@ export function receivablesFiltersFrom(url: URL): ReceivablesFilters {
 const customerKey = (value: string) =>
   value.replace(/\s+/g, " ").trim().toLowerCase();
 function arTeamName(value: string, state: Store) {
-  if (teamName(value) === "预收") return "";
+  const source = teamName(value);
+  if (source === "预收" || source.toUpperCase() === "TBC") return "";
   const name = teamReportingName(
-    teamName(value) === "BD Team" ? "BD" : value,
+    source === "BD Team" ? "BD" : value,
     state.teamActualData,
   );
   if (/^panny team-[ls]$/i.test(name)) return "Panny Team";

@@ -28,6 +28,8 @@ import {
 import { useDataReveal } from "./use-data-reveal";
 import { DashboardShell } from "@/components/dashboard-shell";
 import { WorkspaceHome } from "@/components/workspace-home";
+import { PipelineApp } from "@/components/pipeline-app";
+import { SalesOperations } from "@/components/sales-operations";
 import { ReceivablesApp } from "@/components/receivables-app";
 import { hasReceivablesAccess } from "@/lib/receivables";
 import { ImportPortal } from "@/components/import-portal";
@@ -883,7 +885,7 @@ export default function Home() {
   const [renderPending, startTransition] = useTransition();
   const contentRoot = useRef<HTMLDivElement>(null);
   useDataReveal(contentRoot, data, ".china-strip, .kpi-card");
-  const requiresDashboard = !["home", "login", "ar-aging", "imports", "quotation"].includes(view);
+  const requiresDashboard = !["home", "login", "ar-aging", "imports", "quotation", "pipeline", "sales-operations"].includes(view);
   const pending =
     loading ||
     renderPending ||
@@ -1067,6 +1069,10 @@ export default function Home() {
             <AdminPanel onClose={() => setView("overview")} />
           ) : view === "quotation" ? (
             <QuotationApp />
+          ) : view === "pipeline" ? (
+            <PipelineApp />
+          ) : view === "sales-operations" ? (
+            <SalesOperations />
           ) : view === "ar-aging" ? (
             hasReceivablesAccess(user) ? (
               <ReceivablesApp />

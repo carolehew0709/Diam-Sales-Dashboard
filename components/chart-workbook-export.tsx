@@ -6,9 +6,11 @@ import { collectWorkbookCharts } from "@/lib/chart-workbook-registry";
 import { chartPng, saveChartFile } from "@/lib/chart-export";
 import type { ChartWorkbookImage } from "@/lib/chart-workbook-types";
 import { collectWorkbookGroups } from "@/lib/chart-workbook-groups";
-import { isLocale, type Locale } from "@/lib/i18n";
+import { isLocale, type Locale, type MessageKey } from "@/lib/i18n";
 
-export function ChartWorkbookExport() {
+export function ChartWorkbookExport({
+  layoutLabel = "graphics.workbookLayout",
+}: { layoutLabel?: MessageKey } = {}) {
   const { tr, locale } = useI18n();
   const [chosenLanguage, setChosenLanguage] = useState<Locale>();
   const language = chosenLanguage ?? locale;
@@ -129,7 +131,7 @@ export function ChartWorkbookExport() {
           ? tr("graphics.workbookProgress", progress)
           : tr("graphics.workbookDownload")}
       </button>
-      <small>{tr("graphics.workbookLayout")}</small>
+      <small>{tr(layoutLabel)}</small>
       {error && <span role="alert">{error}</span>}
     </div>
   );

@@ -3,6 +3,8 @@ export const pages = [
   "home",
   "overview",
   "ar-aging",
+  "pipeline",
+  "sales-operations",
   "quotation",
   "analysis",
   "business-units",

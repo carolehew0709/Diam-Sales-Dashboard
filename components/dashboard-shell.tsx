@@ -32,13 +32,16 @@ export function DashboardShell({
   const { tr, locale } = useI18n();
   const { header, active } = useDashboardNavigation(page, locale);
   const quotation = page === "quotation";
+  const pipeline = page === "pipeline";
+  const salesOps = page === "sales-operations";
+  const standalone = quotation || pipeline || salesOps;
   const query = new URLSearchParams(
     Object.entries(filters).map(([k, v]) => [k, String(v)]),
   );
   return (
     <>
       <header
-        className={`topbar dashboard-header ${page === "home" || quotation ? "home-header" : ""}`}
+        className={`topbar dashboard-header ${page === "home" || standalone ? "home-header" : ""}`}
         ref={header}
       >
         <div className="brand">
@@ -67,7 +70,7 @@ export function DashboardShell({
               <>
                 <Link
                   href={pagePath(locale, "overview")}
-                  aria-current={page !== "ar-aging" && !quotation ? "page" : undefined}
+                  aria-current={page === "overview" ? "page" : undefined}
                 >
                   {tr("nav.performance")}
                 </Link>
@@ -84,11 +87,13 @@ export function DashboardShell({
                   </Link>
                 )}
                 {quotation && <Link href={pagePath(locale, "quotation")} aria-current="page">{tr("quote.title")}</Link>}
+                {pipeline && <Link href={pagePath(locale, "pipeline")} aria-current="page">{tr("pipeline.title")}</Link>}
+                {salesOps && <Link href={pagePath(locale, "sales-operations")} aria-current="page">{tr("salesOps.title")}</Link>}
               </>
             )}
           </nav>
         </div>
-        {page !== "home" && page !== "ar-aging" && !quotation && (
+        {page !== "home" && page !== "ar-aging" && !standalone && (
           <nav className="topnav">
             <span className="topnav-links">
               {[
@@ -133,7 +138,7 @@ export function DashboardShell({
           </nav>
         )}
         <div className="topbar-actions">
-          {page !== "home" && !quotation &&
+          {page !== "home" && !standalone &&
             ["superadmin", "region_admin", "editor"].includes(user.role) && (
               <Link
                 className="import-data"
@@ -148,7 +153,7 @@ export function DashboardShell({
                 <span>{tr("nav.import")}</span>
               </Link>
             )}
-          {page !== "home" && page !== "ar-aging" && page !== "imports" && !quotation && (
+          {page !== "home" && page !== "ar-aging" && page !== "imports" && !standalone && (
             <a
               className="excel-export"
               href={`/api/export?${query}`}

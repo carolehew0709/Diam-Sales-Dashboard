@@ -8,9 +8,11 @@ import {
   Calculator,
   FileSpreadsheet,
   Globe2,
+  GitBranch,
   Layers3,
   Target,
   TrendingUp,
+  Truck,
   WalletCards,
 } from "lucide-react";
 import { hasReceivablesAccess } from "@/lib/receivables";
@@ -122,6 +124,26 @@ export function WorkspaceHome({ user }: { user: User }) {
             <div className="home-module-features"><span>{tr("ar.featureAging")}</span><span>{tr("ar.featureTeams")}</span><span>{tr("ar.featureReceipts")}</span></div>
             <div className="home-card-footer"><span>{tr("ar.homeOpen")}</span><span className="home-card-action"><ArrowRight size={19} aria-hidden="true" /></span></div>
           </Link>}
+          {([
+            { route: "pipeline", key: "pipeline", icon: GitBranch, features: ["pipeline.weeklyStatus", "pipeline.cumulative", "pipeline.keyProjects"] },
+            { route: "sales-operations", key: "salesOps", icon: Truck, features: ["salesOps.byTeam", "salesOps.byWeek", "salesOps.byGroup"] },
+          ] as const).map(({ route, key, icon: Icon, features }) => (
+            <Link key={route} className="home-module-card" href={pagePath(locale, route)}
+              aria-labelledby={`home-${route}-title`} aria-describedby={`home-${route}-description`}>
+              <div className="home-card-top">
+                <span className="home-module-icon"><Icon size={28} strokeWidth={1.6} aria-hidden="true" /></span>
+                <span className="home-module-tag">{tr(`${key}.homeTag`)}</span>
+                <ArrowUpRight className="home-card-arrow" size={23} aria-hidden="true" />
+              </div>
+              <h3 id={`home-${route}-title`}>{tr(`${key}.title`)}</h3>
+              <p id={`home-${route}-description`}>{tr(`${key}.homeDescription`)}</p>
+              <div className="home-module-features">{features.map((feature) => <span key={feature}>{tr(feature)}</span>)}</div>
+              <div className="home-card-footer">
+                <span>{tr(`${key}.open`)}</span>
+                <span className="home-card-action"><ArrowRight size={19} aria-hidden="true" /></span>
+              </div>
+            </Link>
+          ))}
           <Link
             className="home-module-card"
             href={pagePath(locale, "quotation")}

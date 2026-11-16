@@ -3,9 +3,9 @@ import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { UpdateStatus } from "./update-status";
 import { useDataReveal } from "./use-data-reveal";
 import { ReceiptBalances } from "./receipt-balances";
-import { receivableCurrencies } from "@/lib/receivables-types";
 import { Download, LoaderCircle } from "lucide-react";
 import { ReceivablesSourceDates } from "./receivables-source-dates";
+import { ReceivablesTrends } from "./receivables-trends";
 import { useI18n } from "./i18n-provider";
 import { agingBuckets, defaultReceivablesFilters } from "@/lib/receivables";
 import type { ReceivablesView } from "@/lib/receivables";
@@ -22,12 +22,14 @@ export function ReceivablesApp() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(true);
   const [retry, setRetry] = useState(0);
-  const invoiceTable = useRef<HTMLDivElement>(null);
   const [appliedQuery, setAppliedQuery] = useState("");
   const [renderPending, startTransition] = useTransition();
   const root = useRef<HTMLDivElement>(null);
-  useDataReveal(root, data, ".ar-kpi-card, .ar-chart-grid > .panel");
-  const [invoicePage, setInvoicePage] = useState(0);
+  useDataReveal(
+    root,
+    data,
+    ".ar-kpi-card, .ar-chart-grid > .panel:not([data-ar-trend])",
+  );
   const query = useMemo(
     () =>
       new URLSearchParams(
@@ -53,7 +55,6 @@ export function ReceivablesApp() {
             controller.signal.aborted ? previous : query,
           );
           setError("");
-          setInvoicePage(0);
         });
       })
       .catch((e) => {
@@ -71,6 +72,12 @@ export function ReceivablesApp() {
       : new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(
           value,
         );
+  const percentage = new Intl.NumberFormat(locale, {
+    style: "percent",
+    maximumFractionDigits: 1,
+  });
+  const proportion = (value: number | null) =>
+    value === null ? "—" : percentage.format(value);
   const team = (value: string) =>
     value === "__unassigned__" || !value ? tr("team.unassigned") : value;
   const select = <K extends keyof ReceivablesFilters>(
@@ -85,7 +92,6 @@ export function ReceivablesApp() {
         "region",
         "bu",
         "salesTeam",
-        "customerGroup",
         "sourceCustomerGroup",
         "salesType",
         "aging",
@@ -171,17 +177,8 @@ export function ReceivablesApp() {
               })),
             ])
           : null}
-        {field("customerGroup", tr("ar.customerRanking"), [
-          all,
-          { value: "top10", label: tr("ar.top10") },
-          { value: "other", label: tr("ar.other") },
-        ])}
         {field("customer", tr("ar.customer"), [
-          {
-            ...all,
-            label:
-              filters.customerGroup === "other" ? tr("ar.allOther") : all.label,
-          },
+          all,
           ...(data?.customers ?? []).map((c) => ({ value: c, label: c })),
         ])}
         {field("salesType", tr("filters.type"), [
@@ -237,44 +234,50 @@ export function ReceivablesApp() {
       )}
       {data && (
         <>
-          <p className="ar-applied-scope">
-            {tr("ar.showingScope", {
-              scope: [
-                data.filters.region === "APAC"
-                  ? tr("filters.apac")
-                  : tr("ar.china"),
-                data.filters.bu === "all"
-                  ? tr("filters.allBU")
-                  : data.filters.bu,
-                data.filters.salesTeam === "all"
-                  ? tr("team.all")
-                  : team(data.filters.salesTeam),
-                data.filters.customer === "all"
-                  ? tr("ar.allCustomers")
-                  : data.filters.customer,
-                ...(data.filters.sourceCustomerGroup
-                  ? [data.filters.sourceCustomerGroup]
-                  : []),
-                data.filters.customerGroup === "all"
-                  ? tr("ar.allGroups")
-                  : tr(
-                      data.filters.customerGroup === "top10"
-                        ? "ar.top10"
-                        : "ar.other",
-                    ),
-                data.filters.salesType === "all"
-                  ? tr("filters.allSales")
-                  : tr(
-                      data.filters.salesType === "external"
-                        ? "ar.external"
-                        : "ar.group",
-                    ),
-                data.filters.aging === "all"
-                  ? tr("ar.allAging")
-                  : tr(`ar.bucket.${data.filters.aging}`),
-              ].join(" · "),
-            })}
-          </p>
+          <div className={styles.scopeActions}>
+            <p className="ar-applied-scope">
+              {tr("ar.showingScope", {
+                scope: [
+                  data.filters.region === "APAC"
+                    ? tr("filters.apac")
+                    : tr("ar.china"),
+                  data.filters.bu === "all"
+                    ? tr("filters.allBU")
+                    : data.filters.bu,
+                  data.filters.salesTeam === "all"
+                    ? tr("team.all")
+                    : team(data.filters.salesTeam),
+                  data.filters.customer === "all"
+                    ? tr("ar.allCustomers")
+                    : data.filters.customer,
+                  ...(data.filters.sourceCustomerGroup
+                    ? [data.filters.sourceCustomerGroup]
+                    : []),
+                  data.filters.salesType === "all"
+                    ? tr("filters.allSales")
+                    : tr(
+                        data.filters.salesType === "external"
+                          ? "ar.external"
+                          : "ar.group",
+                      ),
+                  data.filters.aging === "all"
+                    ? tr("ar.allAging")
+                    : tr(`ar.bucket.${data.filters.aging}`),
+                ].join(" · "),
+              })}
+            </p>
+            <a
+              className="apac-button"
+              href={`/api/receivables/export?${query}`}
+              aria-disabled={pending || !!error || undefined}
+              onClick={(event) => {
+                if (pending || error) event.preventDefault();
+              }}
+            >
+              <Download size={15} />
+              {tr("nav.export")}
+            </a>
+          </div>
           {data.unclassifiedPayments > 0 && (
             <p className="ar-context">{tr("ar.receiptClassification")}</p>
           )}
@@ -347,162 +350,144 @@ export function ReceivablesApp() {
                     </div>
                   ))}
                 </div>
+                <div className={styles.proportions}>
+                  <h3>{tr("ar.agingProportion")}</h3>
+                  <div className="ar-bars">
+                    {chart.buckets.map((b) => (
+                      <div className="ar-bar-row" key={b.bucket}>
+                        <span>{tr(`ar.bucket.${b.bucket}`)}</span>
+                        <div className="ar-bar-track" aria-hidden="true">
+                          <i
+                            className={
+                              (b.proportion ?? 0) < 0
+                                ? styles.credit
+                                : undefined
+                            }
+                            style={{
+                              width: `${Math.min(1, Math.abs(b.proportion ?? 0)) * 100}%`,
+                            }}
+                          />
+                        </div>
+                        <strong>{proportion(b.proportion)}</strong>
+                      </div>
+                    ))}
+                  </div>
+                  <div className={styles.overdueShare}>
+                    <span>{tr("ar.overdueProportion")}</span>
+                    <strong>{proportion(chart.overdueProportion)}</strong>
+                  </div>
+                  <p className="muted">{tr("ar.proportionNote")}</p>
+                </div>
               </section>
             ))}
           </div>
-          <section className="panel ar-detail">
-            <div className="panel-heading">
-              <div>
-                <p className="panel-kicker">{tr("ar.byCustomer")}</p>
-                <h2>{tr("ar.ranking")}</h2>
-              </div>
-              <span className="muted">{tr("ar.rankingNote")}</span>
-            </div>
-            <div className="table-wrap">
-              <table className="bu-table">
-                <thead>
-                  <tr>
-                    <th>{tr("ar.customer")}</th>
-                    <th>{tr("ar.currency")}</th>
-                    <th className="numeric">{tr("ar.metric.ar")}</th>
-                    <th className="numeric">{tr("ar.metric.overdue")}</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {!data.ranking.length && (
-                    <tr>
-                      <td colSpan={4} className="ar-empty">
-                        {tr("ar.noMatches")}
-                      </td>
-                    </tr>
+          <div className="ar-chart-grid">
+            {data.chart.map(({ currency }) => {
+              const ranking = data.ranking.filter(
+                (row) => row.currency === currency,
+              );
+              return (
+                <section
+                  className="panel ar-detail"
+                  key={currency}
+                  data-ranking-currency={currency}
+                >
+                  <div className={`panel-heading ${styles.rankingHeading}`}>
+                    <div>
+                      <p className="panel-kicker">{currency}</p>
+                      <h2>{tr("ar.ranking")}</h2>
+                    </div>
+                    <span className="muted">{tr("ar.rankingNote")}</span>
+                  </div>
+                  <div className="table-wrap">
+                    <table className={`bu-table ${styles.rankingTable}`}>
+                      <thead>
+                        <tr>
+                          <th>{tr("ar.customerGroup")}</th>
+                          <th className="numeric">{tr("ar.metric.ar")}</th>
+                          <th className="numeric">{tr("ar.metric.overdue")}</th>
+                          <th className="numeric">{tr("ar.overduePercent")}</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {!ranking.length && (
+                          <tr>
+                            <td colSpan={4} className="ar-empty">
+                              {tr(
+                                data.rankingExcludedCurrencies.includes(
+                                  currency,
+                                )
+                                  ? "ar.noRankableCustomers"
+                                  : "ar.noMatches",
+                              )}
+                            </td>
+                          </tr>
+                        )}
+                        {ranking.map((row) => {
+                          const { customerGroup } = row;
+                          return (
+                            <tr
+                              key={
+                                customerGroup === null
+                                  ? "others"
+                                  : `group:${customerGroup}`
+                              }
+                            >
+                              <td>
+                                {customerGroup === null ? (
+                                  <strong>{tr("ar.others")}</strong>
+                                ) : (
+                                  <button
+                                    className="entity-link"
+                                    onClick={() =>
+                                      select(
+                                        "sourceCustomerGroup",
+                                        customerGroup,
+                                      )
+                                    }
+                                  >
+                                    {customerGroup}
+                                  </button>
+                                )}
+                              </td>
+                              <td className="numeric">{amount(row.amount)}</td>
+                              <td className="numeric">{amount(row.overdue)}</td>
+                              <td className="numeric">
+                                <div className={styles.rankingShare}>
+                                  <div
+                                    className="ar-bar-track"
+                                    aria-hidden="true"
+                                  >
+                                    <i
+                                      className={
+                                        (row.overdueProportion ?? 0) < 0
+                                          ? styles.credit
+                                          : undefined
+                                      }
+                                      style={{
+                                        width: `${Math.min(1, Math.abs(row.overdueProportion ?? 0)) * 100}%`,
+                                      }}
+                                    />
+                                  </div>
+                                  <strong>
+                                    {proportion(row.overdueProportion)}
+                                  </strong>
+                                </div>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  {ranking.length > 0 && (
+                    <p className="muted">{tr("ar.rankingOverdueNote")}</p>
                   )}
-                  {receivableCurrencies
-                    .flatMap((currency) =>
-                      data.ranking
-                        .filter((r) => r.currency === currency)
-                        .slice(0, 10),
-                    )
-                    .map((row) => (
-                      <tr key={`${row.currency}:${row.customer}`}>
-                        <td>
-                          <button
-                            className="entity-link"
-                            onClick={() => select("customer", row.customer)}
-                          >
-                            {row.customer}
-                          </button>
-                        </td>
-                        <td>{row.currency}</td>
-                        <td className="numeric">{amount(row.amount)}</td>
-                        <td className="numeric">{amount(row.overdue)}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
-          <section className="panel ar-detail">
-            <div className="panel-heading">
-              <div>
-                <p className="panel-kicker">{tr("ar.invoiceDetail")}</p>
-                <h2>{tr("ar.invoices", { count: data.rows.length })}</h2>
-              </div>
-              <a
-                className="apac-button"
-                href={`/api/receivables/export?${query}`}
-                aria-disabled={pending || !!error || undefined}
-                onClick={(event) => {
-                  if (pending || error) event.preventDefault();
-                }}
-              >
-                <Download size={15} />
-                {tr("nav.export")}
-              </a>
-            </div>
-            <div className="table-wrap" ref={invoiceTable}>
-              <table className="bu-table ar-table">
-                <thead>
-                  <tr>
-                    {(
-                      [
-                        "bu",
-                        "date",
-                        "invoice",
-                        "customer",
-                        "team",
-                        "pic",
-                        "amount",
-                        "aging",
-                        "note",
-                      ] as const
-                    ).map((key) => (
-                      <th key={key}>{tr(`ar.column.${key}`)}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {!data.rows.length && (
-                    <tr>
-                      <td colSpan={9} className="ar-empty">
-                        {tr("ar.noMatches")}
-                      </td>
-                    </tr>
-                  )}
-                  {data.rows
-                    .slice(invoicePage * 50, invoicePage * 50 + 50)
-                    .map((row) => (
-                      <tr key={row.id}>
-                        <td>{row.entityId === "dhk" ? "DEHK" : "DDC"}</td>
-                        <td>{row.invoiceDate}</td>
-                        <td>{row.invoiceNumber}</td>
-                        <td>
-                          {row.customer}
-                          {row.customerGroup && (
-                            <small>
-                              {tr("ar.customerGroup")}: {row.customerGroup}
-                            </small>
-                          )}
-                          <small>{row.subCustomer}</small>
-                        </td>
-                        <td>{team(row.salesTeam)}</td>
-                        <td>{row.pic || "—"}</td>
-                        <td className="numeric">
-                          {amount(row.amount)} {row.currency}
-                        </td>
-                        <td>{tr(`ar.bucket.${row.aging}`)}</td>
-                        <td className="ar-note-cell">{row.note || "—"}</td>
-                      </tr>
-                    ))}
-                </tbody>
-              </table>
-            </div>
-            <div className="ar-pagination">
-              <button
-                className="apac-button"
-                disabled={pending || !invoicePage}
-                onClick={() => {
-                  setInvoicePage((p) => p - 1);
-                  invoiceTable.current?.scrollTo({ top: 0 });
-                }}
-              >
-                {tr("ar.previous")}
-              </button>
-              <span>
-                {invoicePage + 1} /{" "}
-                {Math.max(1, Math.ceil(data.rows.length / 50))}
-              </span>
-              <button
-                className="apac-button"
-                disabled={pending || (invoicePage + 1) * 50 >= data.rows.length}
-                onClick={() => {
-                  setInvoicePage((p) => p + 1);
-                  invoiceTable.current?.scrollTo({ top: 0 });
-                }}
-              >
-                {tr("ar.next")}
-              </button>
-            </div>
-          </section>
+                </section>
+              );
+            })}
+          </div>
+          <ReceivablesTrends />
           <section className="panel ar-detail">
             <div className="panel-heading">
               <div>

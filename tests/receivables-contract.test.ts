@@ -4,7 +4,8 @@ import assert from "node:assert/strict";
 import * as XLSX from "xlsx";
 import { parseReceivablesWorkbook } from "../lib/receivables-parser";
 import { getReceivables, defaultReceivablesFilters } from "../lib/receivables";
-import type { Store, User } from "../lib/types";
+import { getReceivablesTrends } from "../lib/receivables-trends";
+import type { ImportBatch, Store, User } from "../lib/types";
 import type { ReceivableRecord } from "../lib/receivables-types";
 
 const admin = {
@@ -241,11 +242,16 @@ test("aggregation contract reconciles currencies independently and keeps shared 
   );
 });
 test("BU and aging do not filter shared receipts, including top10 mode; customer and team still filter", () => {
-  const all = getReceivables(state(), admin, {
+  const fixture = state();
+  for (const row of fixture.receivables!.filter(
+    (r) => r.category === "invoice",
+  ))
+    row.customerGroup = "Test portfolio";
+  const all = getReceivables(fixture, admin, {
     ...defaultReceivablesFilters,
     customerGroup: "top10",
   });
-  const subset = getReceivables(state(), admin, {
+  const subset = getReceivables(fixture, admin, {
     ...defaultReceivablesFilters,
     customerGroup: "top10",
     bu: "DDC",
@@ -268,6 +274,7 @@ test("per-currency top10 and other cohorts partition customers without conversio
       ...template,
       id: `${currency}:${i}`,
       customer: `Test ${i}`,
+      customerGroup: `Portfolio ${i}`,
       amount: i + 1,
       currency: currency as "EUR" | "RMB",
       entityId: currency === "EUR" ? "dhk" : "ddc",
@@ -284,6 +291,126 @@ test("per-currency top10 and other cohorts partition customers without conversio
   assert.equal(top.rows.length, 20);
   assert.equal(other.rows.length, 4);
   assert.ok(other.rows.every((r) => !top.rows.some((t) => t.id === r.id)));
+  const combined = getReceivables(
+    state(records),
+    admin,
+    defaultReceivablesFilters,
+  );
+  for (const currency of ["EUR", "RMB"]) {
+    const ranked = combined.ranking.filter((row) => row.currency === currency);
+    assert.equal(ranked.length, 11);
+    assert.equal(ranked[0].customerGroup, "Portfolio 11");
+    assert.equal(ranked[9].customerGroup, "Portfolio 2");
+    assert.equal(ranked[10].customerGroup, null);
+    assert.equal(ranked[10].amount, 3);
+  }
+  const selected = getReceivables(state(records), admin, {
+    ...defaultReceivablesFilters,
+    customerGroup: "other",
+    sourceCustomerGroup: "Portfolio 0",
+  });
+  assert.equal(selected.rows.length, 2);
+});
+
+test("ranking totals group labels, removes DDC's DEHK customer, and leaves balances in the currency shares", () => {
+  const base = parsed()[0];
+  const invoices: ReceivableRecord[] = [
+    {
+      ...base,
+      id: "dehk",
+      entityId: "ddc",
+      customer: "DEHK LIMITED",
+      customerGroup: "DEHK",
+      amount: 900,
+      aging: "not-due",
+    },
+    {
+      ...base,
+      id: "a",
+      entityId: "ddc",
+      customer: "Company A",
+      customerGroup: "Parent",
+      amount: 80,
+      aging: "not-due",
+    },
+    {
+      ...base,
+      id: "b",
+      entityId: "ddc",
+      customer: "Company B",
+      customerGroup: "Parent",
+      amount: 20,
+      aging: "1-30",
+    },
+    {
+      ...base,
+      id: "c",
+      entityId: "ddc",
+      customer: "Company C",
+      customerGroup: "Parent",
+      amount: 20,
+      currency: "RMB",
+      aging: "1-30",
+    },
+    {
+      ...base,
+      id: "credit",
+      entityId: "ddc",
+      customer: "Unmapped",
+      amount: -20,
+      currency: "RMB",
+      aging: "not-due",
+    },
+    {
+      ...base,
+      id: "d",
+      entityId: "dhk",
+      customer: "DEHK LIMITED",
+      customerGroup: "DEHK",
+      amount: 10,
+      aging: "not-due",
+    },
+  ];
+  const fixture = state(invoices);
+  const all = getReceivables(fixture, admin, defaultReceivablesFilters);
+  assert.equal(all.ranking.find((r) => r.customerGroup === "DEHK")?.amount, 10);
+  const filters = {
+    ...defaultReceivablesFilters,
+    bu: "DDC",
+    salesType: "external" as const,
+  };
+  const ddc = getReceivables(fixture, admin, filters);
+  assert.deepEqual(ddc.ranking, [
+    {
+      customerGroup: "Parent",
+      currency: "EUR",
+      amount: 100,
+      overdue: 20,
+      overdueProportion: 0.2,
+    },
+    {
+      customerGroup: "Parent",
+      currency: "RMB",
+      amount: 20,
+      overdue: 20,
+      overdueProportion: 1,
+    },
+  ]);
+  assert.equal(ddc.totals.find((r) => r.currency === "EUR")?.ar, 1000);
+  assert.equal(ddc.chart[0].overdueProportion, 0.02);
+  assert.equal(
+    ddc.chart[0].buckets.find((b) => b.bucket === "not-due")?.proportion,
+    0.98,
+  );
+  assert.equal(ddc.chart[1].overdueProportion, null);
+  const top = getReceivables(fixture, admin, {
+    ...filters,
+    customerGroup: "top10",
+  });
+  assert.deepEqual(
+    top.rows.map((row) => row.id),
+    ["a", "b", "c"],
+  );
 });
 
 test("AR uses Sales Team2 labels and filters source Customer Group within permitted invoices", () => {
@@ -358,4 +485,91 @@ test("TBC in the team column is unassigned and keeps its pending receipt balance
   assert.equal(visible?.category, "pending");
   assert.equal(visible?.amount, receipt.amount);
   assert.equal(visible?.sourceSalesTeam, " Tbc ");
+});
+
+test("AR trend uses trusted monthly snapshot revisions, preserves gaps and scopes histories", () => {
+  const base = parsed()[0];
+  const invoice = (
+    id: string,
+    entityId: string,
+    asOfDate: string,
+    amount: number,
+    customerGroup?: string,
+  ): ReceivableRecord => ({
+    ...base,
+    id,
+    entityId,
+    customerGroup,
+    asOfDate,
+    amount,
+  });
+  const fixture = state([
+    invoice("active-a", "dhk", "2026-04-30", 20, "Portfolio A"),
+    invoice("active-b", "dhk", "2026-04-30", 40, "Portfolio B"),
+    invoice("active-ddc", "ddc", "2026-04-30", 700, "DDC group"),
+  ]);
+  const batch = (
+    revision: number,
+    records: ReceivableRecord[],
+  ): ImportBatch => ({
+    id: String(revision),
+    submittedBy: "test",
+    submittedAt: "2026-04-30",
+    fileName: "Synthetic",
+    sourceType: "Excel",
+    status: "published",
+    revision,
+    receivablesKind: "aging",
+    receivables: records,
+    entityIds: ["dhk", "ddc"],
+    snapshots: [],
+    lines: [],
+    sheets: [],
+    findings: [],
+  });
+  const ignored = batch(5, []);
+  ignored.publication = {
+    scopes: ["ar:aging:dhk"],
+    reason: "restored",
+    reviewVersion: "test",
+    restoredAt: "2026-05-01",
+    before: { snapshots: [], lines: [], customerAnalyses: [], receivables: [] },
+    after: {
+      snapshots: [],
+      lines: [],
+      customerAnalyses: [],
+      receivables: [
+        invoice("restored", "dhk", "2026-02-28", 888, "Portfolio A"),
+      ],
+    },
+  };
+  fixture.batches = [
+    batch(4, [invoice("published-a", "dhk", "2026-04-30", 500, "Portfolio A")]),
+    batch(2, [invoice("revised-a", "dhk", "2026-01-31", 5, "Portfolio A")]),
+    batch(1, [invoice("older-a", "dhk", "2026-01-31", 100, "Portfolio A")]),
+    batch(3, [invoice("unmapped", "dhk", "2026-03-31", 99)]),
+    ignored,
+  ];
+  const result = getReceivablesTrends(fixture, admin, "2026-05-11");
+  assert.deepEqual(result.months, [
+    "2026-01",
+    "2026-02",
+    "2026-03",
+    "2026-04",
+    "2026-05",
+  ]);
+  const hk = result.panels.find((p) => p.entityId === "dhk")!;
+  assert.deepEqual(hk.top, ["Portfolio B", "Portfolio A"]);
+  assert.equal(hk.observedMonths, 2);
+  assert.deepEqual(hk.series[0].values, [5, null, null, 20, null]);
+  const single = getReceivablesTrends(
+    fixture,
+    { ...india, permissions: { dhk: ["view"] } },
+    "2026-05-11",
+  );
+  assert.deepEqual(single.panels, [hk]);
+  assert.deepEqual(
+    getReceivablesTrends(fixture, india, "2026-05-11").panels,
+    [],
+  );
 });

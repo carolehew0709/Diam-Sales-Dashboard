@@ -334,7 +334,7 @@ test("revised DEHK classifications join to the full ledger while current-month r
       "INV-OLD",
       "Portfolio A",
       "New customer",
-      "New customer",
+      "Alternate source label",
       "Group",
       "Legal A",
       "Item",
@@ -359,8 +359,10 @@ test("revised DEHK classifications join to the full ledger while current-month r
   const result = parse(book);
   assert.deepEqual(errors(book), []);
   const [prior, current] = result.records;
-  assert.equal(prior.customer, "Test Group");
+  assert.equal(prior.customer, "New customer");
+  assert.equal(prior.sourceCustomer, "Test Group");
   assert.equal(prior.customerGroup, "Portfolio A");
+  assert.equal(prior.customerType, "Group");
   assert.equal(prior.salesTeam, "Revised team");
   assert.deepEqual(prior.classificationSource, { sheet: name, row: 3 });
   assert.equal(current.customerGroup, undefined);

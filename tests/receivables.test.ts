@@ -163,7 +163,7 @@ sourceTest(
   },
 );
 sourceTest(
-  "customer top10 and other cohorts partition each currency without mixed-currency ranking",
+  "unmapped legacy customer balances remain available in the All view",
   () => {
     const all = getReceivables(state, admin, defaultReceivablesFilters);
     const top = getReceivables(state, admin, {
@@ -174,25 +174,10 @@ sourceTest(
       ...defaultReceivablesFilters,
       customerGroup: "other",
     });
-    assert.equal(top.rows.length + other.rows.length, all.rows.length);
-    const ids = new Set(top.rows.map((r) => r.id));
-    assert.ok(other.rows.every((r) => !ids.has(r.id)));
-    for (const currency of ["EUR", "RMB"])
-      assert.ok(
-        new Set(
-          top.rows
-            .filter((r) => r.currency === currency)
-            .map((r) => r.customer),
-        ).size <= 10,
-      );
-    const customer = other.customers[0];
-    assert.ok(
-      getReceivables(state, admin, {
-        ...defaultReceivablesFilters,
-        customerGroup: "other",
-        customer,
-      }).rows.every((r) => r.customer === customer),
-    );
+    assert.ok(all.rows.length > 0);
+    assert.deepEqual(all.ranking, []);
+    assert.deepEqual(top.rows, []);
+    assert.deepEqual(other.rows, []);
   },
 );
 test("source aging boundaries and Excel serial dates remain anchored to source calendar", () => {

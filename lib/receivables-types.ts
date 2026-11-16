@@ -14,6 +14,7 @@ export type ReceivableRecord = {
   entityId: string;
   category: "invoice" | ReceiptCategory;
   customer: string;
+  sourceCustomer?: string;
   customerGroup?: string;
   classificationSource?: { sheet: string; row: number };
   subCustomer: string;

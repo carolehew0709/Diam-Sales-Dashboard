@@ -9,3 +9,163 @@
   overflow-x: auto;
   scrollbar-width: thin;
 }
+
+.scopeActions {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.scopeActions p {
+  margin: 0;
+}
+
+.proportions {
+  display: grid;
+  gap: 12px;
+  border-top: 1px solid var(--line);
+  margin-top: 6px;
+  padding-top: 16px;
+}
+
+.proportions h3 {
+  margin: 0;
+  font-size: 15px;
+}
+
+.proportions p {
+  margin: 0;
+  font-size: 11px;
+}
+
+.proportions .credit,
+.rankingShare .credit {
+  background: var(--red);
+}
+
+.rankingShare {
+  display: grid;
+  grid-template-columns: minmax(12px, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.rankingHeading:global(.panel-heading) {
+  display: grid;
+  gap: 6px;
+}
+
+.rankingTable:global(.bu-table) {
+  min-width: 0;
+  table-layout: fixed;
+}
+
+.rankingTable th:first-child {
+  width: 34%;
+}
+
+.rankingTable:global(.bu-table) th,
+.rankingTable:global(.bu-table) td:first-child {
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
+@media (max-width: 640px) {
+  .rankingTable:global(.bu-table) th,
+  .rankingTable:global(.bu-table) td {
+    padding-inline: 5px;
+  }
+}
+
+.rankingShare strong {
+  min-width: 37px;
+  font-variant-numeric: tabular-nums;
+}
+
+.overdueShare {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 8px;
+  background: var(--gold-soft);
+  border-radius: 8px;
+  padding: 10px 12px;
+  font-size: 12px;
+}
+
+.overdueShare strong {
+  font-size: 17px;
+  font-variant-numeric: tabular-nums;
+}
+
+.trends {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.trends article {
+  min-width: 0;
+}
+
+.trends h3 {
+  margin: 0;
+}
+
+.trendCaption {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.trendSelect {
+  max-width: min(100%, 210px);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+  padding: 8px;
+  color: var(--ink);
+}
+
+.trendPlot {
+  overflow-x: auto;
+  margin-top: 10px;
+}
+
+.trendPlot svg {
+  display: block;
+  width: 100%;
+}
+
+.trendAxis {
+  fill: var(--muted);
+  font-size: 11px;
+}
+
+.trendAxis line {
+  stroke: var(--line-soft);
+}
+
+.trendLegend {
+  display: grid;
+  gap: 8px;
+  padding: 0;
+  margin: 10px 0 0;
+  list-style: none;
+}
+
+.trendLegend li {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.trendLegend i {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}

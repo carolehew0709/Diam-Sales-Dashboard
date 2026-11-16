@@ -48,6 +48,7 @@ export const agingBuckets: AgingBucket[] = [
   "over-120",
   "unclassified",
 ];
+const rankingLimit = 10;
 export const defaultReceivablesFilters: ReceivablesFilters = {
   region: "China",
   bu: "all",
@@ -86,6 +87,66 @@ export function receivablesFiltersFrom(url: URL): ReceivablesFilters {
 }
 const customerKey = (value: string) =>
   value.replace(/\s+/g, " ").trim().toLowerCase();
+const isRankableInvoice = (record: ReceivableRecord) =>
+  record.entityId !== "ddc" ||
+  !["dehk", "dehk limited"].includes(customerKey(record.customer));
+const isOverdue = (bucket: AgingBucket) =>
+  bucket !== "not-due" && bucket !== "unclassified";
+const shareOf = (value: number, total: number) =>
+  total > 0 ? value / total : null;
+export function rankCustomerGroups(rows: ReceivableRecord[]) {
+  const groups = new Map<
+    string,
+    {
+      customerGroup: string;
+      currency: ReceivableRecord["currency"];
+      amount: number;
+      overdue: number;
+    }
+  >();
+  for (const row of rows) {
+    if (!row.customerGroup || !isRankableInvoice(row)) continue;
+    const key = `${row.currency}:${row.customerGroup}`;
+    const item = groups.get(key) ?? {
+      customerGroup: row.customerGroup,
+      currency: row.currency,
+      amount: 0,
+      overdue: 0,
+    };
+    item.amount += row.amount;
+    if (isOverdue(row.aging)) item.overdue += row.amount;
+    groups.set(key, item);
+  }
+  return [...groups.values()].sort(
+    (a, b) =>
+      a.currency.localeCompare(b.currency) ||
+      b.amount - a.amount ||
+      a.customerGroup.localeCompare(b.customerGroup),
+  );
+}
+function summarizeRanking(rows: ReceivableRecord[]) {
+  const ranked = rankCustomerGroups(rows);
+  return receivableCurrencies.flatMap((currency) => {
+    const groups = ranked.filter((row) => row.currency === currency);
+    const top = groups.slice(0, rankingLimit);
+    const remaining = groups.slice(rankingLimit);
+    const visible = remaining.length
+      ? [
+          ...top,
+          {
+            customerGroup: null,
+            currency,
+            amount: remaining.reduce((total, row) => total + row.amount, 0),
+            overdue: remaining.reduce((total, row) => total + row.overdue, 0),
+          },
+        ]
+      : top;
+    return visible.map((row) => ({
+      ...row,
+      overdueProportion: shareOf(row.overdue, row.amount),
+    }));
+  });
+}
 function arTeamName(value: string, state: Store) {
   const source = teamName(value);
   if (source === "预收" || source.toUpperCase() === "TBC") return "";
@@ -119,7 +180,7 @@ export function getReceivables(
     Set<ReceivableRecord["customerType"]>
   >();
   for (const r of permitted.filter((r) => r.category === "invoice")) {
-    const key = customerKey(r.customer);
+    const key = customerKey(r.sourceCustomer ?? r.customer);
     classification.set(
       key,
       new Set([...(classification.get(key) ?? []), r.customerType]),
@@ -132,9 +193,11 @@ export function getReceivables(
       sourceSalesTeam: r.salesTeam,
       salesTeam: arTeamName(r.salesTeam, state),
       customerType:
-        r.category !== "invoice" && types?.size === 1
-          ? [...types][0]
-          : r.customerType,
+        r.category === "invoice" && r.entityId === "ddc"
+          ? ("External" as const)
+          : r.category !== "invoice" && types?.size === 1
+            ? [...types][0]
+            : r.customerType,
     };
   });
   const context = records.filter(
@@ -179,61 +242,24 @@ export function getReceivables(
   const groupedInvoices = filters.sourceCustomerGroup
     ? invoices.filter((r) => r.customerGroup === filters.sourceCustomerGroup)
     : invoices;
-  // Rank independently within each source currency; never assume exchange rates.
-  const grouped = new Map<
-    string,
-    { customer: string; currency: string; amount: number; overdue: number }
-  >();
-  for (const r of groupedInvoices) {
-    const key = `${r.currency}:${r.customer}`;
-    const item = grouped.get(key) ?? {
-      customer: r.customer,
-      currency: r.currency,
-      amount: 0,
-      overdue: 0,
-    };
-    item.amount += r.amount;
-    if (!["not-due", "unclassified"].includes(r.aging))
-      item.overdue += r.amount;
-    grouped.set(key, item);
-  }
-  const ranked = [...grouped.values()].sort(
-    (a, b) =>
-      a.currency.localeCompare(b.currency) ||
-      b.amount - a.amount ||
-      a.customer.localeCompare(b.customer),
-  );
+  // Customer and Customer Group filters narrow the report without changing the cohorts.
+  const ranked =
+    filters.customerGroup === "all" ? [] : rankCustomerGroups(invoices);
   const top = new Set(
     receivableCurrencies.flatMap((c) =>
       ranked
         .filter((r) => r.currency === c)
-        .slice(0, 10)
-        .map((r) => `${c}:${r.customer}`),
-    ),
-  );
-  const paymentCohort = new Map<string, number>();
-  for (const r of context.filter((r) => r.category === "invoice")) {
-    const key = `${r.currency}:${r.customer}`;
-    paymentCohort.set(key, (paymentCohort.get(key) ?? 0) + r.amount);
-  }
-  const paymentTop = new Set(
-    receivableCurrencies.flatMap((currency) =>
-      [...paymentCohort]
-        .filter(([key]) => key.startsWith(currency + ":"))
-        .sort((a, b) => b[1] - a[1] || a[0].localeCompare(b[0]))
-        .slice(0, 10)
-        .map(([key]) => key),
+        .slice(0, rankingLimit)
+        .map((r) => `${c}:${r.customerGroup}`),
     ),
   );
   const inCohort = (r: ReceivableRecord) =>
+    r.category !== "invoice" ||
     filters.customerGroup === "all" ||
-    (filters.customerGroup === "top10"
-      ? (r.category === "invoice" ? top : paymentTop).has(
-          `${r.currency}:${r.customer}`,
-        )
-      : !(r.category === "invoice" ? top : paymentTop).has(
-          `${r.currency}:${r.customer}`,
-        ));
+    (!!r.customerGroup &&
+      isRankableInvoice(r) &&
+      top.has(`${r.currency}:${r.customerGroup}`) ===
+        (filters.customerGroup === "top10"));
   const customerMatch = (r: ReceivableRecord) =>
     inCohort(r) &&
     (filters.customer === "all" || r.customer === filters.customer);
@@ -259,11 +285,7 @@ export function getReceivables(
         ? sum(subset.filter((r) => r.aging === "not-due"))
         : null,
       overdue: subset.length
-        ? sum(
-            subset.filter(
-              (r) => !["not-due", "unclassified"].includes(r.aging),
-            ),
-          )
+        ? sum(subset.filter((r) => isOverdue(r.aging)))
         : null,
       unclassified: subset.length
         ? sum(subset.filter((r) => r.aging === "unclassified"))
@@ -291,17 +313,22 @@ export function getReceivables(
           : null,
     };
   });
-  const chart = currencies
-    .filter((currency) => rows.some((r) => r.currency === currency))
-    .map((currency) => ({
-      currency,
-      buckets: agingBuckets.map((bucket) => ({
-        bucket,
-        amount: rows
-          .filter((r) => r.currency === currency && r.aging === bucket)
-          .reduce((n, r) => n + r.amount, 0),
-      })),
-    }));
+  const chart = totals.flatMap(({ currency, ar, overdue }) => {
+    if (ar === null) return [];
+    // Net balances include credit notes. An empty, zero or negative base has no share.
+    return [
+      {
+        currency,
+        overdueProportion: overdue === null ? null : shareOf(overdue, ar),
+        buckets: agingBuckets.map((bucket) => {
+          const amount = rows
+            .filter((r) => r.currency === currency && r.aging === bucket)
+            .reduce((n, r) => n + r.amount, 0);
+          return { bucket, amount, proportion: shareOf(amount, ar) };
+        }),
+      },
+    ];
+  });
   const invoiceSourceDates = allowed.flatMap((entity) => {
     const dates = [
       ...new Set(
@@ -347,11 +374,12 @@ export function getReceivables(
     ].sort(),
     sourceCustomerGroups,
     salesTeams: [...new Set(records.map((r) => teamName(r.salesTeam)))].sort(),
-    ranking: ranked.filter((r) =>
-      rows.some(
-        (row) => row.customer === r.customer && row.currency === r.currency,
+    rankingExcludedCurrencies: [
+      ...new Set(
+        rows.filter((r) => !isRankableInvoice(r)).map((r) => r.currency),
       ),
-    ),
+    ],
+    ranking: summarizeRanking(rows),
     asOfDates: [
       ...new Set(
         scope

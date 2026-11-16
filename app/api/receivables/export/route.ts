@@ -46,6 +46,8 @@ export async function GET(request: Request) {
         "Classification sheet",
         "Classification row",
         "Source Sales Team",
+        "Sales Type",
+        "Source Customer",
       ],
     ];
     for (const r of [...data.rows, ...data.payments])
@@ -77,6 +79,8 @@ export async function GET(request: Request) {
         r.classificationSource?.sheet ?? "",
         r.classificationSource?.row ?? "",
         r.sourceSalesTeam,
+        r.customerType,
+        r.sourceCustomer ?? r.customer,
       ]);
     return new Response(
       "\ufeff" + rows.map((row) => row.map(cell).join(",")).join("\r\n"),

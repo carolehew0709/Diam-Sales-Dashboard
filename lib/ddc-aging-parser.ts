@@ -103,7 +103,7 @@ export function parseDdcAging(bytes: Buffer, file: string) {
       overdueDays: days,
       aging,
       sourceAging: `逾期天数=${r[12] ?? ""}; 即将到期天数=${r[13] ?? ""}`,
-      customerType: "Unclassified",
+      customerType: "External",
       amount: r[16],
       currency,
       note: text(r[19]),
@@ -192,7 +192,7 @@ export function parseDdcAging(bytes: Buffer, file: string) {
   findings.push({
     severity: "review",
     message:
-      "DDC invoices only; preserve DEHK invoices and all Unknown/Advance receipts. Original EUR/RMB remain separate. External/Group allocation is not supplied.",
+      "DDC invoices only; all DDC invoice rows use External. Preserve DEHK invoices and all Unknown/Advance receipts. Original EUR/RMB remain separate.",
   });
   if (missing)
     findings.push({

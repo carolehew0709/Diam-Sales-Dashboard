@@ -132,6 +132,7 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
           0: "date",
           1: "invoicenumber",
           2: "customergroup",
+          3: "customer",
           4: "customer",
           5: "salestype",
           6: "subcustomer",
@@ -174,6 +175,7 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
     date: string;
     invoice: string;
     customer: string;
+    reportingCustomer?: string;
     sub: string;
     amount: number;
     terms: number;
@@ -188,6 +190,7 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
     start: number,
     cols: {
       customer: number;
+      reportingCustomer?: number;
       sub: number;
       amount: number;
       terms: number;
@@ -251,6 +254,10 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
         date,
         invoice,
         customer: text(get(cols.customer)),
+        reportingCustomer:
+          cols.reportingCustomer === undefined
+            ? undefined
+            : text(get(cols.reportingCustomer)),
         sub: text(get(cols.sub)),
         amount,
         terms,
@@ -275,6 +282,7 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
       ? {
           group: 2,
           customer: 4,
+          reportingCustomer: 3,
           type: 5,
           sub: 6,
           amount: 13,
@@ -360,7 +368,12 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
       (lines) =>
         new Set(
           lines.map((line) =>
-            JSON.stringify([line.customerGroup, line.team, line.type]),
+            JSON.stringify([
+              line.customerGroup,
+              line.reportingCustomer,
+              line.team,
+              line.type,
+            ]),
           ),
         ).size > 1,
     )
@@ -396,9 +409,12 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
       id: `dhk:ALL:${line.row}`,
       entityId: "dhk",
       category: "invoice",
-      customer: line.customer,
+      customer: source.reportingCustomer ?? line.customer,
+      ...(source.reportingCustomer !== undefined
+        ? { sourceCustomer: line.customer }
+        : {}),
       ...(source.customerGroup ? { customerGroup: source.customerGroup } : {}),
-      ...(grouped && source.customerGroup
+      ...(source.reportingCustomer !== undefined
         ? { classificationSource: { sheet: agingName, row: source.row } }
         : {}),
       subCustomer: line.sub,
@@ -482,7 +498,7 @@ export function parseDehkReceiveWorkbook(bytes: Buffer, sourceFile: string) {
   if (grouped)
     findings.push({
       severity: "info",
-      message: `DEHK Customer Group and updated Sales Team come from ${agingName} (${old.length} prior-month lines). ${currentName} retains its own team values and has no Customer Group column.`,
+      message: `DEHK uses Customer Group (C), Customer (D), Sales Type (F) and Sales Team (S) from ${agingName} (${old.length} prior-month lines). ${currentName} supplies its own Customer, Sales Type and Sales Team and has no Customer Group column.`,
     });
   return finish();
 }

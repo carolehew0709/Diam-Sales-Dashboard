@@ -68,7 +68,7 @@ test("DDC ledger preserves currency, exact source aging, and explicit Entity-onl
   assert.equal(p.records[0].asOfDate, "2026-10-31");
   assert.equal(p.records[0].aging, "1-30");
   assert.equal(p.records[0].amount, 123);
-  assert.equal(p.records[0].customerType, "Unclassified");
+  assert.equal(p.records[0].customerType, "External");
   assert.equal(p.records[0].currency, "RMB");
 });
 test("DDC ledger rejects foreign organization/currency/missing balance rather than dropping rows", () => {

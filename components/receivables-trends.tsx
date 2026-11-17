@@ -4,6 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import { integerAxis } from "@/lib/chart-axis";
 import type { ReceivablesTrends as TrendData } from "@/lib/receivables-trends";
 import { useI18n } from "./i18n-provider";
+import { arAmountFormatter, arThousands, arUnit } from "./receivables-display";
 import styles from "./receivables-filters.module.css";
 
 const colors = ["#9b681f", "#346e9c", "#2f8064", "#ac5255", "#765690"];
@@ -34,7 +35,7 @@ function TrendPanel({
     const group = panel.series.find((item) => item.name === name);
     return group ? [group] : [];
   });
-  const precision = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
+  const amountLabel = arAmountFormatter(locale);
   const axisNumber = new Intl.NumberFormat(locale, {
     maximumFractionDigits: 0,
   });
@@ -43,7 +44,11 @@ function TrendPanel({
     timeZone: "UTC",
   });
   const { min, max, ticks } = integerAxis(
-    series.flatMap((group) => group.values),
+    series.flatMap((group) =>
+      group.values.map((amount) =>
+        amount === null ? null : arThousands(amount),
+      ),
+    ),
   );
   const start = 68,
     end = width - 19;
@@ -51,8 +56,9 @@ function TrendPanel({
     months.length === 1
       ? (start + end) / 2
       : start + (i * (end - start)) / (months.length - 1);
-  const y = (amount: number) => 210 - ((amount - min) / (max - min)) * 185;
-  const name = `${panel.entityCode} · ${panel.currency}`;
+  const y = (thousands: number) =>
+    210 - ((thousands - min) / (max - min)) * 185;
+  const name = `${panel.entityCode} · ${arUnit(panel.currency)}`;
   const chartTitle = tr("ar.trendChartLabel", { scope: name });
   return (
     <article
@@ -116,7 +122,7 @@ function TrendPanel({
               .map((value, i) =>
                 value === null
                   ? ""
-                  : `${i > 0 && group.values[i - 1] !== null ? "L" : "M"} ${x(i)} ${y(value)}`,
+                  : `${i > 0 && group.values[i - 1] !== null ? "L" : "M"} ${x(i)} ${y(arThousands(value))}`,
               )
               .join(" ");
             return (
@@ -124,12 +130,12 @@ function TrendPanel({
                 <path d={line} fill="none" stroke={color} strokeWidth={2.5} />
                 {group.values.map((value, i) => {
                   if (value === null) return null;
-                  const label = `${group.name} · ${months[i]} · ${precision.format(value)} ${panel.currency}`;
+                  const label = `${group.name} · ${months[i]} · ${amountLabel(value)} ${arUnit(panel.currency)}`;
                   return (
                     <circle
                       key={months[i]}
                       cx={x(i)}
-                      cy={y(value)}
+                      cy={y(arThousands(value))}
                       r={4}
                       fill={color}
                       role="img"
@@ -154,7 +160,7 @@ function TrendPanel({
               <span>{group.name}</span>
               {latest >= 0 && (
                 <strong title={months[latest]}>
-                  {precision.format(group.values[latest]!)}
+                  {amountLabel(group.values[latest]!)}
                 </strong>
               )}
             </li>

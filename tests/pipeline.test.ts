@@ -92,6 +92,44 @@ function workbook(records = rows) {
   return XLSX.write(book, { type: "buffer", bookType: "xlsx" }) as Buffer;
 }
 
+test("Pipeline movement values convert the same dated opportunities used by the counts", () => {
+  const [created, lost, recent] = parsePipelineWorkbook(
+    workbook(),
+    "2026-11-16",
+  ).rows;
+  const result = pipelineMovement(
+    [
+      { ...created, amount: 2000 },
+      { ...lost, currency: "USD", amount: 1100 },
+      { ...recent, amount: 7700 },
+      { ...lost, id: "missing", decided: "2026-11-15" },
+      { ...lost, id: "undated", decided: null, amount: 44_000 },
+      { ...recent, id: "future", created: "2026-11-17", amount: 77_000 },
+    ],
+    "2026-11-16",
+  );
+  const income = Object.fromEntries(
+    Object.entries(result.income).map(([key, value]) => [
+      key,
+      { ...value, kEUR: Number(value.kEUR?.toFixed(6)) },
+    ]),
+  );
+  assert.deepEqual(income, {
+    ytdAdded: { kEUR: 48, missing: 1 },
+    ytdLost: { kEUR: 1, missing: 1 },
+    weekAdded: { kEUR: 1, missing: 0 },
+    weekLost: { kEUR: 1, missing: 0 },
+  });
+  assert.deepEqual(pipelineMovement([lost], "2026-11-16").income.weekLost, {
+    kEUR: null,
+    missing: 1,
+  });
+  assert.deepEqual(pipelineMovement([], "2026-11-16").income.ytdAdded, {
+    kEUR: 0,
+    missing: 0,
+  });
+});
+
 test("Pipeline preserves grain, original currency, source filters and missing income", () => {
   const parsed = parsePipelineWorkbook(workbook(), "2026-11-16");
   assert.equal(parsed.currencyConflicts, 1);

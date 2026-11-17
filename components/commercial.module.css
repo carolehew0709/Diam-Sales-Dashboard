@@ -6,8 +6,7 @@
 
 .header,
 .sectionHeading,
-.source,
-.pagination {
+.source {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -133,6 +132,7 @@
 
 .metric {
   display: grid;
+  align-content: start;
   padding: 18px;
   gap: 8px;
 }
@@ -152,6 +152,37 @@
   line-height: 1;
   letter-spacing: -0.04em;
   font-variant-numeric: tabular-nums;
+}
+
+.metricIncome {
+  display: grid;
+  gap: 3px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metricIncome small {
+  color: var(--muted);
+}
+
+.statusPanels {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.statusPanels .table th,
+.statusPanels .table td {
+  padding-inline: 6px;
+}
+
+.statusPanels .table thead th {
+  white-space: normal;
+}
+
+@media (max-width: 1000px) {
+  .statusPanels {
+    grid-template-columns: minmax(0, 1fr);
+  }
 }
 
 .months {
@@ -207,18 +238,6 @@
   display: block;
   color: var(--muted);
   margin-top: 4px;
-}
-
-.table .empty {
-  padding: 34px 12px;
-  text-align: center;
-  color: var(--muted);
-}
-
-.pagination {
-  justify-content: flex-end;
-  margin-top: 12px;
-  color: var(--muted);
 }
 
 .flow {

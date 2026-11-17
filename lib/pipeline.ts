@@ -161,6 +161,22 @@ export function pipelineTotals(rows: Opportunity[]) {
   };
 }
 
+// Fixed reporting rates: native currency units per EUR.
+export const pipelineFx = { EUR: 1, RMB: 7.7, USD: 1.1 } as const;
+
+function movementIncome(rows: Opportunity[]) {
+  let eur = 0;
+  let missing = 0;
+  for (const { amount, currency } of rows) {
+    if (amount === null) missing++;
+    else eur += amount / pipelineFx[currency];
+  }
+  return {
+    kEUR: rows.length > 0 && missing === rows.length ? null : eur / 1000,
+    missing,
+  };
+}
+
 /** The current export supplies creation and loss events, even before we have status snapshots. */
 export function pipelineMovement(rows: Opportunity[], asOf: string) {
   const yearStart = `${asOf.slice(0, 4)}-01-01`;
@@ -209,11 +225,19 @@ export function pipelineMovement(rows: Opportunity[], asOf: string) {
       losses += events.get(start)?.lost ?? 0;
       trend.push({ week: start, added, lost: losses });
     }
+  const addedThisWeek = created.filter((r) => r.created >= week);
+  const lostThisWeek = lost.filter((r) => r.decided! >= week);
   return {
     ytdAdded: created.length,
     ytdLost: lost.length,
-    weekAdded: created.filter((r) => r.created >= week).length,
-    weekLost: lost.filter((r) => r.decided! >= week).length,
+    weekAdded: addedThisWeek.length,
+    weekLost: lostThisWeek.length,
+    income: {
+      ytdAdded: movementIncome(created),
+      ytdLost: movementIncome(lost),
+      weekAdded: movementIncome(addedThisWeek),
+      weekLost: movementIncome(lostThisWeek),
+    },
     monthAdded: created.filter((r) => r.created.startsWith(month)).length,
     priorMonthAdded: created.filter((r) => r.created.startsWith(priorMonth))
       .length,

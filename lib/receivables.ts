@@ -39,6 +39,51 @@ export function summarizeReceipts(records: ReceivableRecord[]) {
   });
 }
 
+export type PaymentBalanceRow = Pick<
+  ReceivableRecord,
+  "customer" | "currency" | "amount" | "receivedDate"
+> & { category: "unknown" | "advance" };
+
+export function paymentBalances(
+  records: PaymentBalanceRow[],
+  customer: string,
+  category: PaymentBalanceRow["category"] | "",
+) {
+  const selected = records.filter(
+    (row) =>
+      (!customer || row.customer === customer) &&
+      (!category || row.category === category),
+  );
+  return {
+    count: selected.length,
+    latestDate: selected.reduce<string | null>(
+      (latest, row) =>
+        row.receivedDate && (!latest || latest < row.receivedDate)
+          ? row.receivedDate
+          : latest,
+      null,
+    ),
+    balances: receivableCurrencies.flatMap((currency) => {
+      const rows = selected.filter((row) => row.currency === currency);
+      if (!rows.length) return [];
+      const unknown = rows.filter((row) => row.category === "unknown");
+      const advance = rows.filter((row) => row.category === "advance");
+      const sum = (items: PaymentBalanceRow[]) =>
+        items.length
+          ? items.reduce((amount, row) => amount + row.amount, 0)
+          : null;
+      return [
+        {
+          currency,
+          unknown: sum(unknown),
+          advance: sum(advance),
+          total: sum(rows),
+        },
+      ];
+    }),
+  };
+}
+
 export const agingBuckets: AgingBucket[] = [
   "not-due",
   "1-30",
@@ -349,6 +394,22 @@ export function getReceivables(
       .filter((date): date is string => !!date)
       .sort()
       .at(-1) ?? null;
+  // Keep the separate payment section independent of the invoice filters and
+  // expose only the fields it uses, within the existing shared-receipt scope.
+  const paymentFilterRows = permitted.flatMap<PaymentBalanceRow>(
+    ({ category, customer, amount, currency, receivedDate }) =>
+      category === "invoice"
+        ? []
+        : [
+            {
+              category: category === "advance" ? "advance" : "unknown",
+              customer,
+              amount,
+              currency,
+              receivedDate,
+            },
+          ],
+  );
   return {
     filters,
     entities: allowed,
@@ -357,6 +418,7 @@ export function getReceivables(
     chart,
     rows,
     payments,
+    paymentFilterRows,
     receiptSummary: summarizeReceipts(payments),
     invoiceSourceDates,
     latestReceiptDate,

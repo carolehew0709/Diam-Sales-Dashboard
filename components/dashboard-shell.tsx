@@ -14,6 +14,8 @@ import type { Filters, User } from "@/lib/types";
 import { AccountMenu } from "./account-menu";
 import { LanguageSwitcher } from "./language-switcher";
 import { hasReceivablesAccess } from "@/lib/receivables";
+import { hasPipelineAccess } from "@/lib/pipeline";
+import styles from "./dashboard-shell.module.css";
 export function DashboardShell({
   user,
   filters,
@@ -41,7 +43,7 @@ export function DashboardShell({
   return (
     <>
       <header
-        className={`topbar dashboard-header ${page === "home" || standalone ? "home-header" : ""}`}
+        className={`topbar dashboard-header ${styles.header} ${page === "home" || standalone ? "home-header" : ""}`}
         ref={header}
       >
         <div className="brand">
@@ -59,40 +61,55 @@ export function DashboardShell({
             />
           </Link>
           <span className="brand-divider" />
-          <nav className="product-switcher" aria-label={tr("nav.area")}>
-            <Link
-              href={pagePath(locale, "home")}
-              aria-current={page === "home" ? "page" : undefined}
-            >
-              <House size={13} aria-hidden="true" /> {tr("nav.home")}
-            </Link>
-            {page !== "home" && (
-              <>
-                <Link
-                  href={pagePath(locale, "overview")}
-                  aria-current={page === "overview" ? "page" : undefined}
-                >
-                  {tr("nav.performance")}
-                </Link>
-                {hasReceivablesAccess(user) && (
-                  <Link
-                    href={pagePath(locale, "ar-aging")}
-                    scroll={false}
-                    onNavigate={() =>
-                      window.scrollTo({ top: 0, behavior: "instant" })
-                    }
-                    aria-current={page === "ar-aging" ? "page" : undefined}
-                  >
-                    {tr("ar.nav")}
-                  </Link>
-                )}
-                {quotation && <Link href={pagePath(locale, "quotation")} aria-current="page">{tr("quote.title")}</Link>}
-                {pipeline && <Link href={pagePath(locale, "pipeline")} aria-current="page">{tr("pipeline.title")}</Link>}
-                {salesOps && <Link href={pagePath(locale, "sales-operations")} aria-current="page">{tr("salesOps.title")}</Link>}
-              </>
-            )}
-          </nav>
         </div>
+        <nav
+          className={`product-switcher ${styles.modules}`}
+          aria-label={tr("nav.area")}
+        >
+          <Link
+            href={pagePath(locale, "home")}
+            aria-current={page === "home" ? "page" : undefined}
+          >
+            <House size={13} aria-hidden="true" /> {tr("nav.home")}
+          </Link>
+          <Link
+            href={pagePath(locale, "overview")}
+            aria-current={page === "overview" ? "page" : undefined}
+          >
+            {tr("nav.performance")}
+          </Link>
+          {hasReceivablesAccess(user) && (
+            <Link
+              href={pagePath(locale, "ar-aging")}
+              scroll={false}
+              onNavigate={() =>
+                window.scrollTo({ top: 0, behavior: "instant" })
+              }
+              aria-current={page === "ar-aging" ? "page" : undefined}
+            >
+              {tr("ar.nav")}
+            </Link>
+          )}
+          {quotation && (
+            <Link href={pagePath(locale, "quotation")} aria-current="page">
+              {tr("quote.title")}
+            </Link>
+          )}
+          {hasPipelineAccess(user) && (
+            <Link
+              href={pagePath(locale, "pipeline")}
+              aria-current={pipeline ? "page" : undefined}
+            >
+              {tr("pipeline.title")}
+            </Link>
+          )}
+          <Link
+            href={pagePath(locale, "sales-operations")}
+            aria-current={salesOps ? "page" : undefined}
+          >
+            {tr("nav.salesOperations")}
+          </Link>
+        </nav>
         {page !== "home" && page !== "ar-aging" && !standalone && (
           <nav className="topnav">
             <span className="topnav-links">
@@ -138,7 +155,8 @@ export function DashboardShell({
           </nav>
         )}
         <div className="topbar-actions">
-          {page !== "home" && !standalone &&
+          {page !== "home" &&
+            !standalone &&
             ["superadmin", "region_admin", "editor"].includes(user.role) && (
               <Link
                 className="import-data"
@@ -153,21 +171,24 @@ export function DashboardShell({
                 <span>{tr("nav.import")}</span>
               </Link>
             )}
-          {page !== "home" && page !== "ar-aging" && page !== "imports" && !standalone && (
-            <a
-              className="excel-export"
-              href={`/api/export?${query}`}
-              aria-disabled={updating || undefined}
-              onClick={(event) => {
-                if (updating) event.preventDefault();
-              }}
-              title={tr("nav.export")}
-              aria-label={tr("nav.export")}
-            >
-              <Download size={15} />
-              <span>{tr("nav.export")}</span>
-            </a>
-          )}
+          {page !== "home" &&
+            page !== "ar-aging" &&
+            page !== "imports" &&
+            !standalone && (
+              <a
+                className="excel-export"
+                href={`/api/export?${query}`}
+                aria-disabled={updating || undefined}
+                onClick={(event) => {
+                  if (updating) event.preventDefault();
+                }}
+                title={tr("nav.export")}
+                aria-label={tr("nav.export")}
+              >
+                <Download size={15} />
+                <span>{tr("nav.export")}</span>
+              </a>
+            )}
           <AccountMenu user={user} onLogout={onLogout} />
           <LanguageSwitcher />
         </div>

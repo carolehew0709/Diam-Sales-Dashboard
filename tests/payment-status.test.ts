@@ -7,6 +7,7 @@ import { identifyWorkbook } from "../lib/workbook-intake";
 import {
   defaultReceivablesFilters,
   getReceivables,
+  paymentBalances,
   summarizeReceipts,
 } from "../lib/receivables";
 import {
@@ -327,10 +328,29 @@ test("native USD, EUR and pending receipts reconcile independently, never alter 
     }).payments[0].category,
     "pending",
   );
+  const independent = getReceivables(store, admin, {
+    ...defaultReceivablesFilters,
+    salesTeam: "Team B",
+    customer: "Customer C",
+  }).paymentFilterRows;
+  assert.deepEqual(independent, view.paymentFilterRows);
+  assert.deepEqual(
+    paymentBalances(independent, "", "unknown").balances,
+    [{ currency: "USD", unknown: 125, advance: null, total: 125 }],
+  );
+  assert.deepEqual(
+    paymentBalances(independent, "Customer C", "unknown").balances,
+    [{ currency: "USD", unknown: 25, advance: null, total: 25 }],
+  );
+  assert.deepEqual(
+    paymentBalances(independent, "Customer C", "advance").balances,
+    [],
+  );
   for (const permissions of [{ dhk: ["view"] }, { ddi: ["view", "edit"] }] as User["permissions"][]) {
     const actor = { ...editor, permissions } as User,
       hidden = getReceivables(store, actor, defaultReceivablesFilters);
     assert.deepEqual(hidden.payments, []);
+    assert.deepEqual(hidden.paymentFilterRows, []);
     assert.deepEqual(hidden.receiptSummary, []);
     assert.ok(hidden.totals.every((r) => r.currency !== "USD"));
   }

@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState, useTransition } from "react";
 import { UpdateStatus } from "./update-status";
 import { useDataReveal } from "./use-data-reveal";
-import { ReceiptBalances } from "./receipt-balances";
+import { UnknownPayments } from "./unknown-payments";
 import { Download, LoaderCircle } from "lucide-react";
 import { ReceivablesSourceDates } from "./receivables-source-dates";
 import { ReceivablesTrends } from "./receivables-trends";
@@ -10,6 +10,7 @@ import { useI18n } from "./i18n-provider";
 import { agingBuckets, defaultReceivablesFilters } from "@/lib/receivables";
 import type { ReceivablesView } from "@/lib/receivables";
 import type { ReceivablesFilters } from "@/lib/receivables-types";
+import { arAmountFormatter, arUnit } from "./receivables-display";
 import { formatUpdateDate } from "@/lib/dashboard";
 import styles from "./receivables-filters.module.css";
 
@@ -66,12 +67,31 @@ export function ReceivablesApp() {
       });
     return () => controller.abort();
   }, [query, retry]);
-  const amount = (value: number | null) =>
-    value === null
-      ? "—"
-      : new Intl.NumberFormat(locale, { maximumFractionDigits: 0 }).format(
-          value,
-        );
+  const amount = arAmountFormatter(locale);
+  const entitiesByCurrency = useMemo(() => {
+    const result = new Map<string, Set<string>>();
+    for (const row of data?.rows ?? []) {
+      const codes = result.get(row.currency) ?? new Set<string>();
+      const code = data?.entities.find(
+        (entity) => entity.id === row.entityId,
+      )?.code;
+      if (code) codes.add(code);
+      result.set(row.currency, codes);
+    }
+    return result;
+  }, [data]);
+  const invoiceUnit = (currency: string) => {
+    const codes = [...(entitiesByCurrency.get(currency) ?? [])].sort();
+    return [codes.join(" / "), arUnit(currency)].filter(Boolean).join(" · ");
+  };
+  const totals =
+    data?.totals.map((row) => ({
+      ...row,
+      unknown:
+        row.unknown === null && row.pending === null
+          ? null
+          : (row.unknown ?? 0) + (row.pending ?? 0),
+    })) ?? [];
   const percentage = new Intl.NumberFormat(locale, {
     style: "percent",
     maximumFractionDigits: 1,
@@ -290,17 +310,17 @@ export function ReceivablesApp() {
                 <div className="kpi-topline">
                   <span>{tr(`ar.metric.${key}`)}</span>
                 </div>
-                <dl className="ar-kpi-values">
-                  {data.totals.some((t) =>
-                    key === "unknown" ? t.unknown !== null : t.ar !== null,
-                  ) ? (
-                    data.totals
-                      .filter((t) =>
-                        key === "unknown" ? t.unknown !== null : t.ar !== null,
-                      )
+                <dl className={`ar-kpi-values ${styles.kpiValues}`}>
+                  {totals.some((t) => t[key] !== null) ? (
+                    totals
+                      .filter((t) => t[key] !== null)
                       .map((t) => (
                         <div key={t.currency}>
-                          <dt>{t.currency}</dt>
+                          <dt>
+                            {key === "unknown"
+                              ? arUnit(t.currency)
+                              : invoiceUnit(t.currency)}
+                          </dt>
                           <dd
                             className={
                               t[key] === null ? "ar-kpi-missing" : undefined
@@ -331,7 +351,9 @@ export function ReceivablesApp() {
               <section className="panel" key={chart.currency}>
                 <div className="panel-heading">
                   <div>
-                    <p className="panel-kicker">{chart.currency}</p>
+                    <p className={`panel-kicker ${styles.unitLabel}`}>
+                      {invoiceUnit(chart.currency)}
+                    </p>
                     <h2>{tr("ar.agingProfile")}</h2>
                   </div>
                 </div>
@@ -394,7 +416,9 @@ export function ReceivablesApp() {
                 >
                   <div className={`panel-heading ${styles.rankingHeading}`}>
                     <div>
-                      <p className="panel-kicker">{currency}</p>
+                      <p className={`panel-kicker ${styles.unitLabel}`}>
+                        {invoiceUnit(currency)}
+                      </p>
                       <h2>{tr("ar.ranking")}</h2>
                     </div>
                     <span className="muted">{tr("ar.rankingNote")}</span>
@@ -488,84 +512,10 @@ export function ReceivablesApp() {
             })}
           </div>
           <ReceivablesTrends />
-          <section className="panel ar-detail">
-            <div className="panel-heading">
-              <div>
-                <p className="panel-kicker">{tr("ar.sharedReceipts")}</p>
-                <h2>{tr("ar.payments")}</h2>
-              </div>
-              <span>
-                {tr("ar.receiptCount", { count: data.payments.length })}
-              </span>
-            </div>
-            {!data.paymentsAllowed && <p>{tr("ar.sharedAccess")}</p>}
-            {data.latestReceiptDate && (
-              <p className="ar-context">
-                {tr("ar.latestReceiptDate")}:{" "}
-                <time dateTime={data.latestReceiptDate}>
-                  {data.latestReceiptDate}
-                </time>
-              </p>
-            )}
-            <ReceiptBalances
-              rows={data.receiptSummary}
-              caption={tr("ar.receiptSummary")}
-            />
-            <div className="table-wrap">
-              <table className="bu-table ar-table">
-                <thead>
-                  <tr>
-                    {(
-                      [
-                        "category",
-                        "received",
-                        "customer",
-                        "team",
-                        "pic",
-                        "balance",
-                        "note",
-                      ] as const
-                    ).map((key) => (
-                      <th key={key}>{tr(`ar.column.${key}`)}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {!data.payments.length && (
-                    <tr>
-                      <td colSpan={7} className="ar-empty">
-                        {tr(
-                          data.paymentsAllowed
-                            ? "ar.noMatches"
-                            : "ar.sharedAccess",
-                        )}
-                      </td>
-                    </tr>
-                  )}
-                  {data.payments.map((row) => (
-                    <tr key={row.id}>
-                      <td>
-                        {tr(
-                          `ar.category.${row.category === "invoice" ? "unknown" : row.category}`,
-                        )}
-                      </td>
-                      <td>{row.receivedDate}</td>
-                      <td>
-                        {row.customer}
-                        <small>{row.payer}</small>
-                      </td>
-                      <td>{team(row.salesTeam)}</td>
-                      <td>{row.pic || "—"}</td>
-                      <td className="numeric">
-                        {amount(row.amount)} {row.currency}
-                      </td>
-                      <td className="ar-note-cell">{row.note || "—"}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </section>
+          <UnknownPayments
+            allowed={data.paymentsAllowed}
+            rows={data.paymentFilterRows}
+          />
           <footer className="dashboard-footer">
             <span>
               {tr("ar.sources")}: {data.sourceFiles.join(" · ")}

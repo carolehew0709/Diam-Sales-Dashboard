@@ -6,15 +6,16 @@ import type { MessageKey } from "@/lib/i18n";
 import {
   pipelineCurrencies,
   pipelineFilters,
+  pipelineFx,
   pipelineMovement,
   pipelineRows,
+  pipelineStages,
   pipelineStatuses,
   pipelineTotals,
   weekLabel,
   type Opportunity,
   type PipelineData,
   type PipelineFilters,
-  type PipelineStatus,
 } from "@/lib/pipeline";
 import { useI18n } from "./i18n-provider";
 import { PipelineImport } from "./pipeline-import";
@@ -115,9 +116,11 @@ function FilterBar({
 function StatusTable({
   rows,
   earlier,
+  byStage = false,
 }: {
   rows: Opportunity[];
   earlier?: Opportunity[];
+  byStage?: boolean;
 }) {
   const { tr, locale } = useI18n();
   const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
@@ -138,12 +141,39 @@ function StatusTable({
       )}
     </>
   );
+  const groups = byStage
+    ? [
+        ...pipelineStages.map((stage) => ({
+          key: stage,
+          label: tr(`pipeline.stage.${stage}`),
+          match: (row: Opportunity) => row.stage === stage,
+        })),
+        ...(rows.some((row) => !row.stage)
+          ? [
+              {
+                key: "unspecified",
+                label: tr("pipeline.unspecified"),
+                match: (row: Opportunity) => !row.stage,
+              },
+            ]
+          : []),
+      ]
+    : [
+        { key: "total", label: tr("pipeline.status.total"), match: () => true },
+        ...pipelineStatuses.map((status) => ({
+          key: status,
+          label: tr(`pipeline.status.${status}`),
+          match: (row: Opportunity) => row.status === status,
+        })),
+      ];
   return (
     <div className={styles.tableWrap}>
       <table className={styles.table}>
         <thead>
           <tr>
-            <th scope="col">{tr("pipeline.status")}</th>
+            <th scope="col">
+              {tr(byStage ? "pipeline.stage" : "pipeline.status")}
+            </th>
             <th scope="col">{tr("pipeline.projects")}</th>
             <th scope="col">{tr("pipeline.opportunities")}</th>
             {pipelineCurrencies.map((currency) => (
@@ -155,16 +185,12 @@ function StatusTable({
           </tr>
         </thead>
         <tbody>
-          {(["total", ...pipelineStatuses] as const).map((status) => {
-            const select = (data: Opportunity[]) =>
-              status === "total"
-                ? data
-                : data.filter((row) => row.status === status);
-            const current = pipelineTotals(select(rows));
-            const previous = earlier && pipelineTotals(select(earlier));
+          {groups.map(({ key, label, match }) => {
+            const current = pipelineTotals(rows.filter(match));
+            const previous = earlier && pipelineTotals(earlier.filter(match));
             return (
-              <tr key={status}>
-                <th scope="row">{tr(`pipeline.status.${status}`)}</th>
+              <tr key={key}>
+                <th scope="row">{label}</th>
                 <td>{render(current.projects, previous?.projects)}</td>
                 <td>
                   {render(current.opportunities, previous?.opportunities)}
@@ -184,141 +210,6 @@ function StatusTable({
         </tbody>
       </table>
     </div>
-  );
-}
-
-function OpportunityTable({
-  rows,
-  sources,
-}: {
-  rows: Opportunity[];
-  sources: PipelineData["current"];
-}) {
-  const { tr, locale } = useI18n();
-  const [status, setStatus] = useState<"" | PipelineStatus>("");
-  const [page, setPage] = useState(0);
-  const items = status ? rows.filter((row) => row.status === status) : rows;
-  const pageSize = 20;
-  const count = Math.max(1, Math.ceil(items.length / pageSize));
-  const current = Math.min(count - 1, page);
-  const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
-  return (
-    <section className={styles.panel}>
-      <div className={styles.sectionHeading}>
-        <h2>{tr("pipeline.details")}</h2>
-        <label>
-          {tr("pipeline.status")}{" "}
-          <select
-            value={status}
-            onChange={(event) => {
-              setStatus(event.target.value as typeof status);
-              setPage(0);
-            }}
-          >
-            <option value="">{tr("pipeline.all")}</option>
-            {pipelineStatuses.map((item) => (
-              <option value={item} key={item}>
-                {tr(`pipeline.status.${item}`)}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-      <div
-        className={styles.tableWrap}
-        tabIndex={0}
-        role="region"
-        aria-label={tr("pipeline.details")}
-      >
-        <table className={styles.table}>
-          <thead>
-            <tr>
-              {(
-                [
-                  "pipeline.opportunity",
-                  "common.entity",
-                  "pipeline.salesTeam",
-                  "ar.customerGroup",
-                  "common.customer",
-                  "pipeline.status",
-                  "pipeline.stage",
-                  "pipeline.estimated",
-                  "pipeline.created",
-                ] as const
-              ).map((key) => (
-                <th scope="col" key={key}>
-                  {tr(key)}
-                </th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {items
-              .slice(current * pageSize, (current + 1) * pageSize)
-              .map((row) => (
-                <tr key={row.id}>
-                  <th scope="row">
-                    {row.name}
-                    <small>
-                      {row.id} · {row.project}
-                    </small>
-                  </th>
-                  <td>
-                    {row.entityId === "dhk"
-                      ? "DEHK"
-                      : row.entityId.toUpperCase()}
-                  </td>
-                  <td>{row.team || "—"}</td>
-                  <td>{row.customerGroup || "—"}</td>
-                  <td>{row.customer || "—"}</td>
-                  <td>{tr(`pipeline.status.${row.status}`)}</td>
-                  <td>{row.stage ? tr(`pipeline.stage.${row.stage}`) : "—"}</td>
-                  <td>
-                    {row.amount === null
-                      ? "—"
-                      : `${row.currency} ${number.format(row.amount)}`}
-                  </td>
-                  <td>
-                    {row.created}
-                    <small>
-                      {sources.find((s) => s.entityId === row.entityId)?.sheet}{" "}
-                      · {row.sourceRow}
-                    </small>
-                  </td>
-                </tr>
-              ))}
-            {!items.length && (
-              <tr>
-                <td colSpan={9} className={styles.empty}>
-                  {tr("pipeline.noResults")}
-                </td>
-              </tr>
-            )}
-          </tbody>
-        </table>
-      </div>
-      {count > 1 && (
-        <div className={styles.pagination}>
-          <button
-            className="apac-button"
-            disabled={!current}
-            onClick={() => setPage(current - 1)}
-          >
-            {tr("pipeline.previous")}
-          </button>
-          <span>
-            {current + 1} / {count}
-          </span>
-          <button
-            className="apac-button"
-            disabled={current + 1 >= count}
-            onClick={() => setPage(current + 1)}
-          >
-            {tr("pipeline.next")}
-          </button>
-        </div>
-      )}
-    </section>
   );
 }
 
@@ -405,6 +296,7 @@ export function PipelineApp() {
     )
     .join(" · ");
   const number = new Intl.NumberFormat(locale);
+  const income = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
   const month = new Intl.DateTimeFormat(locale, {
     month: "long",
     year: "numeric",
@@ -483,45 +375,79 @@ export function PipelineApp() {
             <div className={styles.metrics}>
               {(
                 [
-                  ["pipeline.ytdAdded", movement.ytdAdded],
-                  ["pipeline.ytdLost", movement.ytdLost],
-                  ["pipeline.weekAdded", movement.weekAdded],
-                  ["pipeline.weekLost", movement.weekLost],
+                  ["pipeline.ytdAdded", "ytdAdded"],
+                  ["pipeline.ytdLost", "ytdLost"],
+                  ["pipeline.weekAdded", "weekAdded"],
+                  ["pipeline.weekLost", "weekLost"],
                 ] as const
-              ).map(([title, value]) => (
-                <article key={title} className={styles.metric}>
-                  <span>{tr(title)}</span>
-                  <strong>{number.format(value)}</strong>
-                </article>
-              ))}
+              ).map(([title, key]) => {
+                const value = movement.income[key];
+                return (
+                  <article key={title} className={styles.metric}>
+                    <span>{tr(title)}</span>
+                    <strong>{number.format(movement[key])}</strong>
+                    <div className={styles.metricIncome}>
+                      <b>
+                        {value.kEUR === null ? "—" : income.format(value.kEUR)}{" "}
+                        kEUR
+                      </b>
+                      {value.missing > 0 && (
+                        <small>
+                          {tr("pipeline.incomeMissing", {
+                            count: value.missing,
+                          })}
+                        </small>
+                      )}
+                    </div>
+                  </article>
+                );
+              })}
             </div>
+            <p className={styles.note}>
+              {tr("pipeline.incomeBasis", {
+                rmb: income.format(pipelineFx.RMB),
+                usd: income.format(pipelineFx.USD),
+              })}
+            </p>
             {movement.undatedLosses > 0 && (
               <p className={styles.note}>
                 {tr("pipeline.undated", { count: movement.undatedLosses })}
               </p>
             )}
-            <section className={styles.panel}>
-              <div className={styles.sectionHeading}>
-                <h2>{tr("pipeline.weeklyStatus")}</h2>
-                <span className={styles.status}>
-                  {tr("pipeline.estimated")}
-                </span>
-              </div>
-              <StatusTable
-                rows={rows}
-                earlier={
-                  comparable ? pipelineRows(earlier, filters) : undefined
-                }
-              />
-              <p className={styles.note}>{tr("pipeline.grainNote")}</p>
-              <p className={styles.note}>
-                {comparable
-                  ? tr("pipeline.compared", {
-                      dates: earlier.map((source) => source.asOf).join(" / "),
-                    })
-                  : tr("pipeline.noComparison")}
-              </p>
-            </section>
+            <div className={styles.statusPanels}>
+              <section className={styles.panel}>
+                <div className={styles.sectionHeading}>
+                  <h2>{tr("pipeline.weeklyStatus")}</h2>
+                  <span className={styles.status}>
+                    {tr("pipeline.estimated")}
+                  </span>
+                </div>
+                <StatusTable
+                  rows={rows}
+                  earlier={
+                    comparable ? pipelineRows(earlier, filters) : undefined
+                  }
+                />
+                <p className={styles.note}>{tr("pipeline.grainNote")}</p>
+                <p className={styles.note}>
+                  {comparable
+                    ? tr("pipeline.compared", {
+                        dates: earlier.map((source) => source.asOf).join(" / "),
+                      })
+                    : tr("pipeline.noComparison")}
+                </p>
+              </section>
+              <section className={styles.panel}>
+                <div className={styles.sectionHeading}>
+                  <h2>{tr("pipeline.salesStages")}</h2>
+                  <span className={styles.status}>
+                    {tr("pipeline.estimated")}
+                  </span>
+                </div>
+                <StatusTable rows={rows} byStage />
+                <p className={styles.note}>{tr("pipeline.stageBasis")}</p>
+              </section>
+            </div>
             <section className={styles.panel}>
               <div className={styles.sectionHeading}>
                 <h2>{tr("pipeline.monthComparison")}</h2>
@@ -569,11 +495,6 @@ export function PipelineApp() {
                 <p className={styles.note}>{tr("pipeline.noKey")}</p>
               )}
             </section>
-            <OpportunityTable
-              key={JSON.stringify([data?.week, filters])}
-              rows={rows}
-              sources={current}
-            />
           </>
         )}
       </div>

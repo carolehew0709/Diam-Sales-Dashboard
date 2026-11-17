@@ -1,0 +1,64 @@
+.header:global(.topbar.dashboard-header) {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  column-gap: 14px;
+}
+
+.header:global(.dashboard-header) :global(.topbar-actions) {
+  grid-column: 3;
+}
+
+.header .modules {
+  grid-column: 2;
+  grid-row: 1;
+  display: inline-flex;
+  justify-self: start;
+  max-width: 100%;
+  min-width: 0;
+  overflow-x: auto;
+  scrollbar-width: thin;
+}
+
+.header .modules a {
+  flex-shrink: 0;
+}
+
+.header .modules a:focus-visible {
+  outline: 1px solid currentColor;
+  outline-offset: -2px;
+}
+
+@media (max-width: 1000px) {
+  .header:global(.topbar.dashboard-header) {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-rows: minmax(56px, auto) auto;
+  }
+
+  .header:global(.topbar.dashboard-header):has(> :global(.topnav)) {
+    grid-template-rows: minmax(56px, auto) auto 48px;
+  }
+
+  .header:global(.dashboard-header) :global(.topbar-actions) {
+    grid-column: 2;
+  }
+
+  .header .modules {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    margin-bottom: 7px;
+  }
+
+  .header .modules a:not([aria-current="page"]) {
+    display: inline-flex;
+  }
+
+  .header :global(.topnav) {
+    grid-row: 3;
+  }
+}
+
+@media (max-width: 480px) {
+  .header .modules a {
+    padding-inline: 5px;
+    letter-spacing: 0.02em;
+  }
+}

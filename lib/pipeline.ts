@@ -139,24 +139,26 @@ export function pipelineRows(
     );
 }
 
+function opportunityIncome(rows: Opportunity[]) {
+  const amounts: Record<PipelineCurrency, number | null> = {
+    EUR: null,
+    RMB: null,
+    USD: null,
+  };
+  let missing = 0;
+  for (const { amount, currency } of rows) {
+    if (amount === null) missing++;
+    else amounts[currency] = (amounts[currency] ?? 0) + amount;
+  }
+  return { amounts, missing };
+}
+
 export function pipelineTotals(rows: Opportunity[]) {
-  const amounts = Object.fromEntries(
-    pipelineCurrencies.map((currency) => {
-      const identified = rows.filter(
-        (r) => r.currency === currency && r.amount !== null,
-      );
-      return [
-        currency,
-        identified.length === 0
-          ? null
-          : identified.reduce((sum, r) => sum + r.amount!, 0),
-      ];
-    }),
-  ) as Record<PipelineCurrency, number | null>;
+  const { amounts, missing } = opportunityIncome(rows);
   return {
     projects: new Set(rows.map((row) => row.project)).size,
     opportunities: rows.length,
-    withoutAmount: rows.filter((r) => r.amount === null).length,
+    withoutAmount: missing,
     amounts,
   };
 }
@@ -164,15 +166,21 @@ export function pipelineTotals(rows: Opportunity[]) {
 // Fixed reporting rates: native currency units per EUR.
 export const pipelineFx = { EUR: 1, RMB: 7.7, USD: 1.1 } as const;
 
-function movementIncome(rows: Opportunity[]) {
-  let eur = 0;
-  let missing = 0;
-  for (const { amount, currency } of rows) {
-    if (amount === null) missing++;
-    else eur += amount / pipelineFx[currency];
+export function pipelineIncomeKEUR(
+  amounts: Record<PipelineCurrency, number | null>,
+) {
+  let eur: number | null = null;
+  for (const currency of pipelineCurrencies) {
+    const amount = amounts[currency];
+    if (amount !== null) eur = (eur ?? 0) + amount / pipelineFx[currency];
   }
+  return eur === null ? null : eur / 1000;
+}
+
+function movementIncome(rows: Opportunity[]) {
+  const { amounts, missing } = opportunityIncome(rows);
   return {
-    kEUR: rows.length > 0 && missing === rows.length ? null : eur / 1000,
+    kEUR: rows.length ? pipelineIncomeKEUR(amounts) : 0,
     missing,
   };
 }

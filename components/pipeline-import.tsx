@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import { pipelineCurrencies, pipelineTotals, weekLabel } from "@/lib/pipeline";
+import {
+  pipelineFx,
+  pipelineIncomeKEUR,
+  weekLabel,
+  type pipelineTotals,
+} from "@/lib/pipeline";
 import { isMessageKey } from "@/lib/i18n";
 import { useI18n } from "./i18n-provider";
 import styles from "./commercial.module.css";
@@ -126,26 +131,32 @@ export function PipelineImport({
             {file?.name} · {review.sheet} · {review.asOf} ·{" "}
             {weekLabel(review.week)}
           </strong>
-          {review.scopes.map(({ entity, previous, next }) => (
-            <p key={entity}>
-              <strong>{entity}</strong> ·{" "}
-              {tr(previous ? "pipeline.reviewExisting" : "pipeline.reviewNew", {
-                date: previous ?? "",
-              })}{" "}
-              ·{" "}
-              {tr("pipeline.reviewCount", {
-                count: next.opportunities,
-                missing: next.withoutAmount,
-              })}{" "}
-              ·{" "}
-              {pipelineCurrencies
-                .map(
-                  (currency) =>
-                    `${currency} ${next.amounts[currency] === null ? "—" : number.format(next.amounts[currency])}`,
-                )
-                .join(" · ")}
-            </p>
-          ))}
+          {review.scopes.map(({ entity, previous, next }) => {
+            const kEUR = pipelineIncomeKEUR(next.amounts);
+            return (
+              <p key={entity}>
+                <strong>{entity}</strong> ·{" "}
+                {tr(
+                  previous ? "pipeline.reviewExisting" : "pipeline.reviewNew",
+                  {
+                    date: previous ?? "",
+                  },
+                )}{" "}
+                ·{" "}
+                {tr("pipeline.reviewCount", {
+                  count: next.opportunities,
+                  missing: next.withoutAmount,
+                })}{" "}
+                · {kEUR === null ? "—" : number.format(kEUR)} kEUR
+              </p>
+            );
+          })}
+          <p>
+            {tr("pipeline.incomeBasis", {
+              rmb: number.format(pipelineFx.RMB),
+              usd: number.format(pipelineFx.USD),
+            })}
+          </p>
           {review.currencyConflicts > 0 && (
             <p>
               {tr("pipeline.currencyConflict", {

@@ -8,6 +8,7 @@ import {
 import {
   pipelineFilters,
   pipelineForWeek,
+  pipelineIncomeKEUR,
   pipelineMovement,
   pipelineRows,
   pipelineTotals,
@@ -163,6 +164,13 @@ test("Pipeline preserves grain, original currency, source filters and missing in
     /dateBeforeSource:3/,
   );
   assert.equal(validPipelineDate("2026-02-29"), false);
+});
+
+test("Pipeline report totals convert settlement currencies without filling missing amounts", () => {
+  assert.equal(pipelineIncomeKEUR({ EUR: 2000, RMB: 7700, USD: 1100 }), 4);
+  assert.equal(pipelineIncomeKEUR({ EUR: null, RMB: null, USD: null }), null);
+  assert.equal(pipelineIncomeKEUR({ EUR: null, RMB: 0, USD: null }), 0);
+  assert.equal(pipelineIncomeKEUR({ EUR: null, RMB: -7700, USD: null }), -1);
 });
 
 test("Pipeline uses creation and loss dates and only serves authorized weekly snapshots", () => {

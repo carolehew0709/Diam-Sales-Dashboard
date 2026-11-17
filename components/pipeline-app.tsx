@@ -4,9 +4,9 @@ import { useEffect, useState } from "react";
 import { matchesRegion, regions } from "@/lib/entities";
 import type { MessageKey } from "@/lib/i18n";
 import {
-  pipelineCurrencies,
   pipelineFilters,
   pipelineFx,
+  pipelineIncomeKEUR,
   pipelineMovement,
   pipelineRows,
   pipelineStages,
@@ -131,12 +131,15 @@ function StatusTable({
   const render = (
     amount: number | null,
     previous: number | null | undefined,
+    unit = "",
   ) => (
     <>
       {amount === null ? "—" : number.format(amount)}
       {amount !== null && typeof previous === "number" && (
         <small>
-          {tr("pipeline.delta", { delta: delta.format(amount - previous) })}
+          {tr("pipeline.delta", {
+            delta: delta.format(amount - previous) + unit,
+          })}
         </small>
       )}
     </>
@@ -176,11 +179,7 @@ function StatusTable({
             </th>
             <th scope="col">{tr("pipeline.projects")}</th>
             <th scope="col">{tr("pipeline.opportunities")}</th>
-            {pipelineCurrencies.map((currency) => (
-              <th key={currency} scope="col">
-                {currency}
-              </th>
-            ))}
+            <th scope="col">{tr("pipeline.estimated")}</th>
             <th scope="col">{tr("pipeline.withoutAmount")}</th>
           </tr>
         </thead>
@@ -195,14 +194,13 @@ function StatusTable({
                 <td>
                   {render(current.opportunities, previous?.opportunities)}
                 </td>
-                {pipelineCurrencies.map((currency) => (
-                  <td key={currency}>
-                    {render(
-                      current.amounts[currency],
-                      previous?.amounts[currency],
-                    )}
-                  </td>
-                ))}
+                <td>
+                  {render(
+                    pipelineIncomeKEUR(current.amounts),
+                    previous && pipelineIncomeKEUR(previous.amounts),
+                    " kEUR",
+                  )}
+                </td>
                 <td>{number.format(current.withoutAmount)}</td>
               </tr>
             );
@@ -296,7 +294,7 @@ export function PipelineApp() {
     )
     .join(" · ");
   const number = new Intl.NumberFormat(locale);
-  const income = new Intl.NumberFormat(locale, { maximumFractionDigits: 1 });
+  const income = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
   const month = new Intl.DateTimeFormat(locale, {
     month: "long",
     year: "numeric",
@@ -418,9 +416,6 @@ export function PipelineApp() {
               <section className={styles.panel}>
                 <div className={styles.sectionHeading}>
                   <h2>{tr("pipeline.weeklyStatus")}</h2>
-                  <span className={styles.status}>
-                    {tr("pipeline.estimated")}
-                  </span>
                 </div>
                 <StatusTable
                   rows={rows}
@@ -440,9 +435,6 @@ export function PipelineApp() {
               <section className={styles.panel}>
                 <div className={styles.sectionHeading}>
                   <h2>{tr("pipeline.salesStages")}</h2>
-                  <span className={styles.status}>
-                    {tr("pipeline.estimated")}
-                  </span>
                 </div>
                 <StatusTable rows={rows} byStage />
                 <p className={styles.note}>{tr("pipeline.stageBasis")}</p>

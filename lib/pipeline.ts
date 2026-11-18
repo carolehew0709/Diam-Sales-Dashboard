@@ -1,5 +1,5 @@
 import { entities, matchesRegion } from "./entities";
-import { canView } from "./permissions";
+import { canView, canAccessModule } from "./permissions";
 import type { User } from "./types";
 
 export const pipelineStatuses = ["active", "won", "lost"] as const;
@@ -61,7 +61,7 @@ export const pipelineFilters: PipelineFilters = {
 };
 
 export const hasPipelineAccess = (user: User) =>
-  entities.some((entity) => canView(user, entity));
+  canAccessModule(user, "pipeline") && entities.some((entity) => canView(user, entity));
 
 const DAY = 86_400_000;
 export const isoDate = (date: Date) => date.toISOString().slice(0, 10);
@@ -87,7 +87,7 @@ export function pipelineForWeek(
   user: User,
   requested: string | null,
 ) {
-  const scope = entities.filter((entity) => canView(user, entity));
+  const scope = entities.filter((entity) => hasPipelineAccess(user) && canView(user, entity));
   const allowed = new Set(scope.map((entity) => entity.id));
   const ordered = snapshots
     .filter((s) => allowed.has(s.entityId))

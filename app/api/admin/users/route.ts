@@ -1,6 +1,6 @@
 import { randomUUID } from "node:crypto";
 import { api, ApiError, currentUser, publicUser, sameOrigin } from "@/lib/auth";
-import { canManageUsers } from "@/lib/permissions";
+import { canManageUsers, validUserAccess } from "@/lib/permissions";
 import { storage, passwordHash } from "@/lib/storage";
 import { entities } from "@/lib/entities";
 import type { User } from "@/lib/types";
@@ -41,6 +41,8 @@ export async function POST(request: Request) {
       (typeof b.password !== "string" || b.password.length < 12)
     )
       throw new ApiError(400, "Use a password of at least 12 characters");
+    if (b.access !== undefined && !validUserAccess(b.access))
+      throw new ApiError(400, "Provide valid module and export permissions");
     const permissions: User["permissions"] = {};
     for (const e of entities) {
       const p = b.permissions?.[e.id] ?? [];
@@ -74,6 +76,10 @@ export async function POST(request: Request) {
         region: "APAC",
         crossRegionView: b.crossRegionView === true,
         permissions,
+        access: b.access === undefined ? existing?.access : {
+          modules: [...new Set<NonNullable<User["access"]>["modules"][number]>(b.access.modules)],
+          export: b.access.export,
+        },
         disabled: b.disabled === true,
         passwordHash: b.password
           ? passwordHash(b.password)

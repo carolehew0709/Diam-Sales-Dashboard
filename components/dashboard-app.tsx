@@ -32,6 +32,7 @@ import { PipelineApp } from "@/components/pipeline-app";
 import { SalesOperations } from "@/components/sales-operations";
 import { ReceivablesApp } from "@/components/receivables-app";
 import { hasReceivablesAccess } from "@/lib/receivables";
+import { canAccessPage } from "@/lib/permissions";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
 import { SalesMonthlyGraphic } from "@/components/sales-monthly-graphic";
@@ -912,7 +913,7 @@ export default function Home() {
     }
   }, [sessionChecked, user, view, pathname, locale, router]);
   useEffect(() => {
-    if (!user || !requiresDashboard) return;
+    if (!user || !requiresDashboard || !canAccessPage(user, view)) return;
     const controller = new AbortController();
     setLoading(true);
     setError("");
@@ -958,7 +959,7 @@ export default function Home() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [user, filters, revision, requiresDashboard]);
+  }, [user, filters, revision, requiresDashboard, view]);
   const login = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -1054,7 +1055,8 @@ export default function Home() {
               {tr("auth.updating")}
             </div>
           )}
-          {(view === "admin" && user.role !== "superadmin") ||
+          {!canAccessPage(user, view) ||
+          (view === "admin" && user.role !== "superadmin") ||
           (view === "imports" &&
             !["superadmin", "region_admin", "editor"].includes(user.role)) ? (
             <p role="alert">{tr("common.noAccess")}</p>

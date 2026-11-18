@@ -4,6 +4,7 @@ import type { CustomerAnalysis } from "./graphics-types";
 export type Role =
   "superadmin" | "region_admin" | "editor" | "viewer" | "audit_viewer";
 export type Permission = "view" | "edit";
+export type WorkspaceModule = "overview" | "pipeline" | "sales-operations" | "ar-aging" | "quotation";
 export type User = {
   id: string;
   name: string;
@@ -16,6 +17,7 @@ export type User = {
   disabled?: boolean;
   sessionVersion?: number;
   systemIdentity?: "apac-health" | "india-health";
+  access?: { modules: WorkspaceModule[]; export: boolean };
 };
 export type Entity = {
   id: string;

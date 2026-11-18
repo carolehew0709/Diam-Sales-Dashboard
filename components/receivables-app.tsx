@@ -1,5 +1,6 @@
 "use client";
-import { useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import { ExportAccess } from "./export-access";
 import { UpdateStatus } from "./update-status";
 import { useDataReveal } from "./use-data-reveal";
 import { UnknownPayments } from "./unknown-payments";
@@ -16,6 +17,7 @@ import styles from "./receivables-filters.module.css";
 
 export function ReceivablesApp() {
   const { tr, locale } = useI18n();
+  const exportAllowed = useContext(ExportAccess);
   const [filters, setFilters] = useState<ReceivablesFilters>(
     defaultReceivablesFilters,
   );
@@ -286,7 +288,7 @@ export function ReceivablesApp() {
                 ].join(" · "),
               })}
             </p>
-            <a
+            {exportAllowed && <a
               className="apac-button"
               href={`/api/receivables/export?${query}`}
               aria-disabled={pending || !!error || undefined}
@@ -296,7 +298,7 @@ export function ReceivablesApp() {
             >
               <Download size={15} />
               {tr("nav.export")}
-            </a>
+            </a>}
           </div>
           {data.unclassifiedPayments > 0 && (
             <p className="ar-context">{tr("ar.receiptClassification")}</p>

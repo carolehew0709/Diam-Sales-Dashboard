@@ -1,5 +1,6 @@
 import { ApiError, currentUser } from "@/lib/auth";
 import { repository } from "@/lib/repository";
+import { canExportData } from "@/lib/permissions";
 import {
   getReceivables,
   hasReceivablesAccess,
@@ -9,7 +10,7 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const user = await currentUser();
-    if (!hasReceivablesAccess(user))
+    if (!hasReceivablesAccess(user) || !canExportData(user))
       throw new ApiError(403, "Access to DEHK or DDC is required");
     const data = getReceivables(
       await repository.read(),

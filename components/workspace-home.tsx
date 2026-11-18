@@ -16,6 +16,7 @@ import {
   WalletCards,
 } from "lucide-react";
 import { hasReceivablesAccess } from "@/lib/receivables";
+import { canAccessModule } from "@/lib/permissions";
 import { useI18n } from "@/components/i18n-provider";
 import { pagePath } from "@/lib/routes";
 import type { User } from "@/lib/types";
@@ -76,7 +77,7 @@ export function WorkspaceHome({ user }: { user: User }) {
           <p>{tr("home.chooseModule")}</p>
         </div>
         <div className="home-module-grid">
-          <Link
+          {canAccessModule(user, "overview") && <Link
             className="home-module-card"
             href={pagePath(locale, "overview")}
             aria-labelledby="home-sales-title"
@@ -115,7 +116,7 @@ export function WorkspaceHome({ user }: { user: User }) {
                 <ArrowRight size={19} aria-hidden="true" />
               </span>
             </div>
-          </Link>
+          </Link>}
           {hasReceivablesAccess(user) && <Link className="home-module-card" href={pagePath(locale, "ar-aging")}
             aria-labelledby="home-ar-title" aria-describedby="home-ar-description">
             <div className="home-card-top"><span className="home-module-icon"><WalletCards size={28} strokeWidth={1.6} aria-hidden="true" /></span>
@@ -127,7 +128,7 @@ export function WorkspaceHome({ user }: { user: User }) {
           {([
             { route: "pipeline", key: "pipeline", icon: GitBranch, features: ["pipeline.weeklyStatus", "pipeline.cumulative", "pipeline.keyProjects"] },
             { route: "sales-operations", key: "salesOps", icon: Truck, features: ["salesOps.byTeam", "salesOps.byWeek", "salesOps.byGroup"] },
-          ] as const).map(({ route, key, icon: Icon, features }) => (
+          ] as const).filter(({route}) => canAccessModule(user, route)).map(({ route, key, icon: Icon, features }) => (
             <Link key={route} className="home-module-card" href={pagePath(locale, route)}
               aria-labelledby={`home-${route}-title`} aria-describedby={`home-${route}-description`}>
               <div className="home-card-top">
@@ -144,7 +145,7 @@ export function WorkspaceHome({ user }: { user: User }) {
               </div>
             </Link>
           ))}
-          <Link
+          {canAccessModule(user, "quotation") && <Link
             className="home-module-card"
             href={pagePath(locale, "quotation")}
             aria-labelledby="home-quote-title"
@@ -165,7 +166,7 @@ export function WorkspaceHome({ user }: { user: User }) {
               <span>{tr("quote.open")}</span>
               <span className="home-card-action"><ArrowRight size={19} aria-hidden="true" /></span>
             </div>
-          </Link>
+          </Link>}
         </div>
       </section>
       <footer className="home-footer">

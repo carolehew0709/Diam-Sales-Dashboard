@@ -7,6 +7,7 @@ import { salesTeamState, matchesOrderDimensions } from "@/lib/sales-teams";
 import * as XLSX from "xlsx-js-style";
 import { currentUser, ApiError } from "@/lib/auth";
 import { repository } from "@/lib/repository";
+import { canExportData, canAccessModule } from "@/lib/permissions";
 import { filtersFrom, getDashboardSnapshot, months } from "@/lib/dashboard";
 import { translate } from "@/lib/i18n";
 import { monthlyPerformanceSeries } from "@/lib/performance-chart";
@@ -14,6 +15,8 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   try {
     const user = await currentUser();
+    if (!canExportData(user) || !canAccessModule(user, "overview"))
+      throw new ApiError(403, "common.noAccess");
     const filters = filtersFrom(new URL(request.url));
     const rawState = reportingState(
       policyState(teamReportingState(reportingPeriod(await repository.read(),filters.week), filters), filters.salesType),

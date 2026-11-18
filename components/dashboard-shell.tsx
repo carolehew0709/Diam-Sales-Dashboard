@@ -15,6 +15,8 @@ import { AccountMenu } from "./account-menu";
 import { LanguageSwitcher } from "./language-switcher";
 import { hasReceivablesAccess } from "@/lib/receivables";
 import { hasPipelineAccess } from "@/lib/pipeline";
+import { canAccessModule, canExportData } from "@/lib/permissions";
+import { ExportAccess } from "./export-access";
 import styles from "./dashboard-shell.module.css";
 export function DashboardShell({
   user,
@@ -41,7 +43,7 @@ export function DashboardShell({
     Object.entries(filters).map(([k, v]) => [k, String(v)]),
   );
   return (
-    <>
+    <ExportAccess.Provider value={canExportData(user)}>
       <header
         className={`topbar dashboard-header ${styles.header} ${page === "home" || standalone ? "home-header" : ""}`}
         ref={header}
@@ -72,12 +74,12 @@ export function DashboardShell({
           >
             <House size={13} aria-hidden="true" /> {tr("nav.home")}
           </Link>
-          <Link
+          {canAccessModule(user, "overview") && <Link
             href={pagePath(locale, "overview")}
             aria-current={page === "overview" ? "page" : undefined}
           >
             {tr("nav.performance")}
-          </Link>
+          </Link>}
           {hasReceivablesAccess(user) && (
             <Link
               href={pagePath(locale, "ar-aging")}
@@ -90,7 +92,7 @@ export function DashboardShell({
               {tr("ar.nav")}
             </Link>
           )}
-          {quotation && (
+          {quotation && canAccessModule(user, "quotation") && (
             <Link href={pagePath(locale, "quotation")} aria-current="page">
               {tr("quote.title")}
             </Link>
@@ -103,12 +105,12 @@ export function DashboardShell({
               {tr("pipeline.title")}
             </Link>
           )}
-          <Link
+          {canAccessModule(user, "sales-operations") && <Link
             href={pagePath(locale, "sales-operations")}
             aria-current={salesOps ? "page" : undefined}
           >
             {tr("nav.salesOperations")}
-          </Link>
+          </Link>}
         </nav>
         {page !== "home" && page !== "ar-aging" && !standalone && (
           <nav className="topnav">
@@ -172,6 +174,7 @@ export function DashboardShell({
               </Link>
             )}
           {page !== "home" &&
+            canExportData(user) &&
             page !== "ar-aging" &&
             page !== "imports" &&
             !standalone && (
@@ -194,6 +197,6 @@ export function DashboardShell({
         </div>
       </header>
       {children}
-    </>
+    </ExportAccess.Provider>
   );
 }

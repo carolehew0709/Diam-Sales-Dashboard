@@ -1,5 +1,6 @@
 "use client";
-import { useRef, useState } from "react";
+import { useContext, useRef, useState } from "react";
+import { ExportAccess } from "./export-access";
 import { FileSpreadsheet } from "lucide-react";
 import { useI18n } from "./i18n-provider";
 import { collectWorkbookCharts } from "@/lib/chart-workbook-registry";
@@ -12,6 +13,7 @@ export function ChartWorkbookExport({
   layoutLabel = "graphics.workbookLayout",
 }: { layoutLabel?: MessageKey } = {}) {
   const { tr, locale } = useI18n();
+  const exportAllowed = useContext(ExportAccess);
   const [chosenLanguage, setChosenLanguage] = useState<Locale>();
   const language = chosenLanguage ?? locale;
   const button = useRef<HTMLButtonElement>(null);
@@ -20,7 +22,7 @@ export function ChartWorkbookExport({
   const [progress, setProgress] = useState({ done: 0, total: 0 });
   const run = async () => {
     const root = button.current?.closest<HTMLElement>(".dashboard-route");
-    if (!root || busy) return;
+    if (!exportAllowed || !root || busy) return;
     if (
       root.getAttribute("aria-busy") === "true" ||
       root.querySelector('[data-customer-status="loading"]')
@@ -102,6 +104,7 @@ export function ChartWorkbookExport({
       setBusy(false);
     }
   };
+  if (!exportAllowed) return null;
   return (
     <div className="chart-workbook-export">
       <label className="chart-workbook-language">

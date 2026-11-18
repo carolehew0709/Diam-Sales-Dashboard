@@ -43,7 +43,7 @@ export async function POST(request: Request) {
   return api(async () => {
     sameOrigin(request);
     const user = await currentUser();
-    if (!entities.some((entity) => canPublish(user, entity)))
+    if (!hasPipelineAccess(user) || !entities.some((entity) => canPublish(user, entity)))
       throw new ApiError(403, "common.noAccess");
     if (!storageStatus().writable)
       throw new ApiError(503, "pipeline.storageUnavailable");

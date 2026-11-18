@@ -1,5 +1,5 @@
 import { entities, matchesRegion } from "./entities";
-import { canView } from "./permissions";
+import { canView, canAccessModule } from "./permissions";
 import { teamName } from "./sales-teams";
 import { teamReportingName } from "./team-actuals";
 import type { Store, User } from "./types";
@@ -104,6 +104,7 @@ export const defaultReceivablesFilters: ReceivablesFilters = {
   aging: "all",
 };
 export const hasReceivablesAccess = (user: User) =>
+  canAccessModule(user, "ar-aging") &&
   entities.some((e) => ["dhk", "ddc"].includes(e.id) && canView(user, e));
 export function receivablesFiltersFrom(url: URL): ReceivablesFilters {
   const p = url.searchParams;
@@ -209,7 +210,8 @@ export function getReceivables(
   filters: ReceivablesFilters,
 ) {
   const allowed = entities.filter(
-    (e) => ["dhk", "ddc"].includes(e.id) && canView(user, e),
+    (e) => canAccessModule(user, "ar-aging") &&
+      ["dhk", "ddc"].includes(e.id) && canView(user, e),
   );
   const paymentsAllowed = ["dhk", "ddc"].every((id) =>
     allowed.some((e) => e.id === id),

@@ -1,5 +1,6 @@
 "use client";
 import {
+  useContext,
   useEffect,
   useRef,
   useState,
@@ -13,6 +14,7 @@ import { registerWorkbookChart } from "@/lib/chart-workbook-registry";
 import type { ChartTable } from "@/lib/chart-workbook-types";
 import { useChartTooltip } from "./chart-interaction";
 import { useDataReveal } from "./use-data-reveal";
+import { ExportAccess } from "./export-access";
 
 export function ChartDownloads({
   svg,
@@ -30,12 +32,13 @@ export function ChartDownloads({
   sheetName?: string;
 }) {
   const { tr } = useI18n();
+  const exportAllowed = useContext(ExportAccess);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(false),
     [waiting, setWaiting] = useState(false);
   useEffect(() => setWaiting(false), [context, exportTable]);
   useEffect(() => {
-    if (!svg.current || !exportTable) return;
+    if (!exportAllowed || !svg.current || !exportTable) return;
     return registerWorkbookChart(svg.current, {
       name: sheetName ?? title,
       title,
@@ -43,10 +46,14 @@ export function ChartDownloads({
       note,
       table: exportTable,
     });
-  }, [svg, title, context, note, exportTable, sheetName]);
+  }, [exportAllowed, svg, title, context, note, exportTable, sheetName]);
   const download = async (format: "png" | "svg") => {
-    if (!svg.current) return;
-    if (svg.current.closest('[aria-busy="true"], [data-customer-status="loading"]')) {
+    if (!exportAllowed || !svg.current) return;
+    if (
+      svg.current.closest(
+        '[aria-busy="true"], [data-customer-status="loading"]',
+      )
+    ) {
       setWaiting(true);
       return;
     }
@@ -61,6 +68,7 @@ export function ChartDownloads({
       setBusy(false);
     }
   };
+  if (!exportAllowed) return null;
   return (
     <div
       className="graphic-downloads"

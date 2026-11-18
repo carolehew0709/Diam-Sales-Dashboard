@@ -1,4 +1,48 @@
-import type { Entity, User } from "./types";
+import type { Entity, User, WorkspaceModule } from "./types";
+import type { Page } from "./routes";
+
+export const workspaceModules: WorkspaceModule[] = [
+  "overview",
+  "pipeline",
+  "sales-operations",
+  "ar-aging",
+  "quotation",
+];
+
+export function canAccessModule(user: User, module: WorkspaceModule) {
+  return (
+    !user.disabled &&
+    (user.access === undefined || user.access.modules.includes(module))
+  );
+}
+
+export function canAccessPage(user: User, page: Page) {
+  const module = ["analysis", "business-units", "management-checks"].includes(
+    page,
+  )
+    ? "overview"
+    : page;
+  return (
+    !workspaceModules.includes(module as WorkspaceModule) ||
+    canAccessModule(user, module as WorkspaceModule)
+  );
+}
+
+export function canExportData(user: User) {
+  return !user.disabled && user.access?.export !== false;
+}
+
+export function validUserAccess(
+  value: unknown,
+): value is NonNullable<User["access"]> {
+  if (!value || typeof value !== "object") return false;
+  const access = value as Partial<NonNullable<User["access"]>>;
+  return (
+    typeof access.export === "boolean" &&
+    Array.isArray(access.modules) &&
+    access.modules.every((module) => workspaceModules.includes(module))
+  );
+}
 export function canView(user: User, entity: Entity) {
   if (user.disabled) return false;
   if (user.role === "superadmin") return entity.region === "APAC";

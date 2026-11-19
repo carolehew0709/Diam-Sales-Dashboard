@@ -1,6 +1,11 @@
 import type { Store, Filters, User, Snapshot } from "./types";
 import { entities, matchesRegion } from "./entities";
 import { canView } from "./permissions";
+import type { TeamActualLine } from "./team-actual-types";
+import { splitPannyTeam } from "./team-names";
+
+const actualTeamName = (row: TeamActualLine) =>
+  splitPannyTeam(row.originalTeam, row.team);
 
 export function teamReportingName(
   value: string | undefined,
@@ -13,13 +18,14 @@ export function teamReportingName(
       : name === "BD-Trading"
         ? "BD"
         : name;
-  return data && Object.hasOwn(data.mappings, key) ? data.mappings[key] : name;
+  const mapped =
+    data && Object.hasOwn(data.mappings, key) ? data.mappings[key] : name;
+  return splitPannyTeam(name, mapped);
 }
 
 /** Rename reporting copies only, preserving raw weekly and retained-source evidence. */
 export function teamNamesState(state: Store): Store {
   const data = state.teamActualData;
-  if (!data) return state;
   const rename = (lines: Store["lines"]) =>
     lines.map((l) => {
       if (!["dhk", "ddc"].includes(l.entityId)) return l;
@@ -60,20 +66,22 @@ export function teamActualView(state: Store, user: User, filters: Filters) {
     (r) => !(r.entityId === "ddc" && r.salesType === "group"),
   );
   if (!allowed.some((e) => ["dhk", "ddc"].includes(e.id))) return null;
-  const names = [...new Set(scoped.map((r) => r.team))].sort();
   const unavailable =
     filters.year !== data.year
       ? "year"
       : filters.customer && filters.customer !== "all"
         ? "customer"
         : null;
+  const names = unavailable
+    ? []
+    : [...new Set(scoped.map(actualTeamName))].sort();
   const rows = unavailable
     ? []
     : scoped.filter(
         (r) =>
           !filters.salesTeam ||
           filters.salesTeam === "all" ||
-          r.team === filters.salesTeam,
+          actualTeamName(r) === filters.salesTeam,
       );
   const rawSelected = unavailable
     ? []
@@ -81,7 +89,7 @@ export function teamActualView(state: Store, user: User, filters: Filters) {
         (r) =>
           !filters.salesTeam ||
           filters.salesTeam === "all" ||
-          r.team === filters.salesTeam,
+          actualTeamName(r) === filters.salesTeam,
       );
   const sourceSales = rawSelected.length
     ? rawSelected.reduce((n, r) => n + r.ytd, 0)
@@ -91,9 +99,9 @@ export function teamActualView(state: Store, user: User, filters: Filters) {
     : rawSelected
         .filter((r) => r.entityId === "ddc" && r.salesType === "group")
         .reduce((n, r) => n + r.ytd, 0);
-  const groups = [...new Set(rows.map((r) => r.team))]
+  const groups = [...new Set(rows.map(actualTeamName))]
     .map((name) => {
-      const selected = rows.filter((r) => r.team === name),
+      const selected = rows.filter((r) => actualTeamName(r) === name),
         sales = selected.reduce((a, r) => a + r.ytd, 0);
       const budget = selected.reduce((a, r) => a + (r.budget ?? 0), 0);
       return {
@@ -148,8 +156,6 @@ export function projectTeamActuals(
     team === "all" ||
     customer !== "all" ||
     snapshot.year !== data.year ||
-    !Object.values(data.mappings).includes(team) ||
-    !data.rows.some((r) => r.entityId === snapshot.entityId) ||
     snapshot.week !==
       Math.max(
         ...state.snapshots
@@ -160,11 +166,12 @@ export function projectTeamActuals(
       )
   )
     return snapshot;
-  const rows = data.rows.filter(
-    (r) =>
-      r.entityId === snapshot.entityId &&
-      r.team === team &&
-      !(r.entityId === "ddc" && r.salesType === "group"),
+  const sourceRows = data.rows.filter(
+    (r) => r.entityId === snapshot.entityId && actualTeamName(r) === team,
+  );
+  if (!sourceRows.length) return snapshot;
+  const rows = sourceRows.filter(
+    (r) => !(r.entityId === "ddc" && r.salesType === "group"),
   );
   const sum = (type: string, kind: "sales" | "budget", month?: number) =>
     rows

@@ -448,7 +448,7 @@ export function getDashboardSnapshot(
       metrics: entityMetric(snapshot, filters, entity.id, monthlyClose),
     };
   });
-  const actualKpi = !!filters.salesTeam && filters.salesTeam !== 'all' && (!filters.customer || filters.customer==='all') && state.teamActualData?.year===filters.year && Object.values(state.teamActualData.mappings).includes(filters.salesTeam);
+  const actualKpi = !!filters.salesTeam && filters.salesTeam !== 'all' && (!filters.customer || filters.customer==='all') && state.teamActualData?.year===filters.year;
   const scopedRows = actualKpi && rows.some(r=>r.snapshot?.teamActualSource && matchesRegion(r.entity,filters.region)) ? rows.filter(r=>r.snapshot?.teamActualSource) : rows;
   const actualKpiSource = scopedRows!==rows ? {week:state.teamActualData!.reportingWeek ?? "—",month:state.teamActualData!.month,year:state.teamActualData!.year,file:state.teamActualData!.sourceFile,entities:scopedRows.filter(r=>matchesRegion(r.entity,filters.region)).map(r=>r.entity.code).join(' / '),prospectWeeks:[...new Set(scopedRows.filter(r=>matchesRegion(r.entity,filters.region)).map(r=>r.snapshot!.week))].map(w=>'W'+w).join(' / ')} : null;
   const selected = scopedRows.filter(

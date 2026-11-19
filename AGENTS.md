@@ -184,3 +184,7 @@ Exclude DDC invoices to DEHK (`DEHK` / `DEHK LIMITED`, including preserved Sourc
 The Graphics finance detail is a China aggregate with Team and customer hierarchy, not an Entity allocation. Add local monthly-chart selectors for Team, Key Customer/Other Customers/Intergroup, subgroup and customer only in fully authorized complete-China scope. Comparable FY2025 YTD is January–October for the supplied October source, matching FY2026 cutoff. Do not promote source annual target/budget columns into approved budgets or overwrite weekly/team KPI sources from this aggregate.
 
 Pipeline display counts distinct Entity/project codes. Weekly status uses projects first created in that week; YTD uses the current-year creation cohort. Status/stage trend curves apply the selected snapshot's classification to creation-week cohorts. Omit won data from Project Status. ERP/Job Number/OB exclusions are deferred pending an authoritative ERP source. Retain original opportunity-grain evidence and kEUR reporting rates.
+
+## Owner team naming decision 2026-11-19
+
+Panny Team-L and Panny Team-S supersede the earlier combined Panny reporting rule. Keep explicit subteam labels in Sales, monthly customer charts, AR and their exports. Use the original LVMH Team / LVMH+Exclusive Team and Sephora Team evidence for the legacy China split. Never allocate a source record labeled only Panny Team to a subteam. Preserve source rows, approved budgets and the independently retained Prospect snapshot; reconcile any label-only re-publication to the previous amounts.

@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import type { ImportBatch } from "./types";
 import type { TeamActualData } from "./team-actual-types";
+import { splitPannyTeam } from "./team-names";
 const norm = (v: unknown) =>
   String(v ?? "")
     .replace(/\s+/g, " ")
@@ -139,7 +140,7 @@ export function parseTeamActualWorkbook(
     data.rows.push({
       entityId: entity === "DEHK" ? "dhk" : "ddc",
       salesType: kind as "external" | "group",
-      team,
+      team: splitPannyTeam(old, team),
       originalTeam: old,
       customer: norm(value(sheet, r, 4)?.v),
       monthly,

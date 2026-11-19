@@ -124,6 +124,67 @@ test("global team KPI uses supplied YTD/budget and separately retained Prospect 
   });
   assert.equal(chinaStripAmount(sales.rows[0], sales.filters), 30);
 });
+
+test("Panny teams keep separate actuals, budgets and retained Prospect from their original assignments", () => {
+  const fixture = state();
+  const source = fixture.teamActualData!;
+  source.mappings = { "LVMH Team": "Panny Team", "Sephora Team": "Panny Team" };
+  const prototype = source.rows[0];
+  source.rows = [
+    { ...prototype, originalTeam: "LVMH Team", team: "Panny Team" },
+    {
+      ...prototype,
+      originalTeam: "Sephora Team",
+      team: "Panny Team",
+      ytd: 45,
+      budget: 200,
+      monthly: [45, ...Array(9).fill(0), null, null],
+    },
+  ];
+  const raw = fixture.retainedTeamSource!.lines[0];
+  fixture.retainedTeamSource!.lines = [
+    { ...raw, id: "L", salesTeam: "LVMH+Exclusive Team" },
+    {
+      ...raw,
+      id: "S",
+      salesTeam: "Sephora Team",
+      total2026: 3,
+      monthly2026: [...Array(10).fill(0), 3, 0],
+    },
+    {
+      ...raw,
+      id: "plain",
+      salesTeam: "Panny Team",
+      total2026: 4,
+      monthly2026: [...Array(10).fill(0), 4, 0],
+    },
+  ];
+  const before = structuredClone(fixture);
+  const all = getDashboardSnapshot(fixture, admin, defaultFilters);
+  assert.deepEqual(all.salesTeams, [
+    "Panny Team",
+    "Panny Team-L",
+    "Panny Team-S",
+  ]);
+  for (const [salesTeam, sales, budget, prospect] of [
+    ["Panny Team-L", 30, 100, 2],
+    ["Panny Team-S", 45, 200, 3],
+  ] as const) {
+    const view = getDashboardSnapshot(fixture, admin, {
+      ...defaultFilters,
+      salesTeam,
+    });
+    assert.equal(view.totals.sales, sales);
+    assert.equal(view.totals.budget, budget);
+    assert.equal(view.totals.orderbook, prospect);
+    assert.equal(view.graphics.teamActuals?.sales, sales);
+    assert.deepEqual(
+      view.graphics.teams.map((team) => [team.name, team.value]),
+      [[salesTeam, prospect]],
+    );
+  }
+  assert.deepEqual(fixture, before);
+});
 test("team monthly curves follow actual Sales scenario and combined annual base, no monthly budget allocation", () => {
   const d = getDashboardSnapshot(state(), admin, {
     ...defaultFilters,

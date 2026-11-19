@@ -79,7 +79,7 @@ The revised DDC workbook retains its full invoice ledger and adds a classified d
 
 Customer Group is independent of External/Group and the existing Top 10/Other ranking. The invoice filter, detail and CSV expose the source grouping without allocating unclassified records to a group. Shared receipt rows do not have these invoice group assignments. The source sheet and row for each revised classification are kept alongside the invoice's own source. Entity permissions and scoped review, publication and restoration still apply.
 
-The AR view and CSV use the same approved SALES TEAM2 mapping as Sales Performance where a mapping exists. The revised AR aliases Panny Team-L and Panny Team-S resolve to Panny Team, and Lynn-Team resolves to Lynn Team. Matched DEHK invoice rows confirm the legacy BD Team label maps through BD to Elly Team. The DDC prepayment marker (预收) is shown as unassigned in the team filter. The CSV retains the original AR Sales Team text separately.
+The AR view and CSV use the same approved SALES TEAM2 mapping as Sales Performance where a mapping exists. Panny Team-L and Panny Team-S remain separate, and Lynn-Team resolves to Lynn Team. Matched DEHK invoice rows confirm the legacy BD Team label maps through BD to Elly Team. The DDC prepayment marker (预收) is shown as unassigned in the team filter. The CSV retains the original AR Sales Team text separately.
 
 ## Invoice Customer and ranking by Customer Group
 

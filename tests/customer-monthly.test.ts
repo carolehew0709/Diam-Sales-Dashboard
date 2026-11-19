@@ -63,7 +63,8 @@ test("Monthly detail source validates leaf allocations, keeps source evidence an
   const details = parseCustomerMonthlyDetails(ws, "Details", 2026, 10)!;
   assert.equal(details.rows.length, 6);
   assert.deepEqual(details.rows[0].path, ["Key Customer", "Sephora"]);
-  assert.equal(details.rows[0].team, "Panny Team");
+  assert.equal(details.rows[0].team, "Panny Team-S");
+  assert.equal(details.rows[1].team, "Panny Team-L");
   const all = {
     year: 2025,
     team: "",
@@ -91,8 +92,12 @@ test("Monthly detail source validates leaf allocations, keeps source evidence an
     "full source months remain available as evidence",
   );
   assert.equal(
-    monthlyDetailPoints(details, { ...all, team: "Panny Team" })[9].ytd,
-    30,
+    monthlyDetailPoints(details, { ...all, team: "Panny Team-S" })[9].ytd,
+    10,
+  );
+  assert.equal(
+    monthlyDetailPoints(details, { ...all, team: "Panny Team-L" })[9].ytd,
+    20,
   );
   assert.equal(
     monthlyDetailPoints(details, {

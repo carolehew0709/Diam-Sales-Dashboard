@@ -444,14 +444,14 @@ test("AR uses Sales Team2 labels and filters source Customer Group within permit
   });
   const view = getReceivables(fixture, admin, {
     ...defaultReceivablesFilters,
-    salesTeam: "Panny Team",
+    salesTeam: "Panny Team-S",
     sourceCustomerGroup: "Portfolio A",
   });
   assert.deepEqual(
     view.rows.map((r) => [r.salesTeam, r.sourceSalesTeam]),
     [
-      ["Panny Team", "Panny Team-S"],
-      ["Panny Team", "Sephora Team"],
+      ["Panny Team-S", "Panny Team-S"],
+      ["Panny Team-S", "Sephora Team"],
     ],
   );
   assert.deepEqual(view.sourceCustomerGroups, ["Portfolio A", "Portfolio B"]);

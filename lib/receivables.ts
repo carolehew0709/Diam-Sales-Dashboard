@@ -207,7 +207,6 @@ function arTeamName(value: string, state: Store) {
     source === "BD Team" ? "BD" : value,
     state.teamActualData,
   );
-  if (/^panny team-[ls]$/i.test(name)) return "Panny Team";
   if (/^lynn-team$/i.test(name)) return "Lynn Team";
   return name;
 }

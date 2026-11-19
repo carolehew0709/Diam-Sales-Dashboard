@@ -1,5 +1,6 @@
 import * as XLSX from "xlsx";
 import type { CustomerMonthlyDetails } from "./graphics-types";
+import { splitPannyTeam } from "./team-names";
 
 const text = (v: unknown) =>
   String(v ?? "")
@@ -79,9 +80,7 @@ export function parseCustomerMonthlyDetails(
       throw Error("Monthly customer category is missing");
     const entry: Entry = {
       name,
-      team: /^Panny Team-[LS]$/i.test(originalTeam)
-        ? "Panny Team"
-        : originalTeam,
+      team: splitPannyTeam(originalTeam),
       path: [],
       monthly: {},
       ytd: {},

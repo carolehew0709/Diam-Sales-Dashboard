@@ -3,7 +3,10 @@ import type { Dashboard } from "@/lib/dashboard";
 import { months } from "@/lib/dashboard";
 import { integerAxis } from "@/lib/chart-axis";
 import { chartAmount } from "@/lib/chart-tooltip";
-import { teamPerformanceSeries } from "@/lib/team-performance";
+import {
+  teamPerformanceCurve,
+  teamPerformanceSeries,
+} from "@/lib/team-performance";
 import { ChartMark } from "./chart-interaction";
 import { GraphicCard } from "./graphic-card";
 import { Legend, PlotEmpty, PlotGrid } from "./graphic-plots";
@@ -13,7 +16,6 @@ const colors = {
   sales: "#d0bd93",
   prospect: "#718699",
   actual: "#a77a35",
-  plan: "#42695c",
 };
 
 export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
@@ -24,18 +26,20 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
   );
   const actuals = data.graphics.teamActuals;
   const view = teamPerformanceSeries(actuals, teams);
-  const hasCombined = view.points.some((p) => p.cumulativeCombined !== null);
+  const curve = teamPerformanceCurve(view.points, data.filters.scenario);
   const hasSales = view.points.some((p) => p.sales !== null);
   const hasProspect = view.points.some((p) => p.prospect !== null);
   const salesLabel = tr("teamActual.sales");
   const prospectLabel = tr("graphics.monthlyTeamOB");
   const actualLabel = tr("teamActual.cumulative");
-  const planLabel = tr(
-    hasCombined
-      ? view.coverage === "partial"
-        ? "teamTrend.knownCombined"
-        : "graphics.cumulativeConfirmed"
-      : "graphics.cumulativeTeamOB",
+  const cumulativeLabel = tr(
+    curve.key === "sales"
+      ? "teamActual.cumulative"
+      : curve.key === "combined"
+        ? view.coverage === "partial"
+          ? "teamTrend.knownCombined"
+          : "graphics.cumulativeConfirmed"
+        : "graphics.cumulativeTeamOB",
   );
   const combinedLabel = tr(
     view.coverage === "partial"
@@ -52,7 +56,7 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
       : team === "__unassigned__"
         ? tr("team.unassigned")
         : team;
-  const context = `${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${name} · ${data.filters.customer && data.filters.customer !== "all" ? data.filters.customer + " · " : ""}${actuals && hasSales ? `${actuals.reportingWeek ? `W${actuals.reportingWeek} · ` : ""}${tr("teamActual.period", { year: actuals.year, month: String(actuals.month).padStart(2, "0") })} · ` : ""}Prospect ${weeks} · kEUR`;
+  const context = `${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${display(data.filters.scenario)} · ${name} · ${data.filters.customer && data.filters.customer !== "all" ? data.filters.customer + " · " : ""}${actuals && hasSales ? `${actuals.reportingWeek ? `W${actuals.reportingWeek} · ` : ""}${tr("teamActual.period", { year: actuals.year, month: String(actuals.month).padStart(2, "0") })} · ` : ""}Prospect ${weeks} · kEUR`;
   const actualSource =
     actuals && hasSales
       ? `${actuals.sourceFile} · ${actuals.sourceSheet}`
@@ -95,25 +99,21 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
     value === null
       ? "—"
       : value.toLocaleString(locale, { maximumFractionDigits: 2 });
-  const planValue = (p: (typeof view.points)[number]) =>
-    hasCombined ? p.cumulativeCombined : p.cumulativeProspect;
   const axis = integerAxis(
     view.points
-      .flatMap((p) => [
+      .flatMap((p, i) => [
         Math.max(0, p.sales ?? 0) + Math.max(0, p.prospect ?? 0),
         Math.min(0, p.sales ?? 0) + Math.min(0, p.prospect ?? 0),
-        p.cumulativeSales,
-        planValue(p),
+        curve.values[i],
       ])
       .filter((n): n is number => n !== null),
   );
   const x = (i: number) => 98 + i * 58;
   const y = (n: number) => 285 - ((n - axis.min) / (axis.max - axis.min)) * 250;
-  const line = (key: "cumulativeSales" | "plan") => {
+  const line = () => {
     let path = "",
       active = false;
-    view.points.forEach((p, i) => {
-      const value = key === "plan" ? planValue(p) : p[key];
+    curve.values.forEach((value, i) => {
       if (value === null) {
         active = false;
         return;
@@ -174,8 +174,15 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
       ) : (
         <>
           <PlotGrid min={axis.min} max={axis.max} />
+          <path
+            d={line()}
+            stroke={colors.actual}
+            strokeWidth="3"
+            fill="none"
+            pointerEvents="none"
+          />
           {view.points.map((p, i) => {
-            const plan = planValue(p);
+            const cumulative = curve.values[i];
             const positiveSales = Math.max(0, p.sales ?? 0),
               negativeSales = Math.min(0, p.sales ?? 0);
             const start = (p.prospect ?? 0) < 0 ? negativeSales : positiveSales;
@@ -183,10 +190,9 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
               <g key={months[i]}>
                 {(p.sales !== null ||
                   p.prospect !== null ||
-                  plan !== null ||
-                  p.cumulativeSales !== null) && (
+                  cumulative !== null) && (
                   <ChartMark
-                    color={colors.prospect}
+                    color={colors.actual}
                     data={{
                       title: display(months[i]),
                       rows: [
@@ -199,10 +205,9 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
                           value: chartAmount(p.prospect, locale),
                         },
                         {
-                          label: actualLabel,
-                          value: chartAmount(p.cumulativeSales, locale),
+                          label: cumulativeLabel,
+                          value: chartAmount(cumulative, locale),
                         },
-                        { label: planLabel, value: chartAmount(plan, locale) },
                       ],
                     }}
                     hit={
@@ -236,23 +241,13 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
                         fill={colors.prospect}
                       />
                     )}
-                    {p.cumulativeSales !== null && (
+                    {cumulative !== null && (
                       <circle
                         cx={x(i)}
-                        cy={y(p.cumulativeSales)}
+                        cy={y(cumulative)}
                         r="4"
                         fill="#fffefa"
                         stroke={colors.actual}
-                        strokeWidth="2"
-                      />
-                    )}
-                    {plan !== null && (
-                      <circle
-                        cx={x(i)}
-                        cy={y(plan)}
-                        r="4"
-                        fill="#fffefa"
-                        stroke={colors.plan}
                         strokeWidth="2"
                       />
                     )}
@@ -270,21 +265,6 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
               </g>
             );
           })}
-          <path
-            d={line("cumulativeSales")}
-            stroke={colors.actual}
-            strokeWidth="3"
-            fill="none"
-            pointerEvents="none"
-          />
-          <path
-            d={line("plan")}
-            stroke={colors.plan}
-            strokeWidth="3"
-            strokeDasharray="6 4"
-            fill="none"
-            pointerEvents="none"
-          />
           <Legend
             labels={[
               ...(hasSales ? [{ name: salesLabel, color: colors.sales }] : []),
@@ -296,11 +276,8 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
           <Legend
             y={375}
             labels={[
-              ...(hasSales
-                ? [{ name: actualLabel, color: colors.actual }]
-                : []),
-              ...(view.points.some((p) => planValue(p) !== null)
-                ? [{ name: planLabel, color: colors.plan }]
+              ...(curve.values.some((value) => value !== null)
+                ? [{ name: cumulativeLabel, color: colors.actual }]
                 : []),
             ]}
           />

@@ -1,6 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { teamPerformanceSeries } from "../lib/team-performance";
+import {
+  teamPerformanceCurve,
+  teamPerformanceSeries,
+} from "../lib/team-performance";
 
 const actuals = {
   month: 2,
@@ -10,6 +13,25 @@ const actuals = {
 const teams = [
   { monthly: [0, 2, 3, ...Array(9).fill(0)], entityIds: ["ddc", "dhk"] },
 ];
+
+test("one cumulative team curve follows the same Sales / Sales + Prospect scenario as the main chart", () => {
+  const { points } = teamPerformanceSeries(actuals, teams);
+  const sales = teamPerformanceCurve(points, "Sales");
+  assert.equal(sales.key, "sales");
+  assert.equal(sales.values[1], 30.25);
+  assert.equal(sales.values[2], null);
+  const combined = teamPerformanceCurve(points, "Sales + Prospect");
+  assert.equal(combined.key, "combined");
+  assert.equal(combined.values[2], 35.25);
+  const unavailable = teamPerformanceSeries(null, teams).points;
+  assert.ok(
+    teamPerformanceCurve(unavailable, "Sales").values.every((v) => v === null),
+  );
+  assert.equal(
+    teamPerformanceCurve(unavailable, "Sales + Prospect").key,
+    "prospect",
+  );
+});
 
 test("combined team planning carries completed actual YTD, never inventing future actuals", () => {
   const view = teamPerformanceSeries(actuals, teams);

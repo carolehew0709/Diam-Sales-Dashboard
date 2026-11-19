@@ -1,4 +1,4 @@
-import type { Amount } from "./types";
+import type { Amount, Scenario } from "./types";
 import { teamMonthlyPerformance } from "./performance-chart";
 
 type ActualSource = {
@@ -56,5 +56,28 @@ export function teamPerformanceSeries(
             : null,
       };
     }),
+  };
+}
+
+/** Match the main Sales trend: one cumulative series for the selected Scenario. */
+export function teamPerformanceCurve(
+  points: ReturnType<typeof teamPerformanceSeries>["points"],
+  scenario: Scenario,
+) {
+  const key =
+    scenario === "Sales"
+      ? "sales"
+      : points.some((p) => p.cumulativeCombined !== null)
+        ? "combined"
+        : "prospect";
+  return {
+    key,
+    values: points.map((p) =>
+      key === "sales"
+        ? p.cumulativeSales
+        : key === "combined"
+          ? p.cumulativeCombined
+          : p.cumulativeProspect,
+    ),
   };
 }

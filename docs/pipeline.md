@@ -18,3 +18,11 @@ In Pipeline, an authorized publisher selects an XLSX export, enters the export's
 ## Sales Operation Management
 
 The home module shows Order → Shipment → Invoice → Payment and the planned Team, Week and Customer Group views. The page uses an empty state until ERP data is connected.
+
+## Project-based reporting (2026-11-19)
+
+The visible overview, movement cards, comparison counts and status tables now count distinct Entity + project code. Original opportunity IDs and rows remain the import/storage evidence. A later source row on an existing project is not a newly created project: project creation uses the earliest supplied creation date in the complete authorized Entity snapshot, before Team/Customer filters. New-project amounts sum known income of the matching project cohort once per source row. Recorded-loss project counts use the earliest dated lost record; their amounts sum the dated lost records of those projects. Missing income is reported as affected projects, not source-row counts. Native currencies and the fixed kEUR rates remain unchanged.
+
+Project Status and Sales Status each offer Weekly and YTD plus a Projects/kEUR trend selector. Weekly means projects first created in the selected week; YTD means first created since January 1 through the selected snapshot date. Trend points group these creation cohorts by week and apply status/stage from the selected snapshot. These are cohort curves, not historical status-transition reconstructions. A project with different underlying statuses/stages may occur in more than one category, consistent with the earlier per-status grain.
+
+Project Status omits won records from its rows, total and trend. Sales Status retains the supplied quote/design/sample/production/complete stages. ERP/Job Number/OB exclusions are explicitly deferred until an authoritative ERP source is provided; production or complete is not used as an invented order flag. There is no visible opportunity-count column. Original source workbook/error identifiers retain their real meaning. Each trend supports local PNG/SVG and the existing bilingual chart Excel export.

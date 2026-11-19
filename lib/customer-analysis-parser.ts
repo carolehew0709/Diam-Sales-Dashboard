@@ -1,6 +1,7 @@
 import * as XLSX from "xlsx";
 import type { CustomerAnalysis } from "./graphics-types";
 import type { Finding } from "./types";
+import { parseCustomerMonthlyDetails } from "./customer-monthly-parser";
 
 const number = (v: unknown) =>
   typeof v === "number" && Number.isFinite(v) ? v : null;
@@ -251,13 +252,21 @@ export function parseCustomerAnalysisWorkbook(
       });
     }
   }
+  const monthlyDetails = parseCustomerMonthlyDetails(
+    breakdown,
+    breakdownSheet,
+    year,
+    Number(analysisMonth.slice(5, 7)),
+  );
   findings.push({
     severity: "review",
-    message:
-      "China aggregate customer analysis; no BU, sales-type or team allocation. Monthly source remains separate from weekly sales and approved budgets.",
-    code: "graphics.customerRule",
+    message: monthlyDetails
+      ? "China monthly team/customer Sales detail; no Entity allocation. Both YTD years use the source cutoff month. Weekly sources and approved budgets are separate."
+      : "China aggregate customer analysis; no BU, sales-type or team allocation. Monthly source remains separate from weekly sales and approved budgets.",
+    code: monthlyDetails ? "monthlyDetail.importRule" : "graphics.customerRule",
   });
   const analysis: CustomerAnalysis = {
+    ...(monthlyDetails ? { monthlyDetails } : {}),
     month: analysisMonth,
     year,
     priorYear,

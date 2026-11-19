@@ -7,19 +7,19 @@ import {
   pipelineFilters,
   pipelineFx,
   pipelineIncomeKEUR,
-  pipelineMovement,
   pipelineRows,
-  pipelineStages,
-  pipelineStatuses,
-  pipelineTotals,
   weekLabel,
-  type Opportunity,
   type PipelineData,
   type PipelineFilters,
 } from "@/lib/pipeline";
 import { useI18n } from "./i18n-provider";
 import { PipelineImport } from "./pipeline-import";
 import { PipelineTrend } from "./pipeline-trend";
+import {
+  PipelineStatusPanel,
+  PipelineStatusSummary,
+} from "./pipeline-status-panel";
+import { pipelineProjectMovement, projectKey } from "@/lib/pipeline-projects";
 import styles from "./commercial.module.css";
 
 const filterKeys = ["region", "entity", "team", "group", "customer"] as const;
@@ -113,104 +113,6 @@ function FilterBar({
   );
 }
 
-function StatusTable({
-  rows,
-  earlier,
-  byStage = false,
-}: {
-  rows: Opportunity[];
-  earlier?: Opportunity[];
-  byStage?: boolean;
-}) {
-  const { tr, locale } = useI18n();
-  const number = new Intl.NumberFormat(locale, { maximumFractionDigits: 2 });
-  const delta = new Intl.NumberFormat(locale, {
-    maximumFractionDigits: 2,
-    signDisplay: "exceptZero",
-  });
-  const render = (
-    amount: number | null,
-    previous: number | null | undefined,
-    unit = "",
-  ) => (
-    <>
-      {amount === null ? "—" : number.format(amount)}
-      {amount !== null && typeof previous === "number" && (
-        <small>
-          {tr("pipeline.delta", {
-            delta: delta.format(amount - previous) + unit,
-          })}
-        </small>
-      )}
-    </>
-  );
-  const groups = byStage
-    ? [
-        ...pipelineStages.map((stage) => ({
-          key: stage,
-          label: tr(`pipeline.stage.${stage}`),
-          match: (row: Opportunity) => row.stage === stage,
-        })),
-        ...(rows.some((row) => !row.stage)
-          ? [
-              {
-                key: "unspecified",
-                label: tr("pipeline.unspecified"),
-                match: (row: Opportunity) => !row.stage,
-              },
-            ]
-          : []),
-      ]
-    : [
-        { key: "total", label: tr("pipeline.status.total"), match: () => true },
-        ...pipelineStatuses.map((status) => ({
-          key: status,
-          label: tr(`pipeline.status.${status}`),
-          match: (row: Opportunity) => row.status === status,
-        })),
-      ];
-  return (
-    <div className={styles.tableWrap}>
-      <table className={styles.table}>
-        <thead>
-          <tr>
-            <th scope="col">
-              {tr(byStage ? "pipeline.stage" : "pipeline.status")}
-            </th>
-            <th scope="col">{tr("pipeline.projects")}</th>
-            <th scope="col">{tr("pipeline.opportunities")}</th>
-            <th scope="col">{tr("pipeline.estimated")}</th>
-            <th scope="col">{tr("pipeline.withoutAmount")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {groups.map(({ key, label, match }) => {
-            const current = pipelineTotals(rows.filter(match));
-            const previous = earlier && pipelineTotals(earlier.filter(match));
-            return (
-              <tr key={key}>
-                <th scope="row">{label}</th>
-                <td>{render(current.projects, previous?.projects)}</td>
-                <td>
-                  {render(current.opportunities, previous?.opportunities)}
-                </td>
-                <td>
-                  {render(
-                    pipelineIncomeKEUR(current.amounts),
-                    previous && pipelineIncomeKEUR(previous.amounts),
-                    " kEUR",
-                  )}
-                </td>
-                <td>{number.format(current.withoutAmount)}</td>
-              </tr>
-            );
-          })}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 export function PipelineApp() {
   const { tr, locale } = useI18n();
   const [data, setData] = useState<PipelineData | null>(null);
@@ -259,23 +161,15 @@ export function PipelineApp() {
     current
       .flatMap((s) => s.rows)
       .filter((r) => r.keyProject)
-      .map((r) => r.project),
+      .map(projectKey),
   );
-  const keyRows = rows.filter((r) => keyIds.has(r.project));
+  const keyRows = rows.filter((r) => keyIds.has(projectKey(r)));
   const asOf = current.reduce(
     (latest, source) => (source.asOf > latest ? source.asOf : latest),
     "",
   );
-  const movement = asOf ? pipelineMovement(rows, asOf) : null;
-  const earlier =
-    data?.previous.filter((s) =>
-      current.some((c) => c.entityId === s.entityId),
-    ) ?? [];
-  const comparable = Boolean(
-    current.length &&
-    earlier.length === current.length &&
-    current.every((s) => s.asOf.slice(0, 7) === movement?.month),
-  );
+  const reference = current.flatMap((s) => s.rows);
+  const movement = asOf ? pipelineProjectMovement(rows, asOf, reference) : null;
   const scopeText = current
     .map(
       (s) =>
@@ -413,32 +307,19 @@ export function PipelineApp() {
               </p>
             )}
             <div className={styles.statusPanels}>
-              <section className={styles.panel}>
-                <div className={styles.sectionHeading}>
-                  <h2>{tr("pipeline.weeklyStatus")}</h2>
-                </div>
-                <StatusTable
-                  rows={rows}
-                  earlier={
-                    comparable ? pipelineRows(earlier, filters) : undefined
-                  }
-                />
-                <p className={styles.note}>{tr("pipeline.grainNote")}</p>
-                <p className={styles.note}>
-                  {comparable
-                    ? tr("pipeline.compared", {
-                        dates: earlier.map((source) => source.asOf).join(" / "),
-                      })
-                    : tr("pipeline.noComparison")}
-                </p>
-              </section>
-              <section className={styles.panel}>
-                <div className={styles.sectionHeading}>
-                  <h2>{tr("pipeline.salesStages")}</h2>
-                </div>
-                <StatusTable rows={rows} byStage />
-                <p className={styles.note}>{tr("pipeline.stageBasis")}</p>
-              </section>
+              <PipelineStatusPanel
+                rows={rows}
+                reference={reference}
+                asOf={asOf}
+                context={chartContext}
+              />
+              <PipelineStatusPanel
+                rows={rows}
+                reference={reference}
+                asOf={asOf}
+                context={chartContext}
+                byStage
+              />
             </div>
             <section className={styles.panel}>
               <div className={styles.sectionHeading}>
@@ -482,7 +363,7 @@ export function PipelineApp() {
             <section className={styles.panel}>
               <h2>{tr("pipeline.keyProjects")}</h2>
               {keyRows.length ? (
-                <StatusTable rows={keyRows} />
+                <PipelineStatusSummary rows={keyRows} />
               ) : (
                 <p className={styles.note}>{tr("pipeline.noKey")}</p>
               )}

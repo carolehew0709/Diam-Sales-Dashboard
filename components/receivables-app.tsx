@@ -1,5 +1,12 @@
 "use client";
-import { useContext, useEffect, useMemo, useRef, useState, useTransition } from "react";
+import {
+  useContext,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  useTransition,
+} from "react";
 import { ExportAccess } from "./export-access";
 import { UpdateStatus } from "./update-status";
 import { useDataReveal } from "./use-data-reveal";
@@ -288,17 +295,19 @@ export function ReceivablesApp() {
                 ].join(" · "),
               })}
             </p>
-            {exportAllowed && <a
-              className="apac-button"
-              href={`/api/receivables/export?${query}`}
-              aria-disabled={pending || !!error || undefined}
-              onClick={(event) => {
-                if (pending || error) event.preventDefault();
-              }}
-            >
-              <Download size={15} />
-              {tr("nav.export")}
-            </a>}
+            {exportAllowed && (
+              <a
+                className="apac-button"
+                href={`/api/receivables/export?${query}`}
+                aria-disabled={pending || !!error || undefined}
+                onClick={(event) => {
+                  if (pending || error) event.preventDefault();
+                }}
+              >
+                <Download size={15} />
+                {tr("nav.export")}
+              </a>
+            )}
           </div>
           {data.unclassifiedPayments > 0 && (
             <p className="ar-context">{tr("ar.receiptClassification")}</p>
@@ -359,43 +368,37 @@ export function ReceivablesApp() {
                     <h2>{tr("ar.agingProfile")}</h2>
                   </div>
                 </div>
+                <p className={styles.agingCaption}>
+                  {tr("ar.amountAndProportion")}
+                </p>
                 <div className="ar-bars">
                   {chart.buckets.map((b) => (
-                    <div className="ar-bar-row" key={b.bucket}>
+                    <div
+                      className={`ar-bar-row ${styles.profileRow}`}
+                      key={b.bucket}
+                      data-aging-bucket={b.bucket}
+                    >
                       <span>{tr(`ar.bucket.${b.bucket}`)}</span>
-                      <div className="ar-bar-track">
+                      <div className="ar-bar-track" aria-hidden="true">
                         <i
+                          className={
+                            (b.proportion ?? 0) < 0 ? styles.credit : undefined
+                          }
                           style={{
-                            width: `${(Math.max(0, b.amount) / Math.max(1, ...chart.buckets.map((x) => Math.abs(x.amount)))) * 100}%`,
+                            width: `${Math.min(1, Math.abs(b.proportion ?? 0)) * 100}%`,
                           }}
                         />
                       </div>
-                      <strong>{amount(b.amount)}</strong>
+                      <strong className={styles.agingValue}>
+                        <span>{amount(b.amount)}</span>
+                        <small aria-label={tr("ar.agingProportion")}>
+                          {proportion(b.proportion)}
+                        </small>
+                      </strong>
                     </div>
                   ))}
                 </div>
                 <div className={styles.proportions}>
-                  <h3>{tr("ar.agingProportion")}</h3>
-                  <div className="ar-bars">
-                    {chart.buckets.map((b) => (
-                      <div className="ar-bar-row" key={b.bucket}>
-                        <span>{tr(`ar.bucket.${b.bucket}`)}</span>
-                        <div className="ar-bar-track" aria-hidden="true">
-                          <i
-                            className={
-                              (b.proportion ?? 0) < 0
-                                ? styles.credit
-                                : undefined
-                            }
-                            style={{
-                              width: `${Math.min(1, Math.abs(b.proportion ?? 0)) * 100}%`,
-                            }}
-                          />
-                        </div>
-                        <strong>{proportion(b.proportion)}</strong>
-                      </div>
-                    ))}
-                  </div>
                   <div className={styles.overdueShare}>
                     <span>{tr("ar.overdueProportion")}</span>
                     <strong>{proportion(chart.overdueProportion)}</strong>

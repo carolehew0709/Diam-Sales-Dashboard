@@ -1,6 +1,7 @@
 import type { Amount } from "./types";
 
 export type CustomerAnalysis = {
+  monthlyDetails?: CustomerMonthlyDetails;
   month: string;
   year: number;
   priorYear: number;
@@ -24,6 +25,21 @@ export type CustomerAnalysis = {
     current: number;
     sourceGrowth: Amount;
     status: string;
+    sourceRow: number;
+  }[];
+};
+
+export type CustomerMonthlyDetails = {
+  cutoffMonth: number;
+  years: number[];
+  sourceSheet: string;
+  sourceRange: string;
+  rows: {
+    name: string;
+    team: string;
+    path: string[];
+    monthly: Record<string, Amount[]>;
+    ytd: Record<string, Amount>;
     sourceRow: number;
   }[];
 };

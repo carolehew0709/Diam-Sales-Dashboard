@@ -295,3 +295,7 @@ Unknown & Advance is now a standalone authoritative receipt template. It imports
 ## Separate AR invoice and receipt dates (2026-11-10)
 
 The AR header now labels each Entity's invoice-aging cutoff separately from the latest authorized, filtered receipt date. The November shared-receipt publication is visible as latest receipt 2026-11-09; it does not change the approved 2026-10-31 DEHK/DDC invoice ledgers. Filename dates and publication times do not substitute for accounting cutoffs. Date visibility follows existing scopes and shared-receipt permissions. This presentation correction leaves published records, amounts and history unchanged. See docs/receivables.md.
+
+## Monthly Sales detail and project reporting (2026-11-19)
+
+The extended Graphics finance source now has a reviewed China-only monthly team/customer hierarchy, with matched January–October FY2025/FY2026 YTD and chart-local selectors. Optional monthly details travel with the customer-month publication and restore image. Entity and weekly/team KPI sources remain independent. AR amount and aging share are combined into one profile. Pipeline overview/status views count Entity/project codes, expose Weekly/YTD creation cohorts and cohort trends, and omit Won from Project Status. ERP order exclusions remain deferred. See `docs/graphics.md`, `docs/pipeline.md` and `docs/receivables.md`.

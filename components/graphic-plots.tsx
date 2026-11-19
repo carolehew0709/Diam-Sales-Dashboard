@@ -1,4 +1,5 @@
 "use client";
+import { integerAxis } from "@/lib/chart-axis";
 import { formatK } from "@/lib/dashboard";
 import type { Amount } from "@/lib/types";
 import { ChartMark } from "./chart-interaction";
@@ -39,31 +40,32 @@ export function PlotGrid({
 }) {
   return (
     <>
-      {Array.from({ length: 5 }, (_, i) => {
-        const value = min + ((max - min) * i) / 4,
-          y = bottom - (i * (bottom - top)) / 4;
-        return (
-          <g key={i}>
-            <line
-              x1={left}
-              x2={right}
-              y1={y}
-              y2={y}
-              stroke="#e5e0d6"
-              strokeDasharray="3 4"
-            />
-            <text
-              x={left - 10}
-              y={y + 4}
-              fontSize="12"
-              fill="#706f67"
-              textAnchor="end"
-            >
-              {formatK(value)}
-            </text>
-          </g>
-        );
-      })}
+      {integerAxis([min, max])
+        .ticks.filter((value) => value >= min && value <= max)
+        .map((value, i) => {
+          const y = bottom - ((value - min) / (max - min)) * (bottom - top);
+          return (
+            <g key={i}>
+              <line
+                x1={left}
+                x2={right}
+                y1={y}
+                y2={y}
+                stroke="#e5e0d6"
+                strokeDasharray="3 4"
+              />
+              <text
+                x={left - 10}
+                y={y + 4}
+                fontSize="12"
+                fill="#706f67"
+                textAnchor="end"
+              >
+                {formatK(value)}
+              </text>
+            </g>
+          );
+        })}
       <text x={left} y="17" fill="#706f67" fontSize="11">
         kEUR
       </text>
@@ -136,9 +138,10 @@ export function ComboPlot({
             ]
           : []),
       ]
-    : points.some(p => p.monthly !== null) ? [{ name: monthlyLabel, color: earlierColor }] : [];
-  const max = Math.max(...values, 1) * 1.13,
-    min = Math.min(0, ...values) * 1.13;
+    : points.some((p) => p.monthly !== null)
+      ? [{ name: monthlyLabel, color: earlierColor }]
+      : [];
+  const { max, min } = integerAxis(values);
   const y = (v: number) => 285 - ((v - min) / (max - min)) * 250,
     x = (i: number) => 98 + i * 58;
   let path = "",

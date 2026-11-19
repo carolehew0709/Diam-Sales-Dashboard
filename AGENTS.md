@@ -178,3 +178,9 @@ The owner authorizes W44 weekly team Prospect, retaining the Sales Team2 mapping
 ## Owner AR exclusion decision 2026-11-19
 
 Exclude DDC invoices to DEHK (`DEHK` / `DEHK LIMITED`, including preserved Source Customer) from the entire AR report, replacing the earlier Customer Ranking-only exclusion. Use the same rule for totals, aging/proportions, filter choices, rankings, monthly historical trends and CSV. Keep original invoices/import history intact and apply the rule to future uploads/restored snapshots. Do not exclude other DDC EUR customers, DEHK's own Entity invoices or shared receipt balances. See `docs/receivables.md`.
+
+## Owner monthly detail and Pipeline decisions 2026-11-19
+
+The Graphics finance detail is a China aggregate with Team and customer hierarchy, not an Entity allocation. Add local monthly-chart selectors for Team, Key Customer/Other Customers/Intergroup, subgroup and customer only in fully authorized complete-China scope. Comparable FY2025 YTD is January–October for the supplied October source, matching FY2026 cutoff. Do not promote source annual target/budget columns into approved budgets or overwrite weekly/team KPI sources from this aggregate.
+
+Pipeline display counts distinct Entity/project codes. Weekly status uses projects first created in that week; YTD uses the current-year creation cohort. Status/stage trend curves apply the selected snapshot's classification to creation-week cohorts. Omit won data from Project Status. ERP/Job Number/OB exclusions are deferred pending an authoritative ERP source. Retain original opportunity-grain evidence and kEUR reporting rates.

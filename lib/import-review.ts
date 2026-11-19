@@ -46,7 +46,8 @@ export function batchScopes(batch: ImportBatch) {
   if (batch.adjustment) return policyScopes(adjustmentPolicy(batch));
   if (batch.adjustedRecordId) return [`ar-row:${batch.adjustedRecordId}`];
   if (batch.teamActualData) return ["team-actual:current"];
-  if (batch.monthlySalesCloses) return batch.monthlySalesCloses.map(monthlySalesScope);
+  if (batch.monthlySalesCloses)
+    return batch.monthlySalesCloses.map(monthlySalesScope);
   if (batch.customerAnalysis)
     return [`customer:${batch.customerAnalysis.month}`];
   if (batch.receivablesKind)
@@ -428,21 +429,27 @@ export function previewImport(
     affected: batch.monthlySalesCloses
       ? ["Monthly / cumulative charts", "Sales exports"]
       : batch.teamActualData
-      ? [
-          "Team actual Sales / Annual Budget",
-          "Sales Team2 names",
-          "Team exports",
-        ]
-      : batch.receivablesKind
-        ? ["AR report", "AR export"]
-        : batch.customerAnalysis
-          ? ["Key Customer Dashboard", "Customer export"]
-          : [
-              "Sales KPIs",
-              "Monthly / cumulative charts",
-              "Teams / customers",
-              "Sales exports",
-            ],
+        ? [
+            "Team actual Sales / Annual Budget",
+            "Sales Team2 names",
+            "Team exports",
+          ]
+        : batch.receivablesKind
+          ? ["AR report", "AR export"]
+          : batch.customerAnalysis
+            ? batch.customerAnalysis.monthlyDetails
+              ? [
+                  "Key Customer Dashboard",
+                  "Monthly / cumulative charts",
+                  "Customer export",
+                ]
+              : ["Key Customer Dashboard", "Customer export"]
+            : [
+                "Sales KPIs",
+                "Monthly / cumulative charts",
+                "Teams / customers",
+                "Sales exports",
+              ],
     unit: batch.receivablesKind
       ? `${receivableCurrencies.filter((currency) => batch.receivables?.some((r) => r.currency === currency)).join(" / ")} (separate currencies)`
       : "kEUR",
@@ -524,7 +531,8 @@ export function publishReviewed(
   batch.publishedAt = now;
   batch.publishedBy = actor.id;
   batch.revision = ++state.revision;
-  if (batch.snapshots.length || batch.monthlySalesCloses) state.dataUpdatedAt = now;
+  if (batch.snapshots.length || batch.monthlySalesCloses)
+    state.dataUpdatedAt = now;
   if (batch.receivablesKind) state.receivablesUpdatedAt = now;
   state.audit.push({
     id: randomUUID(),
@@ -654,7 +662,8 @@ export function restoreReviewed(
   batch.publication!.restoredBy = actor.id;
   batch.status = "restored";
   state.revision++;
-  if (batch.snapshots.length || batch.monthlySalesCloses) state.dataUpdatedAt = now;
+  if (batch.snapshots.length || batch.monthlySalesCloses)
+    state.dataUpdatedAt = now;
   if (batch.receivablesKind) state.receivablesUpdatedAt = now;
   state.audit.push({
     id: randomUUID(),

@@ -212,3 +212,22 @@
   height: 8px;
   border-radius: 50%;
 }
+
+.agingCaption {
+  color: var(--muted);
+  font-size: 11px;
+  margin: 0;
+}
+.profileRow .credit {
+  background: var(--red);
+}
+.agingValue {
+  display: grid;
+  gap: 3px;
+  justify-items: end;
+}
+.agingValue small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 400;
+}

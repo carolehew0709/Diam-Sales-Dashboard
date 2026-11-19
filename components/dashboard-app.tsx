@@ -35,7 +35,7 @@ import { hasReceivablesAccess } from "@/lib/receivables";
 import { canAccessPage } from "@/lib/permissions";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
-import { SalesMonthlyGraphic } from "@/components/sales-monthly-graphic";
+import { SalesTrendWorkspace } from "@/components/sales-trend-workspace";
 import {
   SalesGraphics,
   BusinessUnitGraphics,
@@ -662,7 +662,7 @@ const DashboardView = memo(function DashboardView({
           </div>
         </section>
         <section className="dashboard-grid dashboard-grid-main sales-overview-grid">
-          <SalesMonthlyGraphic data={data} standalone />
+          <SalesTrendWorkspace data={data} />
         </section>
         <SalesGraphics data={data} />
         <section

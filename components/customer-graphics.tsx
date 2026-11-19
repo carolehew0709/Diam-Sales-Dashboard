@@ -20,7 +20,7 @@ import { customerGrowth, customerMetrics } from "@/lib/customer-metrics";
 import type { ChartTable } from "@/lib/chart-workbook-types";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { ChartMark } from "./chart-interaction";
-import { chartAmount } from "@/lib/chart-tooltip";
+import { chartAmount, salesNumber } from "@/lib/chart-tooltip";
 import { customerAnalysisQuery } from "@/lib/dashboard-presentation";
 
 type View = ReturnType<typeof customerAnalysisView>;
@@ -41,10 +41,12 @@ const statusKeys: Record<string, MessageKey> = {
 export const CustomerGraphics = memo(function CustomerGraphics({
   filters,
   revision,
+  latest,
   children,
 }: {
   filters: Filters;
   revision: number;
+  latest?: View;
   children?: ReactNode;
 }) {
   const [month, setMonth] = useState("");
@@ -58,6 +60,7 @@ export const CustomerGraphics = memo(function CustomerGraphics({
     error?: boolean;
   }>();
   useEffect(() => {
+    if (!selectedMonth && latest) return;
     const controller = new AbortController();
     fetch(`/api/customer-analysis?${query}`, { signal: controller.signal })
       .then(async (r) => {
@@ -77,14 +80,15 @@ export const CustomerGraphics = memo(function CustomerGraphics({
           setResponse({ query, revision, error: true });
       });
     return () => controller.abort();
-  }, [query, revision]);
-  const current =
-    response?.query === query && response.revision === revision
+  }, [query, revision, selectedMonth, latest]);
+  const current = !selectedMonth && latest
+    ? { data: latest }
+    : response?.query === query && response.revision === revision
       ? response
       : undefined;
   return (
     <CustomerGraphicsView
-      current={current ?? response}
+      current={current ?? response ?? (latest ? { data: latest } : undefined)}
       pending={!current || renderPending}
       selectedMonth={selectedMonth}
       setMonth={setMonth}
@@ -157,18 +161,19 @@ function CustomerGraphicsView({
     : "";
   const groupLabel = (name: string) =>
     groupKeys[name] ? tr(groupKeys[name]) : name;
-  const yoy = (prior: number, amount: number) => {
+  const detail = (value: number | null) => salesNumber(value, locale, 2);
+  const yoy = (prior: number, amount: number, digits = 0) => {
     const growth = customerGrowth(prior, amount);
     return growth === null
       ? "—"
-      : `${growth >= 0 ? "+" : ""}${(growth * 100).toFixed(1)}%`;
+      : `${growth >= 0 ? "+" : ""}${salesNumber(growth, locale, digits, "percent")}`;
   };
   const metrics = analysis
     ? customerMetrics(analysis, view?.referenceTotal)
     : null;
   const metricsShare = (amount: number) =>
     metrics && metrics.keyTotal > 0
-      ? `${((amount / metrics.keyTotal) * 100).toFixed(1)}%`
+      ? salesNumber(amount / metrics.keyTotal, locale, 2, "percent")
       : "—";
   const contributionTable = analysis && (
     <table className="bu-table">
@@ -183,7 +188,7 @@ function CustomerGraphicsView({
         {analysis.customers.map((c) => (
           <tr key={c.name}>
             <td>{c.name}</td>
-            <td className="numeric">{formatK(c.current)}</td>
+            <td className="numeric">{detail(c.current)}</td>
             <td className="numeric">{metricsShare(c.current)}</td>
           </tr>
         ))}
@@ -205,9 +210,9 @@ function CustomerGraphicsView({
         {analysis.customers.map((c) => (
           <tr key={c.name}>
             <td>{c.name}</td>
-            <td className="numeric">{formatK(c.prior)}</td>
-            <td className="numeric">{formatK(c.current)}</td>
-            <td className="numeric">{yoy(c.prior, c.current)}</td>
+            <td className="numeric">{detail(c.prior)}</td>
+            <td className="numeric">{detail(c.current)}</td>
+            <td className="numeric">{yoy(c.prior, c.current, 2)}</td>
             <td>
               {statusKeys[c.status] ? tr(statusKeys[c.status]) : c.status}
             </td>
@@ -218,15 +223,16 @@ function CustomerGraphicsView({
             <strong>{tr("graphics.keyTotal")}</strong>
           </td>
           <td className="numeric">
-            {formatK(analysis.customers.reduce((n, c) => n + c.prior, 0))}
+            {detail(analysis.customers.reduce((n, c) => n + c.prior, 0))}
           </td>
           <td className="numeric">
-            {formatK(analysis.customers.reduce((n, c) => n + c.current, 0))}
+            {detail(analysis.customers.reduce((n, c) => n + c.current, 0))}
           </td>
           <td className="numeric">
             {yoy(
               analysis.customers.reduce((n, c) => n + c.prior, 0),
               analysis.customers.reduce((n, c) => n + c.current, 0),
+              2,
             )}
           </td>
           <td>—</td>
@@ -338,10 +344,7 @@ function CustomerGraphicsView({
             <div>
               <span>{tr("graphics.keyShare")}</span>
               <strong>
-                {metrics!.keyShare !== null
-                  ? (metrics!.keyShare * 100).toFixed(1)
-                  : "—"}
-                <small>%</small>
+                {salesNumber(metrics!.keyShare, locale, 0, "percent")}
               </strong>
             </div>
             <div>
@@ -404,7 +407,7 @@ function CustomerGraphicsView({
                           <td>{groupLabel(r.name)}</td>
                           {r.values.map((v, i) => (
                             <td key={i} className="numeric">
-                              {formatK(v)}
+                              {detail(v)}
                             </td>
                           ))}
                         </tr>
@@ -415,7 +418,7 @@ function CustomerGraphicsView({
                         </td>
                         {columns.map((c, i) => (
                           <td className="numeric" key={c}>
-                            {formatK(
+                            {detail(
                               analysis.breakdown.reduce(
                                 (n, r) => n + r.values[i],
                                 0,
@@ -481,7 +484,7 @@ function CustomerGraphicsView({
                                   label: tr("graphics.share"),
                                   value:
                                     columnTotal > 0
-                                      ? `${((value / columnTotal) * 100).toFixed(1)}%`
+                                      ? salesNumber(value / columnTotal, locale, 0, "percent")
                                       : "—",
                                 },
                               ],

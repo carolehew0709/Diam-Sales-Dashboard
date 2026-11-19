@@ -6,10 +6,28 @@ export type ChartTooltipData = {
   rows: { label: string; value: string }[];
 };
 
+export function salesNumber(
+  value: number | null,
+  locale: Locale,
+  digits = 0,
+  style: "decimal" | "percent" = "decimal",
+) {
+  if (value === null) return "—";
+  const formatter = new Intl.NumberFormat(locale, {
+    style,
+    minimumFractionDigits: digits,
+    maximumFractionDigits: digits,
+  });
+  return formatter.format(
+    Object.is(value, -0) ||
+      Math.abs(value) * (style === "percent" ? 100 : 1) < 0.5 * 10 ** -digits
+      ? 0
+      : value,
+  );
+}
+
 export function chartAmount(value: number | null, locale: Locale) {
-  return value === null
-    ? "—"
-    : `${new Intl.NumberFormat(locale, { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(value)} kEUR`;
+  return value === null ? "—" : `${salesNumber(value, locale)} kEUR`;
 }
 
 export function tooltipPosition(

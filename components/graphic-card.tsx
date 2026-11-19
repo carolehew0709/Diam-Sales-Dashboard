@@ -1,5 +1,6 @@
 "use client";
 import {
+  createContext,
   useContext,
   useEffect,
   useRef,
@@ -15,6 +16,9 @@ import type { ChartTable } from "@/lib/chart-workbook-types";
 import { useChartTooltip } from "./chart-interaction";
 import { useDataReveal } from "./use-data-reveal";
 import { ExportAccess } from "./export-access";
+import { salesNumber } from "@/lib/chart-tooltip";
+
+export const SalesChartPresentation = createContext(false);
 
 export function ChartDownloads({
   svg,
@@ -31,7 +35,8 @@ export function ChartDownloads({
   exportTable?: ChartTable;
   sheetName?: string;
 }) {
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
+  const showDataInImage = useContext(SalesChartPresentation);
   const exportAllowed = useContext(ExportAccess);
   const [busy, setBusy] = useState(false),
     [error, setError] = useState(false),
@@ -61,7 +66,16 @@ export function ChartDownloads({
     setBusy(true);
     setError(false);
     try {
-      await downloadChart(svg.current, format, title, context, note);
+      await downloadChart(
+        svg.current,
+        format,
+        title,
+        context,
+        note,
+        showDataInImage && exportTable
+          ? { table: exportTable, locale, heading: tr("graphics.viewData") }
+          : undefined,
+      );
     } catch {
       setError(true);
     } finally {
@@ -121,7 +135,8 @@ export function GraphicCard({
   const plot = useRef<HTMLDivElement>(null);
   useDataReveal(plot, JSON.stringify([context, exportTable]));
   const tooltip = useChartTooltip(svg, exportTable);
-  const { tr } = useI18n();
+  const { tr, locale } = useI18n();
+  const collapseNotes = useContext(SalesChartPresentation);
   return (
     <article className={`panel graphic-card ${className}`}>
       <div className="graphic-heading">
@@ -150,11 +165,45 @@ export function GraphicCard({
         </svg>
       </div>
       {tooltip}
-      <p className="graphic-note">{note}</p>
-      {table && (
+      {!collapseNotes && <p className="graphic-note">{note}</p>}
+      {(table || (collapseNotes && note)) && (
         <details className="graphic-data">
           <summary>{tr("graphics.viewData")}</summary>
-          <div className="table-wrap">{table}</div>
+          <div className="table-wrap">
+            {table ?? (
+              <table className="bu-table">
+                <thead>
+                  <tr>
+                    {exportTable.columns.map(({ label }, i) => (
+                      <th key={i}>{label}</th>
+                    ))}
+                  </tr>
+                </thead>
+                <tbody>
+                  {exportTable.rows.map((row, index) => (
+                    <tr key={index}>
+                      {exportTable.columns.map(({ format }, i) => {
+                        const value = row[i];
+                        return (
+                          <td key={i}>
+                            {typeof value === "number"
+                              ? salesNumber(
+                                  value,
+                                  locale,
+                                  2,
+                                  format?.includes("%") ? "percent" : "decimal",
+                                )
+                              : (value ?? "—")}
+                          </td>
+                        );
+                      })}
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            )}
+          </div>
+          {collapseNotes && <p className="graphic-note">{note}</p>}
         </details>
       )}
     </article>

@@ -6,6 +6,7 @@ import { storageStatus } from "@/lib/storage";
 export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   return api(async () => {
+    const url = new URL(request.url);
     const user = await currentUser();
     if (!canAccessModule(user, "overview")) throw new ApiError(403, "common.noAccess");
     return {
@@ -13,7 +14,8 @@ export async function GET(request: Request) {
       data: getDashboardSnapshot(
         await repository.read(),
         user,
-        filtersFrom(new URL(request.url)),
+        filtersFrom(url),
+        { includeHistory: url.searchParams.get("summary") !== "1" },
       ),
       storage: storageStatus(),
     };

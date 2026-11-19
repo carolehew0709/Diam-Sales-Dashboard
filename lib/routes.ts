@@ -18,6 +18,8 @@ export const dashboardSections = [
   "overview",
   "analysis",
   "business-units",
+  "sales-team-section",
+  "customer-section",
   "management-checks",
 ] as const;
 export type DashboardSection = (typeof dashboardSections)[number];

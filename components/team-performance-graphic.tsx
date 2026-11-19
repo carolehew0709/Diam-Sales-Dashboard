@@ -1,7 +1,9 @@
 "use client";
+import { useId } from "react";
 import type { Dashboard } from "@/lib/dashboard";
 import { months } from "@/lib/dashboard";
 import { integerAxis } from "@/lib/chart-axis";
+import { weeklySourceReference } from "@/lib/fiscal-years";
 import { chartAmount } from "@/lib/chart-tooltip";
 import {
   teamPerformanceCurve,
@@ -20,6 +22,7 @@ const colors = {
 
 export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
   const { tr, display, locale } = useI18n();
+  const plotId = useId();
   const team = data.filters.salesTeam ?? "all";
   const teams = data.graphics.teams.filter(
     (row) => team === "all" || row.name === team,
@@ -63,9 +66,11 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
       : "—";
   const prospectSource =
     (
-      data.graphics.teamSource?.files ?? [
+      data.graphics.teamSource?.periods.map(weeklySourceReference) ?? [
         ...new Set(
-          data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
+          data.rows.flatMap((r) =>
+            r.snapshot ? [weeklySourceReference(r.snapshot)] : [],
+          ),
         ),
       ]
     ).join("; ") || "—";
@@ -186,6 +191,9 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
             const positiveSales = Math.max(0, p.sales ?? 0),
               negativeSales = Math.min(0, p.sales ?? 0);
             const start = (p.prospect ?? 0) < 0 ? negativeSales : positiveSales;
+            const stacked = (p.sales ?? 0) * (p.prospect ?? 0) > 0;
+            const stackEnd = (p.sales ?? 0) + (p.prospect ?? 0);
+            const clipId = `${plotId}-month-${i}`;
             return (
               <g key={months[i]}>
                 {(p.sales !== null ||
@@ -220,12 +228,25 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
                       />
                     }
                   >
-                    {p.sales !== null && (
+                    {stacked && (
+                      <clipPath id={clipId}>
+                        <rect
+                          x={x(i) - 15}
+                          y={Math.min(y(stackEnd), y(0))}
+                          width="30"
+                          height={Math.max(1, Math.abs(y(stackEnd) - y(0)))}
+                          rx="3"
+                        />
+                      </clipPath>
+                    )}
+                    {p.sales !== null && p.sales !== 0 && (
                       <rect
                         x={x(i) - 15}
                         y={Math.min(y(p.sales), y(0))}
                         width="30"
                         height={Math.max(1, Math.abs(y(p.sales) - y(0)))}
+                        rx={stacked ? 0 : 3}
+                        clipPath={stacked ? `url(#${clipId})` : undefined}
                         fill={colors.sales}
                       />
                     )}
@@ -238,6 +259,8 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
                           1,
                           Math.abs(y(start + p.prospect) - y(start)),
                         )}
+                        rx={stacked ? 0 : 3}
+                        clipPath={stacked ? `url(#${clipId})` : undefined}
                         fill={colors.prospect}
                       />
                     )}

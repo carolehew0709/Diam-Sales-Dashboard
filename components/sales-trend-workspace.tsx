@@ -7,6 +7,7 @@ import { useI18n } from "./i18n-provider";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { months, type Dashboard } from "@/lib/dashboard";
 import { customerAnalysisQuery } from "@/lib/dashboard-presentation";
+import { salesNumber } from "@/lib/chart-tooltip";
 import {
   monthlyDetailPoints,
   monthlyDetailRows,
@@ -36,7 +37,7 @@ function MonthlyDetailChart({
   selection: MonthlyDetailFilters;
   exportOnly?: boolean;
 }) {
-  const { tr, display } = useI18n();
+  const { tr, display, locale } = useI18n();
   const root = useRef<HTMLDivElement>(null);
   useWorkbookGroup(
     root,
@@ -91,12 +92,10 @@ function MonthlyDetailChart({
                 <tr key={i}>
                   <td>{display(months[i])}</td>
                   <td>
-                    {point.monthly === null
-                      ? "—"
-                      : point.monthly.toLocaleString()}
+                    {salesNumber(point.monthly, locale, 2)}
                   </td>
                   <td>
-                    {point.ytd === null ? "—" : point.ytd.toLocaleString()}
+                    {salesNumber(point.ytd, locale, 2)}
                   </td>
                 </tr>
               ))}

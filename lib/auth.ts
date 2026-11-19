@@ -54,8 +54,8 @@ export async function currentUser(): Promise<User> {
     throw new ApiError(401, "Invalid session.");
   }
   if (decoded.expires < Date.now()) throw new ApiError(401, "Session expired.");
-  const state = await storage.read();
-  const user = state.users.find(
+  const users = await storage.readUsers();
+  const user = users.find(
     (u) =>
       u.id === decoded.id &&
       !u.disabled &&

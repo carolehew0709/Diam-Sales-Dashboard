@@ -218,16 +218,28 @@
   font-size: 11px;
   margin: 0;
 }
+.profileRow:global(.ar-bar-row) {
+  grid-template-columns: minmax(64px, 100px) minmax(16px, 1fr) auto;
+  column-gap: clamp(6px, 1vw, 14px);
+}
 .profileRow .credit {
   background: var(--red);
 }
 .agingValue {
   display: grid;
-  gap: 3px;
-  justify-items: end;
+  grid-template-columns: minmax(6ch, auto) minmax(6ch, auto);
+  align-items: baseline;
+  gap: 10px;
+  color: var(--ink);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+  white-space: nowrap;
+}
+.agingValue[data-credit="true"] {
+  color: var(--red);
 }
 .agingValue small {
-  color: var(--muted);
-  font-size: 11px;
-  font-weight: 400;
+  color: inherit;
+  font: inherit;
 }

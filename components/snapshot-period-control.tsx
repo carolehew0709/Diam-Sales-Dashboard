@@ -67,6 +67,7 @@ export function SnapshotPeriodControl({
       <p className="snapshot-period-note">
         {tr(selected ? "history.readOnly" : "history.choose")}
       </p>
+      <p className="snapshot-period-note">{tr("history.salesScope")}</p>
     </section>
   );
 }

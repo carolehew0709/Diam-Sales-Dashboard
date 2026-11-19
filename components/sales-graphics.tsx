@@ -2,6 +2,7 @@
 import { TeamBudgetGraphic } from "./team-actual-graphics";
 import { TeamPerformanceGraphic } from "./team-performance-graphic";
 import { integerAxis } from "@/lib/chart-axis";
+import { weeklySourceReference } from "@/lib/fiscal-years";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import {
@@ -12,12 +13,11 @@ import {
   graphicColors,
 } from "./graphic-plots";
 import { formatK, months, percent, type Dashboard } from "@/lib/dashboard";
-import { ChartWorkbookExport } from "./chart-workbook-export";
 import type { ChartTable } from "@/lib/chart-workbook-types";
 import { memo, useRef } from "react";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { ChartMark } from "./chart-interaction";
-import { chartAmount } from "@/lib/chart-tooltip";
+import { chartAmount, salesNumber } from "@/lib/chart-tooltip";
 import { SalesMonthlyGraphic } from "./sales-monthly-graphic";
 import {
   businessUnitShares,
@@ -44,7 +44,7 @@ export const SalesGraphics = memo(function SalesGraphics({
   const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" || !data.filters.salesTeam ? tr("team.all") : data.filters.salesTeam} · ${data.filters.customer && data.filters.customer !== "all" ? data.filters.customer + " · " : ""}kEUR`;
   const sources = [
     ...new Set(
-      data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
+      data.rows.flatMap((r) => (r.snapshot ? [weeklySourceReference(r.snapshot)] : [])),
     ),
   ].join("; ");
   const note = `${data.graphics.teamKpiSource ? tr("teamKpi.scope", data.graphics.teamKpiSource) : ""} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
@@ -144,7 +144,6 @@ export const SalesGraphics = memo(function SalesGraphics({
           {tr("graphics.weekly", { week })}
         </span>
       </div>
-      {!exportOnly && <ChartWorkbookExport />}
       <div className="graphics-grid">
         <GraphicCard
           title={tr("graphics.waterfall")}
@@ -257,10 +256,10 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
       .join(" / ") || tr("snapshot.none");
   const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${team === "all" ? tr("team.all") : team === "__unassigned__" ? tr("team.unassigned") : team} · ${data.filters.customer && data.filters.customer !== "all" ? data.filters.customer + " · " : ""}kEUR`;
   const sources =
-    data.graphics.teamSource?.files.join("; ") ??
+    data.graphics.teamSource?.periods.map(weeklySourceReference).join("; ") ??
     [
       ...new Set(
-        data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
+        data.rows.flatMap((r) => (r.snapshot ? [weeklySourceReference(r.snapshot)] : [])),
       ),
     ].join("; ");
   const note = `${data.graphics.teamSource ? tr(data.graphics.teamSource.reviewed ? "team.reviewedSource" : "team.retainedSource", { week: data.graphics.teamSource.weeks.map((w) => `W${w}`).join(" / ") }) + " " : ""}${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
@@ -335,7 +334,7 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
                   <td className="numeric">{exact(r.value)}</td>
                   <td className="numeric">
                     {teamTotal > 0
-                      ? `${((r.value / teamTotal) * 100).toFixed(1)}%`
+                      ? salesNumber(r.value / teamTotal, locale, 2, "percent")
                       : "—"}
                   </td>
                   {detailMonths.map(({ index }) => (
@@ -433,20 +432,15 @@ export const BusinessUnitGraphics = memo(function BusinessUnitGraphics({
     source:
       [
         ...new Set(
-          data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
+          data.rows.flatMap((r) => (r.snapshot ? [weeklySourceReference(r.snapshot)] : [])),
         ),
       ].join("; ") || tr("common.review"),
   });
   const max = Math.max(1, ...rows.map((r) => Math.abs(r.metrics.base ?? 0)));
   const shares = businessUnitShares(rows.map((r) => r.metrics.base));
-  const shareLabel = (value: number | null) =>
-    value === null
-      ? "—"
-      : new Intl.NumberFormat(locale, {
-          style: "percent",
-          minimumFractionDigits: 1,
-          maximumFractionDigits: 1,
-        }).format(value);
+  const shareLabel = (value: number | null, digits = 0) =>
+    salesNumber(value, locale, digits, "percent");
+  const detail = (value: number | null) => salesNumber(value, locale, 2);
   const table = (
     <table className="bu-table">
       <thead>
@@ -465,13 +459,13 @@ export const BusinessUnitGraphics = memo(function BusinessUnitGraphics({
         {rows.map((r, i) => (
           <tr key={r.entity.id}>
             <td>{r.entity.code}</td>
-            <td className="numeric">{formatK(r.metrics.budget)}</td>
-            <td className="numeric">{formatK(r.metrics.sales)}</td>
-            <td className="numeric">{formatK(r.metrics.orderbook)}</td>
-            <td className="numeric">{formatK(r.metrics.base)}</td>
-            <td className="numeric">{shareLabel(shares[i])}</td>
-            <td className="numeric">{display(percent(r.metrics.coverage))}</td>
-            <td className="numeric">{formatK(r.metrics.gap)}</td>
+            <td className="numeric">{detail(r.metrics.budget)}</td>
+            <td className="numeric">{detail(r.metrics.sales)}</td>
+            <td className="numeric">{detail(r.metrics.orderbook)}</td>
+            <td className="numeric">{detail(r.metrics.base)}</td>
+            <td className="numeric">{shareLabel(shares[i], 2)}</td>
+            <td className="numeric">{salesNumber(r.metrics.coverage, locale, 2, "percent")}</td>
+            <td className="numeric">{detail(r.metrics.gap)}</td>
           </tr>
         ))}
       </tbody>

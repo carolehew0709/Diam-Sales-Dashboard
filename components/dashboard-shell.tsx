@@ -9,8 +9,8 @@ import {
   type Page,
 } from "@/lib/routes";
 import { useDashboardNavigation } from "./use-dashboard-navigation";
-import { Download, FileUp, House } from "lucide-react";
-import type { Filters, User } from "@/lib/types";
+import { FileUp, House } from "lucide-react";
+import type { User } from "@/lib/types";
 import { AccountMenu } from "./account-menu";
 import { LanguageSwitcher } from "./language-switcher";
 import { hasReceivablesAccess } from "@/lib/receivables";
@@ -20,17 +20,15 @@ import { ExportAccess } from "./export-access";
 import styles from "./dashboard-shell.module.css";
 export function DashboardShell({
   user,
-  filters,
   onLogout,
   page,
-  updating = false,
+  salesExport,
   children,
 }: {
   user: User;
-  filters: Filters;
   onLogout: () => Promise<void>;
   page: Page;
-  updating?: boolean;
+  salesExport?: React.ReactNode;
   children: React.ReactNode;
 }) {
   const { tr, locale } = useI18n();
@@ -39,9 +37,6 @@ export function DashboardShell({
   const pipeline = page === "pipeline";
   const salesOps = page === "sales-operations";
   const standalone = quotation || pipeline || salesOps;
-  const query = new URLSearchParams(
-    Object.entries(filters).map(([k, v]) => [k, String(v)]),
-  );
   return (
     <ExportAccess.Provider value={canExportData(user)}>
       <header
@@ -119,6 +114,8 @@ export function DashboardShell({
                 ["overview", tr("nav.overview")],
                 ["analysis", tr("nav.analysis")],
                 ["business-units", tr("nav.entities")],
+                ["sales-team-section", tr("team.label")],
+                ["customer-section", tr("common.customer")],
                 ["management-checks", tr("nav.checks")],
               ].map(([id, label]) => (
                 <Link
@@ -173,25 +170,7 @@ export function DashboardShell({
                 <span>{tr("nav.import")}</span>
               </Link>
             )}
-          {page !== "home" &&
-            canExportData(user) &&
-            page !== "ar-aging" &&
-            page !== "imports" &&
-            !standalone && (
-              <a
-                className="excel-export"
-                href={`/api/export?${query}`}
-                aria-disabled={updating || undefined}
-                onClick={(event) => {
-                  if (updating) event.preventDefault();
-                }}
-                title={tr("nav.export")}
-                aria-label={tr("nav.export")}
-              >
-                <Download size={15} />
-                <span>{tr("nav.export")}</span>
-              </a>
-            )}
+          {salesExport}
           <AccountMenu user={user} onLogout={onLogout} />
           <LanguageSwitcher />
         </div>

@@ -389,7 +389,10 @@ export function ReceivablesApp() {
                           }}
                         />
                       </div>
-                      <strong className={styles.agingValue}>
+                      <strong
+                        className={styles.agingValue}
+                        data-credit={b.amount < 0 || (b.proportion ?? 0) < 0 || undefined}
+                      >
                         <span>{amount(b.amount)}</span>
                         <small aria-label={tr("ar.agingProportion")}>
                           {proportion(b.proportion)}

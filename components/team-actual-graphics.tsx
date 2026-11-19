@@ -1,18 +1,23 @@
 "use client";
 import type { Dashboard } from "@/lib/dashboard";
+import { salesNumber } from "@/lib/chart-tooltip";
 import { GraphicCard } from "./graphic-card";
 import { ChartMark } from "./chart-interaction";
 import { PlotEmpty } from "./graphic-plots";
 import { useI18n } from "./i18n-provider";
 export function TeamBudgetGraphic({ data }: { data: Dashboard }) {
-  const { tr, display } = useI18n();
+  const { tr, display, locale } = useI18n();
   const source = data.graphics.teamActuals;
   if (!source) return null;
-  const exact = (n: number | null) =>
-    n === null
-      ? "—"
-      : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
-  const context = `${source.reportingWeek ? `W${source.reportingWeek} · ` : ""}${tr("teamActual.period", { year: source.year, month: String(source.month).padStart(2, "0") })} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" ? tr("team.all") : data.filters.salesTeam} · ${tr("teamActual.sales")} ${exact(source.sales)} / ${tr("teamActual.budget")} ${exact(source.budget)} kEUR`;
+  const exact = (n: number | null) => salesNumber(n, locale, 2);
+  const rounded = (n: number | null) => salesNumber(n, locale);
+  const rate = (n: number | null, digits = 0) =>
+    salesNumber(n, locale, digits, "percent");
+  const context = `${source.reportingWeek ? `W${source.reportingWeek} · ` : ""}${tr("teamActual.period", { year: source.year, month: String(source.month).padStart(2, "0") })} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" ? tr("team.all") : data.filters.salesTeam} · kEUR`;
+  const max = Math.max(
+    1,
+    ...source.groups.flatMap((row) => [row.sales, row.budget]),
+  );
   const reconciliation =
     source.excludedDdcGroup && source.sales !== null
       ? tr("teamActual.reconciliation", {
@@ -78,11 +83,7 @@ export function TeamBudgetGraphic({ data }: { data: Dashboard }) {
                   <td>{r.name}</td>
                   <td>{exact(r.sales)}</td>
                   <td>{exact(r.budget)}</td>
-                  <td>
-                    {r.attainment === null
-                      ? "—"
-                      : (r.attainment * 100).toFixed(1) + "%"}
-                  </td>
+                  <td>{rate(r.attainment, 2)}</td>
                 </tr>
               ))}
             </tbody>
@@ -91,11 +92,18 @@ export function TeamBudgetGraphic({ data }: { data: Dashboard }) {
       >
         {source.groups.length ? (
           <>
+            <g fontSize="11" fontWeight="600" fill="#706f67" textAnchor="end">
+              <text x="595" y="17">
+                {tr("teamActual.sales")}
+              </text>
+              <text x="718" y="17">
+                {tr("metric.budget")}
+              </text>
+              <text x="786" y="17">
+                %
+              </text>
+            </g>
             {source.groups.map((r, i) => {
-              const max = Math.max(
-                1,
-                ...source.groups.flatMap((x) => [x.sales, x.budget]),
-              );
               return (
                 <g key={r.name}>
                   <ChartMark
@@ -105,18 +113,15 @@ export function TeamBudgetGraphic({ data }: { data: Dashboard }) {
                       rows: [
                         {
                           label: tr("teamActual.sales"),
-                          value: exact(r.sales) + " kEUR",
+                          value: rounded(r.sales) + " kEUR",
                         },
                         {
                           label: tr("teamActual.budget"),
-                          value: exact(r.budget) + " kEUR",
+                          value: rounded(r.budget) + " kEUR",
                         },
                         {
                           label: tr("teamActual.attainment"),
-                          value:
-                            r.attainment === null
-                              ? "—"
-                              : (r.attainment * 100).toFixed(1) + "%",
+                          value: rate(r.attainment),
                         },
                       ],
                     }}
@@ -127,30 +132,32 @@ export function TeamBudgetGraphic({ data }: { data: Dashboard }) {
                     <rect
                       x="150"
                       y={25 + i * 45}
-                      width={(Math.max(0, r.budget) / max) * 450}
+                      width={(Math.max(0, r.budget) / max) * 350}
                       height="18"
                       fill="#e4ddcd"
                     />
                     <rect
                       x="150"
                       y={28 + i * 45}
-                      width={(Math.max(0, r.sales) / max) * 450}
+                      width={(Math.max(0, r.sales) / max) * 350}
                       height="12"
                       fill="#a77a35"
                     />
-                    <text x="610" y={40 + i * 45} fontSize="11">
-                      {exact(r.sales)} / {exact(r.budget)} ·{" "}
-                      {r.attainment === null
-                        ? "—"
-                        : (r.attainment * 100).toFixed(1) + "%"}
-                    </text>
+                    <g fontSize="12" textAnchor="end">
+                      <text x="595" y={40 + i * 45}>
+                        {rounded(r.sales)}
+                      </text>
+                      <text x="718" y={40 + i * 45}>
+                        {rounded(r.budget)}
+                      </text>
+                      <text x="786" y={40 + i * 45}>
+                        {rate(r.attainment)}
+                      </text>
+                    </g>
                   </ChartMark>
                 </g>
               );
             })}
-            <text x="150" y={source.groups.length * 45 + 65} fontSize="11">
-              {tr("teamActual.sales")} / {tr("teamActual.budget")} · kEUR
-            </text>
           </>
         ) : (
           <PlotEmpty text={tr("teamActual.unavailable")} />

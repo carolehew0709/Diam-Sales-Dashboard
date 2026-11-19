@@ -5,6 +5,7 @@ import { GraphicCard } from "./graphic-card";
 import { ComboPlot } from "./graphic-plots";
 import { useWorkbookGroup } from "./use-workbook-group";
 import { months, type Dashboard } from "@/lib/dashboard";
+import { weeklySourceReference } from "@/lib/fiscal-years";
 import {
   firstOpenMonth,
   monthlyPerformanceSeries,
@@ -85,8 +86,8 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
     selectedRows
       .map(
         (r) => r.monthlyClose && monthIndex < r.monthlyClose.monthly.length
-          ? `${r.entity.code}: ${r.monthlyClose.sourceFile} · ${r.monthlyClose.sourceSheet} · ${r.monthlyClose.sourceRange}`
-          : `${r.entity.code}: ${r.snapshot?.teamActualSource ? `Actual W${r.snapshot.teamActualSource.week??"—"} · ${r.snapshot.teamActualSource.sourceFile} · ${r.snapshot.teamActualSource.sourceSheet}; Prospect ` : ""}${r.snapshot ? `W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}` : "—"}`,
+          ? `${r.entity.code}: ${r.monthlyClose.year}-${String(monthIndex + 1).padStart(2, "0")} · ${r.monthlyClose.sourceFile} · ${r.monthlyClose.sourceSheet} · ${r.monthlyClose.sourceRange}`
+          : `${r.entity.code}: ${r.snapshot?.teamActualSource ? `${tr("teamTrend.actualSource")} W${r.snapshot.teamActualSource.week??"—"} · ${r.snapshot.teamActualSource.sourceFile} · ${r.snapshot.teamActualSource.sourceSheet}; ` : ""}${r.snapshot ? weeklySourceReference(r.snapshot) : "—"}`,
       )
       .join("; ");
   const scopeName =

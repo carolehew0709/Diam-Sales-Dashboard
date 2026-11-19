@@ -22,7 +22,7 @@ test("tooltip flips around the pointer and stays inside the viewport at chart ed
 test("tooltip amounts keep units, signed values and source missingness in both languages", () => {
   assert.equal(chartAmount(null, "en"), "—");
   assert.equal(chartAmount(null, "zh-CN"), "—");
-  assert.equal(chartAmount(0, "en"), "0.00 kEUR");
-  assert.equal(chartAmount(-260.81449, "zh-CN"), "-260.81 kEUR");
-  assert.equal(chartAmount(11923, "en"), "11,923.00 kEUR");
+  assert.equal(chartAmount(0, "en"), "0 kEUR");
+  assert.equal(chartAmount(-260.81449, "zh-CN"), "-261 kEUR");
+  assert.equal(chartAmount(11923, "en"), "11,923 kEUR");
 });

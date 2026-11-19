@@ -1,4 +1,4 @@
-import {teamNamesState,teamActualView} from "./team-actuals";
+import {teamActualView} from "./team-actuals";
 import { teamReportingState, retainedTeamView } from "./team-reporting";
 import { policyState } from "./governance";
 import { reportingPeriod, availableReportingWeeks, reportingMonthClosed } from './reporting-period';
@@ -20,6 +20,7 @@ import {
   teamOrderbookSummary,
 } from "./sales-teams";
 import { salesGraphicSeries } from "./sales-graphics";
+import { customerAnalysisView } from "./customer-analysis";
 import type {
   Amount,
   Filters,
@@ -260,21 +261,35 @@ export function entityMetric(
   };
 }
 export type Metric = ReturnType<typeof entityMetric>;
+export function actualSalesForYear(
+  row: { snapshot?: Snapshot; metrics: Metric },
+  filters: Pick<Filters, "year" | "salesType">,
+): Amount {
+  const approvedSales = row.snapshot?.policyMetrics?.[`${filters.year}:${filters.salesType}`]?.sales;
+  if (approvedSales !== undefined) return approvedSales;
+  return row.snapshot?.year === filters.year ? row.metrics.sales : null;
+}
+
+export function selectedSalesScenario(
+  row: { snapshot?: Snapshot; metrics: Metric },
+  filters: Filters,
+): Amount {
+  return filters.scenario === "Sales" ? actualSalesForYear(row, filters) : row.metrics.base;
+}
+
 /** First-row display only; never changes annual KPI or scenario calculations. */
 export function chinaStripAmount(
   row: { snapshot?: Snapshot; metrics: Metric },
   filters: Filters,
 ): Amount {
-  if (filters.year === 2026 && filters.scenario === "Sales") {
-    if (
-      row.snapshot?.policyMetrics?.[`${filters.year}:${filters.salesType}`]
-        ?.sales !== undefined
-    )
-      return row.metrics.sales;
-    return filters.salesType === "all" &&
+  if (filters.scenario === "Sales") {
+    return filters.year === 2026 &&
+      row.snapshot?.year === filters.year &&
+      row.snapshot?.policyMetrics?.[`${filters.year}:${filters.salesType}`]?.sales === undefined &&
+      filters.salesType === "all" &&
       row.snapshot?.salesCardValue !== undefined
       ? row.snapshot.salesCardValue
-      : row.metrics.sales;
+      : actualSalesForYear(row, filters);
   }
   return filters.year === 2026 &&
     filters.salesType === "all" &&
@@ -353,10 +368,10 @@ export function getDashboardSnapshot(
   state: Store,
   user: User,
   filters: Filters,
+  { includeHistory = true }: { includeHistory?: boolean } = {},
 ) {
   const availableWeeks = availableReportingWeeks(state, user, filters);
   state=reportingPeriod(state,filters.week);
-  state=teamNamesState(state);
   const actualTeams=teamActualView(state,user,filters);
   const retainedTeams = retainedTeamView(state,user,filters);
   state = teamReportingState(state,filters);
@@ -513,7 +528,7 @@ export function getDashboardSnapshot(
         (key === "scenario" && !r.metrics.scenarioComplete),
     ),
   );
-  const history = selected.map((r) => ({
+  const history = includeHistory ? selected.map((r) => ({
     entity: r.entity,
     records: (actualKpiSource ? [] : state.snapshots)
       .filter(
@@ -523,9 +538,10 @@ export function getDashboardSnapshot(
       )
       .sort((a, b) => a.week - b.week)
       .map((s) => ({ week: s.week, value: entityMetric(s, filters).scenario })),
-  }));
+  })) : [];
   return {
     availableWeeks,
+    latestCustomerAnalysis: customerAnalysisView(state, user, filters),
     availableYears: [
       ...new Set(
         state.snapshots

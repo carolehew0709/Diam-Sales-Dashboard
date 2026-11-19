@@ -23,7 +23,6 @@ import {
 import {
   DashboardFilters,
   DashboardFilterState,
-  Segmented,
 } from "./dashboard-filters";
 import { useDataReveal } from "./use-data-reveal";
 import { DashboardShell } from "@/components/dashboard-shell";
@@ -45,7 +44,10 @@ import { CustomerGraphics } from "@/components/customer-graphics";
 import { KeyCustomerOrders } from "@/components/key-customer-orders";
 import { SnapshotPeriodControl } from "./snapshot-period-control";
 import { LanguageSwitcher } from "@/components/language-switcher";
-import { monthlyPerformanceSeries } from "@/lib/performance-chart";
+import { ChartWorkbookExport } from "./chart-workbook-export";
+import { SalesChartPresentation } from "./graphic-card";
+import { salesNumber } from "@/lib/chart-tooltip";
+import styles from "./sales-performance.module.css";
 import {
   dashboardFilterKey,
   showProspectForecast,
@@ -56,12 +58,13 @@ import {
   formatUpdateDate,
   percent,
   months,
-  combine,
   chinaStripAmount,
+  actualSalesForYear,
+  selectedSalesScenario,
   sumKnown,
 } from "@/lib/dashboard";
 import type { Dashboard, Metric } from "@/lib/dashboard";
-import type { Amount, Filters, User, Entity } from "@/lib/types";
+import type { Filters, User, Entity } from "@/lib/types";
 
 const QuotationApp = dynamic(() => import("@/components/quotation-app"));
 
@@ -113,11 +116,13 @@ function MetricsTable({
     name: string;
     description?: string;
     metrics: Metric;
+    scenarioAmount: number | null;
     week?: number;
   }[];
   onSelect?: (id: string) => void;
 }) {
-  const { tr, display } = useI18n();
+  const { tr, display, locale } = useI18n();
+  const detail = (value: number | null) => salesNumber(value, locale, 2);
   return (
     <div className="table-wrap">
       <table className="bu-table">
@@ -152,20 +157,17 @@ function MetricsTable({
                   {r.week ? ` · W${r.week}` : ""}
                 </small>
               </td>
-              <td className="numeric">{formatK(r.metrics.budget)}</td>
-              <td className="numeric">{formatK(r.metrics.base)}</td>
-              <td className="numeric">{formatK(r.metrics.prospect)}</td>
+              <td className="numeric">{detail(r.metrics.budget)}</td>
+              <td className="numeric">{detail(r.metrics.base)}</td>
+              <td className="numeric">{detail(r.metrics.prospect)}</td>
               <td className="numeric">
-                {formatK(r.metrics.scenario)}
-                {!r.metrics.scenarioComplete && (
-                  <small>{tr("metric.partial")}</small>
-                )}
+                {detail(r.scenarioAmount)}
               </td>
               <td className="numeric">
-                {display(percent(r.metrics.coverage))}
+                {salesNumber(r.metrics.coverage, locale, 2, "percent")}
               </td>
-              <td className="numeric">{formatK(r.metrics.gap)}</td>
-              <td className="numeric">{formatK(r.metrics.remaining)}</td>
+              <td className="numeric">{detail(r.metrics.gap)}</td>
+              <td className="numeric">{detail(r.metrics.remaining)}</td>
             </tr>
           ))}
         </tbody>
@@ -181,9 +183,7 @@ const DashboardView = memo(function DashboardView({
   setFilters: Dispatch<SetStateAction<Filters>>;
 }) {
   const { tr, display, locale } = useI18n();
-  const [readiness, setReadiness] = useState(false),
-    [frequency, setFrequency] = useState("week"),
-    [matrixLevel, setMatrixLevel] = useState("entity");
+  const [readiness, setReadiness] = useState(false);
   const snapshotWrapper = useRef<HTMLDivElement>(null);
   const customerOrders = useMemo(
     () => <KeyCustomerOrders data={data} />,
@@ -239,35 +239,20 @@ const DashboardView = memo(function DashboardView({
         total: data.regionRows.length,
       }),
       metrics: data.regionTotal,
+      scenarioAmount: sumKnown(data.regionRows.map((row) => selectedSalesScenario(row, filters))),
     },
     ...data.regionRows.map((r) => ({
       id: r.entity.id,
       name: r.entity.code,
       description: r.entity.description,
       metrics: r.metrics,
+      scenarioAmount: selectedSalesScenario(r, filters),
       week: r.snapshot?.week,
     })),
   ];
-  const matrixRows =
-    matrixLevel === "entity"
-      ? data.rows.map((r) => ({ name: r.entity.code, metrics: r.metrics }))
-      : data.buGroups;
   const dimensionScoped =
     (!!filters.salesTeam && filters.salesTeam !== "all") ||
     (!!filters.customer && filters.customer !== "all");
-  const monthlyView = monthlyPerformanceSeries(
-    t,
-    filters.scenario,
-    dimensionScoped,
-  );
-  const monthlyMatrixKey = monthlyView.key;
-  const monthlyMatrixLabel = tr(
-    monthlyMatrixKey === "sales" ? "metric.sales" :
-      monthlyMatrixKey === "orderbook" ? "metric.ob" : "chart.salesOB",
-  );
-  const weeks = [
-    ...new Set(data.history.flatMap((h) => h.records.map((r) => r.week))),
-  ].sort((a, b) => a - b);
   return (
     <>
       <section className="executive-head" id="overview">
@@ -280,59 +265,15 @@ const DashboardView = memo(function DashboardView({
         </div>
         <div className="snapshot-wrapper" ref={snapshotWrapper}>
           <button
-            className="snapshot-cluster"
+            type="button"
+            className={`snapshot-cluster ${styles.snapshot}`}
             title={tr("snapshot.controls")}
             onClick={() => setReadiness(!readiness)}
             aria-expanded={readiness}
             aria-controls="snapshot-readiness"
           >
-            <span className="snapshot-main">
-              <span>{tr("snapshot.active")}</span>
-              <strong>
-                {data.weeks.length
-                  ? data.weeks.map((w) => `W${w}`).join(" / ")
-                  : tr("snapshot.none")}
-              </strong>
-              {!!filters.week && <small className="snapshot-history-badge">{tr("history.mode")}</small>}
-            </span>
-            <span className="snapshot-detail">
-              <span>
-                {data.weeks.length > 1
-                  ? tr("snapshot.mixed")
-                  : tr("snapshot.source")}{" "}
-                ·{" "}
-                {Array.from(
-                  new Set(
-                    data.rows.flatMap((r) =>
-                      r.snapshot ? [r.snapshot.year] : [],
-                    ),
-                  ),
-                ).join(" / ") || filters.year}
-              </span>
-              <span>
-                EUR K · {tr("notes.revision", { revision: data.revision })}
-              </span>
-            </span>
-            <span className="snapshot-readiness-compact">
-              <strong>
-                {tr("snapshot.count", {
-                  count: data.sourceCount,
-                  total: data.rows.length,
-                })}
-              </strong>
-              <small>
-                {tr("snapshot.checkCount", { count: data.checks.length })}
-              </small>
-              <strong>
-                {tr("snapshot.prospectState", {
-                  state:
-                    t.prospect === null
-                      ? tr("snapshot.pending")
-                      : tr("snapshot.partial"),
-                })}
-              </strong>
-            </span>
-            <span>⌄</span>
+            <strong>{data.weeks.length ? data.weeks.map((w) => `W${w}`).join(" / ") : tr("snapshot.none")}</strong>
+            <span aria-hidden="true">⌄</span>
           </button>
           {readiness && (
             <section
@@ -352,6 +293,13 @@ const DashboardView = memo(function DashboardView({
                   ×
                 </button>
               </div>
+              <div className={styles.snapshotMetadata}>
+                {!!filters.week && <strong>{tr("history.mode")}</strong>}
+                <span>{tr("snapshot.count", { count: data.sourceCount, total: data.rows.length })}</span>
+                <span>{tr("snapshot.checkCount", { count: data.checks.length })}</span>
+                <span>{tr("snapshot.prospectState", { state: t.prospect === null ? tr("snapshot.pending") : tr("snapshot.partial") })}</span>
+                <span>{tr("notes.revision", { revision: data.revision })}</span>
+              </div>
               <SnapshotPeriodControl data={data} onSelect={() => {
                 setReadiness(false);
                 snapshotWrapper.current?.querySelector<HTMLButtonElement>(".snapshot-cluster")?.focus({ preventScroll: true });
@@ -366,7 +314,7 @@ const DashboardView = memo(function DashboardView({
                     </strong>
                     <p>
                       {r.snapshot
-                        ? `${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}`
+                        ? `FY${r.snapshot.year} · W${r.snapshot.week} · ${r.snapshot.sourceFile} · ${r.snapshot.sourceSheet}`
                         : tr("snapshot.notSupplied")}
                     </p>
                     {r.snapshot && (
@@ -395,6 +343,7 @@ const DashboardView = memo(function DashboardView({
         </div>
       </section>
       <DashboardFilters data={data} />
+      <p className={styles.roundingNote}>{tr("graphics.roundedDisplay")}</p>
       <>
         {dimensionScoped && (
           <p className="apac-notice">{tr(data.graphics.teamKpiSource ? "teamKpi.scope" : "filters.dimensionLimitation",data.graphics.teamKpiSource ?? {})}</p>
@@ -425,7 +374,7 @@ const DashboardView = memo(function DashboardView({
               </small>
               <strong>
                 {formatK(
-                  filters.year === 2026 && filters.scenario === "Sales"
+                  filters.scenario === "Sales"
                     ? sumKnown(
                         data.regionRows.map((r) =>
                           chinaStripAmount(r, filters),
@@ -436,7 +385,7 @@ const DashboardView = memo(function DashboardView({
                 <em>kEUR</em>
               </strong>
               <span>
-                {filters.year === 2026 && filters.scenario === "Sales"
+                {filters.scenario === "Sales"
                   ? tr("metric.salesDate")
                   : tr("china.known")}
               </span>
@@ -462,7 +411,7 @@ const DashboardView = memo(function DashboardView({
                     {formatK(chinaStripAmount(r, filters))} <em>kEUR</em>
                   </strong>
                   <span>
-                    {filters.year === 2026 && filters.scenario === "Sales" ? (
+                    {filters.scenario === "Sales" ? (
                       `${tr("metric.salesDate")} · `
                     ) : (
                       <>
@@ -532,7 +481,7 @@ const DashboardView = memo(function DashboardView({
             <div className="kpi-sales-split">
               <div>
                 <span>{tr("metric.salesDate")}</span>
-                <strong>{formatK(t.sales)}</strong>
+                <strong>{formatK(sumKnown(data.rows.map((row) => actualSalesForYear(row, filters))))}</strong>
               </div>
               <div>
                 <span>{tr("metric.ob")}</span>
@@ -686,7 +635,8 @@ const DashboardView = memo(function DashboardView({
           </details>
         </section>
         <section
-          className="graphics-section"
+          id="sales-team-section"
+          className={`graphics-section ${styles.section}`}
           aria-labelledby="orderbook-graphics-title"
         >
           <div className="graphics-section-heading">
@@ -697,126 +647,15 @@ const DashboardView = memo(function DashboardView({
           </div>
           <TeamContributionGraphic data={data} />
         </section>
-        <CustomerGraphics filters={filters} revision={data.revision}>
-          {customerOrders}
-        </CustomerGraphics>
-        <section className="panel matrix-panel" id="time-matrix">
-          <details>
-            <summary>
-              <span>
-                <p className="panel-kicker">{tr("matrix.period")}</p>
-                <h2>{tr("matrix.title")}</h2>
-                <small>{tr("matrix.subtitle")}</small>
-              </span>
-              <span className="disclosure-action">{tr("matrix.explore")}</span>
-            </summary>
-            <div className="matrix-body">
-              <div className="analysis-toolbar matrix-toolbar">
-                <Segmented
-                  label={tr("matrix.frequency")}
-                  value={frequency}
-                  options={[
-                    { value: "month", label: tr("common.month") },
-                    { value: "week", label: tr("common.week") },
-                  ]}
-                  onChange={setFrequency}
-                />
-                <Segmented
-                  label={tr("matrix.rows")}
-                  value={matrixLevel}
-                  options={[
-                    { value: "entity", label: tr("common.entities") },
-                    { value: "bu", label: tr("common.bus") },
-                  ]}
-                  onChange={setMatrixLevel}
-                />
-                <p>
-                  {filters.year} ·{" "}
-                  {frequency === "month"
-                    ? monthlyMatrixLabel
-                    : display(filters.scenario)}
-                </p>
-              </div>
-              <div className="matrix-scroll">
-                <table className="time-matrix">
-                  <thead>
-                    <tr>
-                      <th>{tr("common.buEntity")}</th>
-                      {(frequency === "month"
-                        ? months
-                        : weeks.map((w) => `W${w}`)
-                      ).map((m) => (
-                        <th className="numeric" key={m}>
-                          {display(m)}
-                        </th>
-                      ))}
-                      <th className="numeric">
-                        {frequency === "month"
-                          ? tr("matrix.fyMetric", {
-                              metric: monthlyMatrixLabel,
-                            })
-                          : tr("matrix.fy")}
-                      </th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {matrixRows.map((r) => (
-                      <tr key={r.name}>
-                        <td>{r.name}</td>
-                        {frequency === "month"
-                          ? r.metrics.monthly.map((m) => (
-                              <td className="numeric" key={m.label}>
-                                {formatK(m[monthlyMatrixKey])}
-                              </td>
-                            ))
-                          : weeks.map((w) => {
-                              const history = data.history.filter((h) =>
-                                matrixLevel === "entity"
-                                  ? h.entity.code === r.name
-                                  : h.entity.businessUnit === r.name,
-                              );
-                              const vals = history.map(
-                                (h) =>
-                                  h.records.find((x) => x.week === w)?.value ??
-                                  null,
-                              );
-                              return (
-                                <td className="numeric" key={w}>
-                                  {formatK(
-                                    vals.length && vals.every((v) => v !== null)
-                                      ? vals.reduce<number>((a, v) => a + v!, 0)
-                                      : null,
-                                  )}
-                                </td>
-                              );
-                            })}
-                        <td className="numeric">
-                          {formatK(
-                            frequency === "month"
-                              ? monthlyMatrixKey === "sales"
-                                ? r.metrics.cumulative.findLast((m) => m.sales !== null)?.sales ?? null
-                                : monthlyMatrixKey === "base"
-                                  ? r.metrics.cumulative.at(-1)?.base ?? null
-                                  : r.metrics.orderbook
-                              : r.metrics.scenario,
-                          )}
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-              <p className="muted">
-                {frequency === "month" ? (
-                  tr("matrix.monthNote")
-                ) : (
-                  tr("matrix.note")
-                )}
-              </p>
-            </div>
-          </details>
-        </section>
-
+        <div id="customer-section" className={styles.section}>
+          <CustomerGraphics
+            filters={filters}
+            revision={data.revision}
+            latest={data.latestCustomerAnalysis}
+          >
+            {customerOrders}
+          </CustomerGraphics>
+        </div>
         <section className="quality-panel" id="management-checks">
           <details open>
             <summary>
@@ -920,6 +759,7 @@ export default function Home() {
     const query = new URLSearchParams(
       Object.entries(filters).map(([k, v]) => [k, String(v)]),
     );
+    query.set("summary", "1");
     void fetch(`/api/dashboard?${query}`, { signal: controller.signal })
       .then((r) => {
         if (!controller.signal.aborted && r.status === 401) {
@@ -1036,8 +876,9 @@ export default function Home() {
   return (
     <DashboardShell
       user={user}
-      filters={filters}
-      updating={pending}
+      salesExport={requiresDashboard && view !== "admin" && canAccessPage(user, view)
+        ? <ChartWorkbookExport dashboardRoot={contentRoot} disabled={!data || pending || !!error} />
+        : undefined}
       onLogout={logout}
       page={view}
     >
@@ -1085,10 +926,12 @@ export default function Home() {
             <div
               ref={contentRoot}
               aria-busy={pending}
-              className={`dashboard-route dashboard-route-${view}`}
+              className={`dashboard-route dashboard-route-${view} ${styles.sales}`}
             >
               <DashboardFilterState.Provider value={filterState}>
-                <DashboardView data={data} setFilters={setFilters} />
+                <SalesChartPresentation.Provider value>
+                  <DashboardView data={data} setFilters={setFilters} />
+                </SalesChartPresentation.Provider>
               </DashboardFilterState.Provider>
             </div>
           ) : (

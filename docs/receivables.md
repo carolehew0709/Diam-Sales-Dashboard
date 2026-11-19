@@ -103,4 +103,4 @@ The AR screen displays amounts rounded to the nearest thousand in each source cu
 
 ## Combined aging profile (2026-11-19)
 
-Aging Profile now shows each bucket once, with its signed amount in thousands and its share of filtered AR side by side. Its bar uses that same share, preserving credit signs and missing shares for nonpositive denominators. The separate repeated Aging Proportion block is removed. Overall Overdue Proportion remains beneath the combined profile. Totals, source cutoffs, shared receipts, CSV precision and the full DDC-to-DEHK reporting exclusion are unchanged.
+Aging Profile shows each bucket once, with its signed amount in thousands and its share of filtered AR in aligned columns on the same row. Amount and percentage use the same typography and share the credit color for negative balances. Its bar uses that same share, preserving credit signs and missing shares for nonpositive denominators. Overall Overdue Proportion remains beneath the combined profile. Totals, source cutoffs, shared receipts, CSV precision and the full DDC-to-DEHK reporting exclusion are unchanged.

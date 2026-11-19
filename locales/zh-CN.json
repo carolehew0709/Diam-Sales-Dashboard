@@ -174,6 +174,8 @@
   "metric.salesSelected": "已选择销售额情景",
   "metric.expected": "含P1的年度预计销售额",
   "snapshot.active": "当前快照",
+  "history.salesScope": "周次影响周报销售指标、实体图表、团队及客户的周报 Prospect 和导出。各实体使用该周或之前最新的报告。团队实际销售在结账来源可用后显示，客户月度图使用独立的来源月份。",
+  "graphics.roundedDisplay": "网页金额和百分比按四舍五入显示为整数。明细和 Excel 保留最多两位小数。",
   "snapshot.controls": "报告周次与来源",
   "history.available": "可查看的报告周次",
   "history.none": "当前范围暂无已发布周次。",

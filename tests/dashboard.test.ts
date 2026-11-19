@@ -813,7 +813,10 @@ test("Sales scenario changes only first-row values with H12/H10 provenance", () 
     year: 2027,
     entity: "dhk",
   });
-  close(chinaStripAmount(future.rows[0], { ...sales, year: 2027 }), 2597);
+  assert.equal(chinaStripAmount(future.rows[0], future.filters), null);
+  close(chinaStripAmount(future.rows[0], { ...future.filters, scenario: "Sales + Prospect" }), 2597);
+  const firstActual = { ...future.rows[0], snapshot: { ...future.rows[0].snapshot!, year: 2027 }, metrics: { ...future.rows[0].metrics, sales: 12.5 } };
+  assert.equal(chinaStripAmount(firstActual, future.filters), 12.5);
 });
 
 test("External uses H10 plus K17 independently of All-sales overrides", () => {

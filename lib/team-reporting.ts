@@ -87,6 +87,8 @@ export function retainedTeamView(state: Store, user: User, filters: Filters) {
         year: s.year,
         month: s.month,
         week: s.week,
+        sourceFile: s.sourceFile,
+        sourceSheet: s.sourceSheet,
       })),
     },
   };

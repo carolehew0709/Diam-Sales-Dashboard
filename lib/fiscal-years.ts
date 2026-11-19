@@ -30,3 +30,6 @@ export function latestFiscalSnapshot(
     .filter((s) => s.entityId === entityId && s.year === year)
     .sort((a, b) => b.week - a.week)[0];
 }
+export function weeklySourceReference(source: Pick<Snapshot, "year" | "week" | "sourceFile" | "sourceSheet">) {
+  return `FY${source.year} · W${source.week} · ${source.sourceFile} · ${source.sourceSheet}`;
+}

@@ -33,9 +33,11 @@ export function customerAnalysisView(
   const source = records.find((r) => r.month === selected);
   const customerScoped = !!filters.customer && filters.customer !== "all";
   const customers = source?.customers.filter((row) => !customerScoped || orderCustomerKey(row.name) === orderCustomerKey(filters.customer!));
-  const analysis = source && customers?.length
-    ? { ...source, customers, breakdown: customerScoped ? [] : source.breakdown }
-    : null;
+  let analysis = null;
+  if (source && customers?.length) {
+    const { monthlyDetails: _monthlyDetails, ...summary } = source;
+    analysis = { ...summary, customers, breakdown: customerScoped ? [] : source.breakdown };
+  }
   return {
     permitted,
     scopeMatches,

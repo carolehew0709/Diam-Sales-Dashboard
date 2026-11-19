@@ -6,7 +6,7 @@ import { Pool } from "pg";
 import source from "@/data/apac-dashboard.json";
 import { entities } from "./entities";
 import { configuredIndiaEditor } from "./india-account";
-import type { Store, Snapshot, OrderBookLine } from "./types";
+import type { Store, Snapshot, OrderBookLine, User } from "./types";
 import { passwordHash } from "./passwords";
 export { passwordHash } from "./passwords";
 function initial(): Store {
@@ -53,6 +53,7 @@ function initial(): Store {
 }
 export interface StorageAdapter {
   read(): Promise<Store>;
+  readUsers(): Promise<User[]>;
   transaction<T>(update: (state: Store) => T | Promise<T>): Promise<T>;
 }
 const storageFile = () =>
@@ -67,6 +68,10 @@ async function fileRead() {
   }
 }
 export const fileAdapter: StorageAdapter = {
+  readUsers: async () => {
+    await queue;
+    return (await fileRead()).users;
+  },
   read: async () => {
     await queue;
     return ensureGovernance(await fileRead());
@@ -103,6 +108,13 @@ async function database() {
   return pool;
 }
 export const postgresAdapter: StorageAdapter = {
+  readUsers: async () => {
+    const db = await database();
+    const result = await db.query<{ users: User[] }>(
+      "SELECT payload -> 'users' AS users FROM diam_dashboard_state WHERE id=1",
+    );
+    return result.rows[0]?.users ?? initial().users;
+  },
   read: async () => {
     const db = await database();
     const result = await db.query(

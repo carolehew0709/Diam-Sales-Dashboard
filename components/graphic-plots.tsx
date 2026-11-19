@@ -4,7 +4,7 @@ import { formatK } from "@/lib/dashboard";
 import type { Amount } from "@/lib/types";
 import { ChartMark } from "./chart-interaction";
 import { useI18n } from "./i18n-provider";
-import { chartAmount } from "@/lib/chart-tooltip";
+import { chartAmount, salesNumber } from "@/lib/chart-tooltip";
 
 export const graphicColors = [
   "#a77a35",
@@ -287,7 +287,7 @@ export function DonutPlot({
             },
             {
               label: tr("graphics.share"),
-              value: `${((r.value / total) * 100).toFixed(1)}%`,
+              value: salesNumber(r.value / total, locale, 0, "percent"),
             },
           ],
         };
@@ -336,7 +336,7 @@ export function DonutPlot({
                 },
                 {
                   label: tr("graphics.share"),
-                  value: `${((r.value / total) * 100).toFixed(1)}%`,
+                  value: salesNumber(r.value / total, locale, 0, "percent"),
                 },
               ],
             }}
@@ -347,7 +347,7 @@ export function DonutPlot({
               {r.name.length > 30 ? r.name.slice(0, 29) + "…" : r.name}
             </text>
             <text x="374" y="10" textAnchor="end" fontSize="13">
-              {formatK(r.value)} · {((r.value / total) * 100).toFixed(1)}%
+              {formatK(r.value)} · {salesNumber(r.value / total, locale, 0, "percent")}
             </text>
           </ChartMark>
         </g>

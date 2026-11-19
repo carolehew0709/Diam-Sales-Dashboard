@@ -21,6 +21,7 @@ import {
 } from "./sales-teams";
 import { salesGraphicSeries } from "./sales-graphics";
 import { customerAnalysisView } from "./customer-analysis";
+import { monthlyPerformanceAxis } from "./performance-chart";
 import type {
   Amount,
   Filters,
@@ -415,6 +416,22 @@ export function getDashboardSnapshot(
   }
   const customers = [...customerLabels.values()].sort();
   state = salesTeamState(state, filters.salesTeam, filters.customer);
+  const dimensionScoped =
+    (filters.salesTeam ?? "all") !== "all" ||
+    (filters.customer ?? "all") !== "all";
+  const monthlyCloseFor = (
+    snapshot: Snapshot | undefined,
+    salesType: SalesType,
+  ) =>
+    snapshot?.year === filters.year && salesType === "all" && !dimensionScoped
+      ? state.monthlySalesCloses?.find(
+          (close) =>
+            close.entityId === snapshot.entityId &&
+            close.year === snapshot.year &&
+            close.monthly.length <=
+              snapshot.month - (reportingMonthClosed(snapshot) ? 0 : 1),
+        )
+      : undefined;
   const latest = (id: string) => latestFiscalSnapshot(state, id, filters.year);
   const rows = allowed.map((entity) => {
     const raw = latest(entity.id);
@@ -423,12 +440,7 @@ export function getDashboardSnapshot(
         ? raw
         : applyApprovedBudget(raw)
       : undefined;
-    const monthlyClose = snapshot?.year === filters.year &&
-      filters.salesType === "all" && (!filters.salesTeam || filters.salesTeam === "all") &&
-      (!filters.customer || filters.customer === "all")
-      ? state.monthlySalesCloses?.find((close) => close.entityId === entity.id &&
-          close.year === snapshot.year && close.monthly.length <= snapshot.month - (reportingMonthClosed(snapshot) ? 0 : 1))
-      : undefined;
+    const monthlyClose = monthlyCloseFor(snapshot, filters.salesType);
     return {
       entity,
       snapshot,
@@ -456,6 +468,38 @@ export function getDashboardSnapshot(
     matchesRegion(r.entity, filters.region),
   );
   const regionTotal = combineSelected(regionRows.map((r) => r.metrics));
+  const salesTypes = ["all", "external", "group"] as const;
+  // Reuse the scoped source snapshots. entityMetric reapplies the sales-type
+  // rules (including the preserved DCP External source), and the monthly close is All-only.
+  const variants = new Map(
+    regionRows.map((row) => [
+      row.entity.id,
+      salesTypes.map((salesType) =>
+        salesType === filters.salesType
+          ? row.metrics
+          : entityMetric(
+              row.snapshot,
+              { ...filters, salesType },
+              row.entity.id,
+              monthlyCloseFor(row.snapshot, salesType),
+            ),
+      ),
+    ]),
+  );
+  const performanceAxes = {
+    total: monthlyPerformanceAxis(
+      salesTypes.map((_, i) =>
+        combineSelected(selected.map((row) => variants.get(row.entity.id)![i])),
+      ),
+      dimensionScoped,
+    ),
+    byEntity: Object.fromEntries(
+      [...variants].map(([id, metrics]) => [
+        id,
+        monthlyPerformanceAxis(metrics, dimensionScoped),
+      ]),
+    ),
+  };
   const weeks = [
     ...new Set(selected.flatMap((r) => (r.snapshot ? [actualKpiSource ? r.snapshot.teamActualSource?.week ?? r.snapshot.week : r.snapshot.week] : []))),
   ].sort((a, b) => a - b);
@@ -551,6 +595,7 @@ export function getDashboardSnapshot(
     ].sort(),
     filters,
     graphics: {
+      performanceAxes,
       series: salesGraphicSeries(
         state,
         selected.map((r) => r.entity),

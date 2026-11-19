@@ -24,6 +24,7 @@ import {
 } from "../lib/governance-management";
 import { getDashboardSnapshot, defaultFilters } from "../lib/dashboard";
 import { integerAxis } from "../lib/chart-axis";
+import { monthlyPerformanceSeries } from "../lib/performance-chart";
 import {
   identifyWorkbook,
   supplementMonthlyHistory,
@@ -317,6 +318,57 @@ test("actual fiscal-year source overrides previous outlook; permitted years neve
   assert.equal(outlook.totals.sales, 0);
   assert.equal(outlook.totals.orderbook, 7);
   assert.ok(outlook.checks.some((c) => c.message.includes("outlook")));
+});
+
+test("monthly trend shares a signed integer axis across both scenarios and all three sales types", () => {
+  const state = store();
+  const january = (value: number) => [value, ...Array(11).fill(0)];
+  const current = snapshot(5, 18, 2027);
+  current.turnover.group = -5;
+  current.monthlySales = { external: january(18), group: january(-5) };
+  current.monthlyOrderbook = { external: january(8), group: january(-3) };
+  const previous = snapshot(52, 90000, 2026);
+  previous.monthlySales = { external: january(90000), group: january(0) };
+  state.snapshots = [
+    previous,
+    current,
+    { ...previous, year: 2027, entityId: "ddj", week: 1 },
+  ];
+  const viewer: User = { ...admin, role: "viewer", permissions: { ddi: ["view"] } };
+  const filters = { ...defaultFilters, region: "APAC", year: 2027 };
+  const expected = integerAxis([-8, 26]);
+  for (const salesType of ["all", "external", "group"] as const) {
+    for (const scenario of ["Sales", "Sales + Prospect"] as const) {
+      const view = getDashboardSnapshot(state, viewer, { ...filters, salesType, scenario });
+      assert.deepEqual(view.graphics.performanceAxes.total, expected);
+      assert.deepEqual(view.graphics.performanceAxes.byEntity, { ddi: expected });
+      for (const { monthly, ytd } of monthlyPerformanceSeries(view.totals, scenario).points)
+        for (const value of [monthly, ytd])
+          assert.ok(value === null || (value >= expected.min && value <= expected.max));
+    }
+  }
+  const priorYear = getDashboardSnapshot(state, viewer, { ...filters, year: 2026 });
+  assert.ok(priorYear.graphics.performanceAxes.total.max >= 90000);
+});
+
+test("the shared axis includes the All-sales-only monthly close even when viewing External or Group", () => {
+  const state = store();
+  const current = snapshot(8, 18);
+  current.month = 2;
+  current.monthlySales = { external: [18, 0, ...Array(10).fill(null)], group: Array(12).fill(0) };
+  current.monthlyOrderbook = { external: Array(12).fill(0), group: Array(12).fill(0) };
+  state.snapshots = [current];
+  state.monthlySalesCloses = [{
+    entityId: "ddi", year: 2026, monthly: [52],
+    sourceFile: "January.xlsx", sourceSheet: "Sales", sourceRange: "A1:B2", sourceNote: "",
+  }];
+  const filters = { ...defaultFilters, region: "India", year: 2026 };
+  const all = getDashboardSnapshot(state, admin, filters);
+  const group = getDashboardSnapshot(state, admin, { ...filters, salesType: "group" });
+  assert.equal(all.totals.monthly[0].sales, 52);
+  assert.equal(group.totals.monthly[0].sales, 0);
+  assert.ok(all.graphics.performanceAxes.total.max >= 52);
+  assert.deepEqual(group.graphics.performanceAxes, all.graphics.performanceAxes);
 });
 function workbook(year = 2028, missingCache = false, missingYear = false) {
   const ws = XLSX.utils.aoa_to_sheet([]);

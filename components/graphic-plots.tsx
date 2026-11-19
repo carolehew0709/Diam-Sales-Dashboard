@@ -26,6 +26,7 @@ export function PlotEmpty({ text }: { text: string }) {
 export function PlotGrid({
   max,
   min = 0,
+  ticks = integerAxis([min, max]).ticks,
   left = 70,
   right = 770,
   top = 35,
@@ -33,6 +34,7 @@ export function PlotGrid({
 }: {
   max: number;
   min?: number;
+  ticks?: readonly number[];
   left?: number;
   right?: number;
   top?: number;
@@ -40,8 +42,8 @@ export function PlotGrid({
 }) {
   return (
     <>
-      {integerAxis([min, max])
-        .ticks.filter((value) => value >= min && value <= max)
+      {ticks
+        .filter((value) => value >= min && value <= max)
         .map((value, i) => {
           const y = bottom - ((value - min) / (max - min)) * (bottom - top);
           return (
@@ -100,6 +102,7 @@ export function ComboPlot({
   monthlyLabel,
   ytdLabel,
   empty,
+  axis,
 }: {
   points: {
     label: string;
@@ -110,12 +113,19 @@ export function ComboPlot({
   monthlyLabel: string;
   ytdLabel: string;
   empty: string;
+  axis?: ReturnType<typeof integerAxis>;
 }) {
   const { locale, tr } = useI18n();
   const values = points
     .flatMap((p) => [p.monthly, p.ytd])
     .filter((v): v is number => v !== null);
-  if (!values.length) return <PlotEmpty text={empty} />;
+  if (!values.length)
+    return (
+      <>
+        {axis && <PlotGrid min={axis.min} max={axis.max} ticks={axis.ticks} />}
+        <PlotEmpty text={empty} />
+      </>
+    );
   const earlierColor = "#d0bd93",
     openColor = "#718699";
   const knownPeriods = points.some((p) => p.estimated !== null);
@@ -141,7 +151,7 @@ export function ComboPlot({
     : points.some((p) => p.monthly !== null)
       ? [{ name: monthlyLabel, color: earlierColor }]
       : [];
-  const { max, min } = integerAxis(values);
+  const { max, min, ticks } = axis ?? integerAxis(values);
   const y = (v: number) => 285 - ((v - min) / (max - min)) * 250,
     x = (i: number) => 98 + i * 58;
   let path = "",
@@ -156,7 +166,7 @@ export function ComboPlot({
   });
   return (
     <>
-      <PlotGrid max={max} min={min} />
+      <PlotGrid max={max} min={min} ticks={ticks} />
       <path d={path} stroke="#a77a35" strokeWidth="3" fill="none" />
       {points.map((p, i) => (
         <g key={i}>

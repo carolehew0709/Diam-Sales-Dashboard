@@ -1,5 +1,6 @@
 import type { Amount, Scenario } from "./types";
 import type { Metric } from "./dashboard";
+import { integerAxis } from "./chart-axis";
 import { reportingMonthClosed, type ReportingPeriod } from "./reporting-period";
 
 export type PerformanceSeriesKey = "base" | "scenario";
@@ -79,6 +80,21 @@ export function monthlyPerformanceSeries(
       ytd: metrics.cumulative[i][key],
     })),
   };
+}
+
+/** Fit the axis to the actual plotted points from both scenarios of each sales type. */
+export function monthlyPerformanceAxis(
+  variants: readonly Pick<Metric, "monthly" | "cumulative">[],
+  dimensionScoped: boolean,
+) {
+  return integerAxis(
+    variants.flatMap((metrics) =>
+      (["Sales", "Sales + Prospect"] as const).flatMap((scenario) =>
+        monthlyPerformanceSeries(metrics, scenario, dimensionScoped).points
+          .flatMap(({ monthly, ytd }) => [monthly, ytd]),
+      ),
+    ),
+  );
 }
 
 /** Compare the full monthly series, preserving zero values and missing months. */

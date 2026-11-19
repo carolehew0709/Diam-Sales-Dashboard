@@ -46,6 +46,10 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
       ? data.rows
       : data.rows.filter((r) => r.entity.id === series.id);
   const metrics = comparisonRow?.metrics ?? (index === 0 ? data.totals : selectedRows[0].metrics);
+  const axis =
+    comparisonRow || index !== 0
+      ? data.graphics.performanceAxes?.byEntity[series.id]
+      : data.graphics.performanceAxes?.total;
   const openMonth = firstOpenMonth(
     data.filters.year,
     selectedRows.map((r) => r.snapshot),
@@ -162,6 +166,7 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
         }
       >
         <ComboPlot
+          axis={axis}
           points={view.points.map((p, i) => ({
             ...p,
             label: display(months[i]),

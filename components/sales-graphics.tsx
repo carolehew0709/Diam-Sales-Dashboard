@@ -1,11 +1,11 @@
 "use client";
-import {TeamActualGraphics} from "./team-actual-graphics";
+import { TeamBudgetGraphic } from "./team-actual-graphics";
+import { TeamPerformanceGraphic } from "./team-performance-graphic";
 import { integerAxis } from "@/lib/chart-axis";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import {
   DonutPlot,
-  ComboPlot,
   Legend,
   PlotEmpty,
   PlotGrid,
@@ -23,10 +23,6 @@ import {
   businessUnitShares,
   exploreBusinessUnitRows,
 } from "@/lib/sales-graphics";
-import {
-  firstOpenMonth,
-  teamMonthlyPerformance,
-} from "@/lib/performance-chart";
 
 export const SalesGraphics = memo(function SalesGraphics({
   data,
@@ -51,7 +47,7 @@ export const SalesGraphics = memo(function SalesGraphics({
       data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
     ),
   ].join("; ");
-  const note = `${data.graphics.teamKpiSource ? tr("teamKpi.scope",data.graphics.teamKpiSource) : ""} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
+  const note = `${data.graphics.teamKpiSource ? tr("teamKpi.scope", data.graphics.teamKpiSource) : ""} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
   const exact = (v: number | null) =>
     v === null
       ? "—"
@@ -256,10 +252,18 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
       : () => <TeamContributionGraphic data={data} exportOnly />,
   );
   const week =
-    (data.graphics.teamSource?.weeks ?? data.weeks).map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
+    (data.graphics.teamSource?.weeks ?? data.weeks)
+      .map((w) => `W${w}`)
+      .join(" / ") || tr("snapshot.none");
   const context = `${tr("graphics.weekly", { week })} · ${data.filters.year} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${team === "all" ? tr("team.all") : team === "__unassigned__" ? tr("team.unassigned") : team} · ${data.filters.customer && data.filters.customer !== "all" ? data.filters.customer + " · " : ""}kEUR`;
-  const sources = data.graphics.teamSource?.files.join("; ") ?? [...new Set(data.rows.flatMap(r=>r.snapshot ? [r.snapshot.sourceFile] : []))].join("; ");
-  const note = `${data.graphics.teamSource ? tr(data.graphics.teamSource.reviewed ? "team.reviewedSource" : "team.retainedSource", {week:(data.graphics.teamSource.weeks.map(w=>`W${w}`).join(" / "))}) + " " : ""}${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
+  const sources =
+    data.graphics.teamSource?.files.join("; ") ??
+    [
+      ...new Set(
+        data.rows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
+      ),
+    ].join("; ");
+  const note = `${data.graphics.teamSource ? tr(data.graphics.teamSource.reviewed ? "team.reviewedSource" : "team.retainedSource", { week: data.graphics.teamSource.weeks.map((w) => `W${w}`).join(" / ") }) + " " : ""}${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
   const exact = (v: number | null) =>
     v === null
       ? "—"
@@ -272,27 +276,6 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
     ...r,
     name: r.name === "__unassigned__" ? tr("team.unassigned") : r.name,
   }));
-  const trend = teamMonthlyPerformance(teams);
-  const entityIds = new Set(teams.flatMap((row) => row.entityIds));
-  const openMonth = firstOpenMonth(
-    data.filters.year,
-    data.graphics.teamSource
-      ? data.graphics.teamSource.periods.filter((row) => entityIds.has(row.entityId))
-      : data.rows
-          .filter((row) => entityIds.has(row.entity.id))
-          .map((row) => row.snapshot),
-  );
-  const monthlyLabel = tr("graphics.monthlyTeamOB");
-  const cumulativeLabel = tr("graphics.cumulativeTeamOB");
-  const trendTitle = tr("graphics.teamPerformanceFor", {
-    name:
-      team === "all"
-        ? tr("team.all")
-        : team === "__unassigned__"
-          ? tr("team.unassigned")
-          : team,
-  });
-  const trendNote = `${tr("graphics.teamMonthlyRule")} ${tr("graphics.periodColorsRule")} ${note}`;
   const teamBUs = (row: (typeof teamRows)[number]) =>
     row.entityIds
       .map((id) => data.entities.find((e) => e.id === id)?.code ?? id)
@@ -302,59 +285,8 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
     .filter(({ index }) => teamRows.some((row) => row.monthly[index] !== 0));
   return (
     <div ref={root} className="team-contribution-graphic">
-      <TeamActualGraphics data={data}/>
-      <GraphicCard
-        className="team-monthly-graphic-card"
-        title={trendTitle}
-        context={context}
-        note={trendNote}
-        height={395}
-        exportTable={{
-          columns: [
-            { label: tr("common.month") },
-            { label: `${monthlyLabel} (kEUR)` },
-            { label: `${cumulativeLabel} (kEUR)` },
-            { label: tr("common.source") },
-          ],
-          rows: trend.map((point, index) => [
-            display(months[index]),
-            point.monthly,
-            point.ytd,
-            teams.map((row) => row.source).join("; "),
-          ]),
-        }}
-        table={
-          <table className="bu-table">
-            <thead>
-              <tr>
-                <th>{tr("common.month")}</th>
-                <th className="numeric">{monthlyLabel}</th>
-                <th className="numeric">{cumulativeLabel}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {trend.map((point, index) => (
-                <tr key={index}>
-                  <td>{display(months[index])}</td>
-                  <td className="numeric">{exact(point.monthly)}</td>
-                  <td className="numeric">{exact(point.ytd)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        }
-      >
-        <ComboPlot
-          points={trend.map((point, index) => ({
-            ...point,
-            label: display(months[index]),
-            estimated: openMonth === null ? null : index >= openMonth,
-          }))}
-          monthlyLabel={monthlyLabel}
-          ytdLabel={cumulativeLabel}
-          empty={tr("graphics.noTeam")}
-        />
-      </GraphicCard>
+      <TeamPerformanceGraphic data={data} />
+      <TeamBudgetGraphic data={data} />
       <GraphicCard
         title={tr("graphics.teamContribution")}
         context={context}

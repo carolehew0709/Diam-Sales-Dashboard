@@ -1,11 +1,10 @@
 "use client";
 import type { Dashboard } from "@/lib/dashboard";
-import { months } from "@/lib/dashboard";
 import { GraphicCard } from "./graphic-card";
 import { ChartMark } from "./chart-interaction";
-import { ComboPlot, PlotEmpty } from "./graphic-plots";
+import { PlotEmpty } from "./graphic-plots";
 import { useI18n } from "./i18n-provider";
-export function TeamActualGraphics({ data }: { data: Dashboard }) {
+export function TeamBudgetGraphic({ data }: { data: Dashboard }) {
   const { tr, display } = useI18n();
   const source = data.graphics.teamActuals;
   if (!source) return null;
@@ -14,67 +13,23 @@ export function TeamActualGraphics({ data }: { data: Dashboard }) {
       ? "—"
       : n.toLocaleString(undefined, { maximumFractionDigits: 2 });
   const context = `${source.reportingWeek ? `W${source.reportingWeek} · ` : ""}${tr("teamActual.period", { year: source.year, month: String(source.month).padStart(2, "0") })} · ${display(data.filters.region)} · ${data.filters.bu === "all" ? tr("filters.allBU") : data.filters.bu} · ${data.filters.salesType === "all" ? tr("filters.allSales") : display(data.filters.salesType)} · ${data.filters.salesTeam === "all" ? tr("team.all") : data.filters.salesTeam} · ${tr("teamActual.sales")} ${exact(source.sales)} / ${tr("teamActual.budget")} ${exact(source.budget)} kEUR`;
-  const reconciliation=source.excludedDdcGroup && source.sales!==null ? tr("teamActual.reconciliation",{source:source.sourceSales!.toLocaleString(undefined,{maximumFractionDigits:3}),excluded:source.excludedDdcGroup.toLocaleString(undefined,{maximumFractionDigits:3}),reported:source.sales.toLocaleString(undefined,{maximumFractionDigits:3})}):"";
+  const reconciliation =
+    source.excludedDdcGroup && source.sales !== null
+      ? tr("teamActual.reconciliation", {
+          source: source.sourceSales!.toLocaleString(undefined, {
+            maximumFractionDigits: 3,
+          }),
+          excluded: source.excludedDdcGroup.toLocaleString(undefined, {
+            maximumFractionDigits: 3,
+          }),
+          reported: source.sales.toLocaleString(undefined, {
+            maximumFractionDigits: 3,
+          }),
+        })
+      : "";
   const note = `${reconciliation} ${tr(source.unavailable ? "teamActual.unavailable" : "teamActual.rule")} ${source.sourceFile} · ${source.sourceSheet}`;
-  const points = source.monthly.map((monthly, i) => ({
-    label: display(months[i]),
-    monthly,
-    ytd:
-      monthly === null
-        ? null
-        : source.monthly.slice(0, i + 1).reduce<number>((a, b) => a + b!, 0),
-    estimated: i >= source.month,
-  }));
   return (
     <>
-      <GraphicCard
-        className="team-actual-trend"
-        title={tr("teamActual.title")}
-        context={context}
-        note={note}
-        height={395}
-        exportTable={{
-          columns: [
-            { label: tr("common.month") },
-            { label: tr("teamActual.sales") + " (kEUR)" },
-            { label: tr("teamActual.cumulative") + " (kEUR)" },
-            { label: tr("common.source") },
-          ],
-          rows: points.map((p) => [
-            p.label,
-            p.monthly,
-            p.ytd,
-            source.sourceFile + " · " + source.sourceSheet,
-          ]),
-        }}
-        table={
-          <table className="bu-table">
-            <thead>
-              <tr>
-                <th>{tr("common.month")}</th>
-                <th>{tr("teamActual.sales")}</th>
-                <th>{tr("teamActual.cumulative")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {points.map((p) => (
-                <tr key={p.label}>
-                  <td>{p.label}</td>
-                  <td>{exact(p.monthly)}</td>
-                  <td>{exact(p.ytd)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        }
-      >
-        <ComboPlot
-          points={points}
-          monthlyLabel={tr("teamActual.sales")}
-          ytdLabel={tr("teamActual.cumulative")}
-          empty={tr("teamActual.unavailable")}
-        />
-      </GraphicCard>
       <GraphicCard
         className="team-actual-budget"
         title={tr("teamActual.budgetTitle")}

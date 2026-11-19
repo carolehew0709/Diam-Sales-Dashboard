@@ -133,9 +133,16 @@ export function receivablesFiltersFrom(url: URL): ReceivablesFilters {
 }
 const customerKey = (value: string) =>
   value.replace(/\s+/g, " ").trim().toLowerCase();
-const isRankableInvoice = (record: ReceivableRecord) =>
-  record.entityId !== "ddc" ||
-  !["dehk", "dehk limited"].includes(customerKey(record.customer));
+/** Reporting-only exclusion. Preserve original invoices in storage and import history. */
+export function isExcludedDdcInvoice(record: ReceivableRecord) {
+  return (
+    record.category === "invoice" &&
+    record.entityId === "ddc" &&
+    [record.customer, record.sourceCustomer].some(
+      (name) => !!name && ["dehk", "dehk limited"].includes(customerKey(name)),
+    )
+  );
+}
 const isOverdue = (bucket: AgingBucket) =>
   bucket !== "not-due" && bucket !== "unclassified";
 const shareOf = (value: number, total: number) =>
@@ -151,7 +158,7 @@ export function rankCustomerGroups(rows: ReceivableRecord[]) {
     }
   >();
   for (const row of rows) {
-    if (!row.customerGroup || !isRankableInvoice(row)) continue;
+    if (!row.customerGroup || isExcludedDdcInvoice(row)) continue;
     const key = `${row.currency}:${row.customerGroup}`;
     const item = groups.get(key) ?? {
       customerGroup: row.customerGroup,
@@ -210,14 +217,16 @@ export function getReceivables(
   filters: ReceivablesFilters,
 ) {
   const allowed = entities.filter(
-    (e) => canAccessModule(user, "ar-aging") &&
-      ["dhk", "ddc"].includes(e.id) && canView(user, e),
+    (e) =>
+      canAccessModule(user, "ar-aging") &&
+      ["dhk", "ddc"].includes(e.id) &&
+      canView(user, e),
   );
   const paymentsAllowed = ["dhk", "ddc"].every((id) =>
     allowed.some((e) => e.id === id),
   );
   // Shared China receipts have no BU allocation and require access to both source BUs.
-  const permitted = (state.receivables ?? []).filter((r) =>
+  const authorizedSources = (state.receivables ?? []).filter((r) =>
     r.category === "invoice"
       ? allowed.some((e) => e.id === r.entityId)
       : paymentsAllowed && r.entityId === "china-payments",
@@ -226,13 +235,15 @@ export function getReceivables(
     string,
     Set<ReceivableRecord["customerType"]>
   >();
-  for (const r of permitted.filter((r) => r.category === "invoice")) {
+  // Receipt classification still uses original evidence, independent of invoice reporting exclusions.
+  for (const r of authorizedSources.filter((r) => r.category === "invoice")) {
     const key = customerKey(r.sourceCustomer ?? r.customer);
     classification.set(
       key,
       new Set([...(classification.get(key) ?? []), r.customerType]),
     );
   }
+  const permitted = authorizedSources.filter((r) => !isExcludedDdcInvoice(r));
   const records = permitted.map((r) => {
     const types = classification.get(customerKey(r.customer));
     return {
@@ -304,7 +315,7 @@ export function getReceivables(
     r.category !== "invoice" ||
     filters.customerGroup === "all" ||
     (!!r.customerGroup &&
-      isRankableInvoice(r) &&
+      !isExcludedDdcInvoice(r) &&
       top.has(`${r.currency}:${r.customerGroup}`) ===
         (filters.customerGroup === "top10"));
   const customerMatch = (r: ReceivableRecord) =>
@@ -439,9 +450,7 @@ export function getReceivables(
     sourceCustomerGroups,
     salesTeams: [...new Set(records.map((r) => teamName(r.salesTeam)))].sort(),
     rankingExcludedCurrencies: [
-      ...new Set(
-        rows.filter((r) => !isRankableInvoice(r)).map((r) => r.currency),
-      ),
+      ...new Set(rows.filter(isExcludedDdcInvoice).map((r) => r.currency)),
     ],
     ranking: summarizeRanking(rows),
     asOfDates: [

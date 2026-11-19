@@ -312,7 +312,7 @@ test("per-currency top10 and other cohorts partition customers without conversio
   assert.equal(selected.rows.length, 2);
 });
 
-test("ranking totals group labels, removes DDC's DEHK customer, and leaves balances in the currency shares", () => {
+test("DDC's DEHK invoices are excluded from totals, currency shares and ranking", () => {
   const base = parsed()[0];
   const invoices: ReceivableRecord[] = [
     {
@@ -396,13 +396,17 @@ test("ranking totals group labels, removes DDC's DEHK customer, and leaves balan
       overdueProportion: 1,
     },
   ]);
-  assert.equal(ddc.totals.find((r) => r.currency === "EUR")?.ar, 1000);
-  assert.equal(ddc.chart[0].overdueProportion, 0.02);
+  assert.equal(ddc.totals.find((r) => r.currency === "EUR")?.ar, 100);
+  assert.equal(ddc.chart[0].overdueProportion, 0.2);
   assert.equal(
     ddc.chart[0].buckets.find((b) => b.bucket === "not-due")?.proportion,
-    0.98,
+    0.8,
   );
   assert.equal(ddc.chart[1].overdueProportion, null);
+  assert.ok(!ddc.rows.some((r) => r.id === "dehk"));
+  assert.ok(!ddc.customers.includes("DEHK LIMITED"));
+  assert.ok(!ddc.sourceCustomerGroups.includes("DEHK"));
+  assert.equal(fixture.receivables!.find((r) => r.id === "dehk")!.amount, 900);
   const top = getReceivables(fixture, admin, {
     ...filters,
     customerGroup: "top10",

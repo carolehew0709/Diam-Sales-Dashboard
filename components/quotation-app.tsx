@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
+import { useContext, useMemo, useRef, useState } from "react";
+import { ExportAccess } from "./export-access";
 import { Calculator, Download, FileSpreadsheet, Plus, Trash2 } from "lucide-react";
 import { useI18n } from "@/components/i18n-provider";
 import type { MessageKey } from "@/lib/i18n";
@@ -37,6 +38,7 @@ async function readPicture(file: File) {
 
 export default function QuotationApp() {
   const { tr, locale } = useI18n();
+  const canExport = useContext(ExportAccess);
   const nextId = useRef(1);
   const [sheets, setSheets] = useState<CostSheet[]>([]);
   const [fileName, setFileName] = useState("");
@@ -118,7 +120,7 @@ export default function QuotationApp() {
   }
 
   async function download() {
-    if (total === null) return;
+    if (!canExport || total === null) return;
     setExporting(true);
     setNotice(undefined);
     try {
@@ -251,9 +253,9 @@ export default function QuotationApp() {
                   <span>{tr("quote.total")}</span><strong>{price(total)}</strong>
                   {total === null && <small>{tr("quote.pending")}</small>}
                 </div>
-                <button type="button" className="apac-button primary" disabled={total === null || exporting} onClick={() => void download()}>
+                {canExport && <button type="button" className="apac-button primary" disabled={total === null || exporting} onClick={() => void download()}>
                   <Download size={15} />{tr(exporting ? "quote.exporting" : "quote.export")}
-                </button>
+                </button>}
               </div>
             </div>
           </section>

@@ -10,7 +10,7 @@ export async function GET() {
     const user = await currentUser();
     if (!canManageUsers(user))
       throw new ApiError(403, "Superadmin access required");
-    return { ok: true, users: (await storage.read()).users.map(publicUser) };
+    return { ok: true, actorId: user.id, users: (await storage.read()).users.map(publicUser) };
   });
 }
 export async function POST(request: Request) {
@@ -55,6 +55,10 @@ export async function POST(request: Request) {
       permissions[e.id] = p;
     }
     return storage.transaction((state) => {
+      const liveActor = state.users.find((u) => u.id === actor.id);
+      if (!liveActor || !canManageUsers(liveActor) ||
+          (liveActor.sessionVersion ?? 1) !== (actor.sessionVersion ?? 1))
+        throw new ApiError(403, "Superadmin access required");
       const existing = state.users.find((u) => u.id === b.id);
       if (!existing && !b.password)
         throw new ApiError(400, "Password is required for a new account");
@@ -94,7 +98,7 @@ export async function POST(request: Request) {
         action: "update-user",
         subject: next.id,
       });
-      return { ok: true, user: publicUser(next) };
+      return { ok: true, user: publicUser(next), reauthenticate: next.id === actor.id };
     });
   });
 }

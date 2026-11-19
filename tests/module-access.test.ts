@@ -10,7 +10,9 @@ import {
   canView,
   validUserAccess,
   workspaceModules,
+  userAccessPolicy,
 } from "../lib/permissions";
+import { securityChanged } from "../lib/account-management";
 import { entities } from "../lib/entities";
 import { hasPipelineAccess, pipelineForWeek } from "../lib/pipeline";
 import { hasReceivablesAccess } from "../lib/receivables";
@@ -34,7 +36,8 @@ test("Finance readers have only their selected modules and China Entity scope", 
   assert.deepEqual(
     entities
       .filter((entity) => canView(finance, entity))
-      .map((entity) => entity.id).sort(),
+      .map((entity) => entity.id)
+      .sort(),
     ["dcp", "ddc", "dhk"],
   );
   for (const page of [
@@ -57,6 +60,66 @@ test("Finance readers have only their selected modules and China Entity scope", 
     assert.equal(canEdit(finance, entity), false);
     assert.equal(canPublish(finance, entity), false);
   }
+});
+
+test("Account access editing preserves legacy defaults and disabled account configuration", () => {
+  const legacy = { ...finance, access: undefined };
+  assert.deepEqual(userAccessPolicy(legacy), {
+    modules: workspaceModules,
+    export: true,
+  });
+  assert.deepEqual(userAccessPolicy({ ...finance, disabled: true }), {
+    modules: ["overview", "sales-operations", "ar-aging"],
+    export: false,
+  });
+  assert.deepEqual(
+    userAccessPolicy({ ...finance, access: { modules: [], export: true } }),
+    {
+      modules: [],
+      export: true,
+    },
+  );
+  const policy = userAccessPolicy(legacy);
+  policy.modules.pop();
+  assert.equal(workspaceModules.length, 5);
+});
+
+test("Module and export changes revoke sessions without treating module order as a permission change", () => {
+  assert.equal(
+    securityChanged(finance, {
+      ...finance,
+      access: { ...finance.access!, modules: ["overview"] },
+    }),
+    true,
+  );
+  assert.equal(
+    securityChanged(finance, {
+      ...finance,
+      access: { ...finance.access!, export: true },
+    }),
+    true,
+  );
+  assert.equal(
+    securityChanged(finance, {
+      ...finance,
+      access: {
+        ...finance.access!,
+        modules: [...finance.access!.modules].reverse(),
+      },
+    }),
+    false,
+  );
+  assert.equal(
+    securityChanged(finance, { ...finance, name: "Updated name" }),
+    false,
+  );
+  assert.equal(
+    securityChanged(
+      { ...finance, access: undefined },
+      { ...finance, access: { modules: [...workspaceModules], export: true } },
+    ),
+    false,
+  );
 });
 
 test("Module policies validate their fields and preserve existing account permissions", () => {

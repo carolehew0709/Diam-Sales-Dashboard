@@ -1,6 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { ApiError } from "./auth";
 import { passwordHash } from "./passwords";
+import { userAccessPolicy } from "./permissions";
 import type { Store, User } from "./types";
 
 export function managementActor(state: Store, actor: User) {
@@ -120,6 +121,8 @@ export function securityChanged(previous: User, next: User) {
     previous.crossRegionView !== next.crossRegionView ||
     !!previous.disabled !== !!next.disabled ||
     previous.passwordHash !== next.passwordHash ||
+    JSON.stringify(userAccessPolicy(previous)) !==
+      JSON.stringify(userAccessPolicy(next)) ||
     permissions(previous) !== permissions(next)
   );
 }

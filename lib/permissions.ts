@@ -9,6 +9,17 @@ export const workspaceModules: WorkspaceModule[] = [
   "quotation",
 ];
 
+/** Configured access for editing, including disabled accounts and legacy defaults. */
+export function userAccessPolicy(user: User): NonNullable<User["access"]> {
+  return {
+    modules: workspaceModules.filter(
+      (module) =>
+        user.access === undefined || user.access.modules.includes(module),
+    ),
+    export: user.access?.export !== false,
+  };
+}
+
 export function canAccessModule(user: User, module: WorkspaceModule) {
   return (
     !user.disabled &&

@@ -1,0 +1,60 @@
+.section {
+  margin-top: 24px;
+  padding-top: 1px;
+  border-top: 1px solid var(--line);
+}
+.modules {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
+}
+.option {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  min-width: 0;
+  padding: 13px 14px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: #fff;
+  font-size: 12px;
+  line-height: 1.5;
+  cursor: pointer;
+  transition:
+    border-color 120ms ease,
+    background 120ms ease;
+}
+.option:has(input:checked) {
+  border-color: #d2b580;
+  background: #faf7ef;
+}
+.option:focus-within {
+  outline: 2px solid var(--gold);
+  outline-offset: 2px;
+}
+.option input {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  margin: 0;
+  accent-color: var(--gold);
+}
+.option small {
+  display: block;
+  margin-top: 3px;
+}
+.export {
+  margin-top: 12px;
+}
+.note {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.6;
+  margin: 12px 0 0;
+}
+@media (max-width: 600px) {
+  .modules {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}

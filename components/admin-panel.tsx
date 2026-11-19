@@ -5,6 +5,7 @@ import { Check, LoaderCircle, Plus, Search, ShieldCheck } from "lucide-react";
 import { entities } from "@/lib/entities";
 import { canEdit, canView } from "@/lib/permissions";
 import type { User } from "@/lib/types";
+import { AccountModuleAccess } from "./account-module-access";
 
 type Draft = { user: User; password: string };
 const newUser = (): User => ({
@@ -17,7 +18,8 @@ const newUser = (): User => ({
   permissions: {},
 });
 export function AdminPanel({ onClose }: { onClose: () => void }) {
-  const { tr, display } = useI18n();
+  const { tr, display, locale } = useI18n();
+  const [reauthenticate, setReauthenticate] = useState(false);
   const [users, setUsers] = useState<User[]>([]);
   const [selected, setSelected] = useState<string | null>(null);
   const [drafts, setDrafts] = useState<Record<string, Draft>>({});
@@ -123,6 +125,7 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
         return next;
       });
       setSelected(result.user.id);
+      if (result.reauthenticate) setReauthenticate(true);
       setFeedback({ kind: "success", text: tr("admin.saved") });
     } catch (error) {
       setFeedback({
@@ -142,6 +145,16 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
       .toLowerCase()
       .includes(query.trim().toLowerCase()),
   );
+  if (reauthenticate)
+    return (
+      <section className="panel admin-workspace">
+        <h2>{tr("admin.accountUpdated")}</h2>
+        <p>{tr("admin.signInAgain")}</p>
+        <a className="apac-button primary" href={`/${locale}/login`}>
+          {tr("admin.returnLogin")}
+        </a>
+      </section>
+    );
   return (
     <section className="panel apac-workspace admin-workspace">
       <div className="panel-heading">
@@ -333,6 +346,10 @@ export function AdminPanel({ onClose }: { onClose: () => void }) {
                   </small>
                 </label>
               </div>
+              <AccountModuleAccess
+                user={active}
+                onChange={(access) => edit({ access })}
+              />
               <div className="admin-scope-heading">
                 <h3>{tr("admin.entityAccess")}</h3>
                 <p className="muted">

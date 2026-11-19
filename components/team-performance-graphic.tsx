@@ -229,7 +229,7 @@ export function TeamPerformanceGraphic({ data }: { data: Dashboard }) {
                         fill={colors.sales}
                       />
                     )}
-                    {p.prospect !== null && (
+                    {p.prospect !== null && p.prospect !== 0 && (
                       <rect
                         x={x(i) - 15}
                         y={Math.min(y(start + p.prospect), y(start))}

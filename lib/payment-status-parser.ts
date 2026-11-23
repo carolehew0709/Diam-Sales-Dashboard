@@ -53,6 +53,14 @@ export function parsePaymentStatusWorkbook(bytes: Buffer, sourceFile: string) {
       error(r + 1, XLSX.utils.encode_col(c) + " formula cache");
     return cell?.v;
   };
+  const header = (c: number) =>
+    text(value(0, c))
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "");
+  const groupLayout =
+    header(10) === "status" &&
+    header(11) === "customergroup" &&
+    header(12) === "";
   const headers = [
     "",
     "year",
@@ -64,14 +72,10 @@ export function parsePaymentStatusWorkbook(bytes: Buffer, sourceFile: string) {
     "bankslip",
     "remarks",
     "saleteam",
-    "pic",
-    "status",
-    "customer",
+    ...(groupLayout ? ["status", "customergroup"] : ["pic", "status", "customer"]),
   ];
   for (let c = 0; c < headers.length; c++) {
-    const label = text(value(0, c))
-      .toLowerCase()
-      .replace(/[^a-z0-9]/g, "");
+    const label = header(c);
     if (
       label !== headers[c] &&
       !(c === 2 && label === "receiveddate") &&
@@ -95,7 +99,7 @@ export function parsePaymentStatusWorkbook(bytes: Buffer, sourceFile: string) {
   const controls: { row: number; amount: unknown }[] = [];
   const end = XLSX.utils.decode_range(ws["!ref"] ?? "A1").e.r;
   for (let r = 1; r <= end; r++) {
-    const row = Array.from({ length: 13 }, (_, c) => value(r, c));
+    const row = Array.from({ length: headers.length }, (_, c) => value(r, c));
     if (row.every((v) => v == null || text(v) === "")) continue;
     const balanceCell = ws[`G${r + 1}`];
     if (
@@ -116,7 +120,7 @@ export function parsePaymentStatusWorkbook(bytes: Buffer, sourceFile: string) {
       currency = text(row[4]).toUpperCase();
     const balance = row[6],
       received = row[5],
-      sourceStatus = text(row[11]),
+      sourceStatus = text(row[groupLayout ? 10 : 11]),
       category = categories.get(sourceStatus.toLowerCase());
     if (
       !date ||
@@ -129,7 +133,8 @@ export function parsePaymentStatusWorkbook(bytes: Buffer, sourceFile: string) {
       error(r + 1, "Currency (E): USD / EUR");
     if (!numeric(received)) error(r + 1, "Received Amount (F)");
     if (!numeric(balance)) error(r + 1, "Balance (G)");
-    if (!category) error(r + 1, "Status (L): Unknown / Advance / TBC");
+    if (!category)
+      error(r + 1, `Status (${groupLayout ? "K" : "L"}): Unknown / Advance / TBC`);
     if (
       !date ||
       !payer ||
@@ -143,10 +148,11 @@ export function parsePaymentStatusWorkbook(bytes: Buffer, sourceFile: string) {
       id: `china-payments:${name}:${r + 1}`,
       entityId: "china-payments",
       category,
-      customer: text(row[12]),
+      customer: groupLayout ? "" : text(row[12]),
+      ...(groupLayout ? { customerGroup: text(row[11]) } : {}),
       subCustomer: "",
       salesTeam: text(row[9]),
-      pic: text(row[10]),
+      pic: groupLayout ? "" : text(row[10]),
       payer,
       invoiceNumber: "",
       invoiceDate: null,

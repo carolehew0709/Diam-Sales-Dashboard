@@ -46,5 +46,21 @@ export function orderDimensionColumns(
     for(let c=2;c<anchorCol;c++)
       if(months.includes(String(sheet[utils.encode_cell({r:row,c})]?.v??'').trim().toLowerCase()))
         return {team:c-2,product:c-1,shifted:true};
+  // Some DDC sheets omit both dimension headers. In this layout the
+  // month amount sits on the template anchor, just before the order headers.
+  for (const row of [headerRow, headerRow + 1]) {
+    const labelAt = (column: number) =>
+      String(sheet[utils.encode_cell({ r: row, c: column })]?.v ?? "")
+        .trim()
+        .toLowerCase();
+    if (
+      anchorCol >= 2 &&
+      months.includes(labelAt(anchorCol)) &&
+      /^order\b.*\bto be delivered$/.test(labelAt(anchorCol + 1)) &&
+      labelAt(anchorCol + 2) === "external or group" &&
+      labelAt(anchorCol + 3) === "customers orders"
+    )
+      return { team: anchorCol - 2, product: anchorCol - 1, shifted: true };
+  }
   return { team: anchorCol, product: anchorCol + 1, shifted: false };
 }

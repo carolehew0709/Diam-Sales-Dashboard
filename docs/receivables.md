@@ -65,6 +65,10 @@ At the owner's request, a recognized `Unknown & Advance` sheet is the sole autho
 
 Status Unknown maps to `unknown`, Advance to `advance`, and **TBC to `pending`**. Pending receipts are shown separately, excluded from Unknown/Advance totals and require a publication explanation. Source Status, received amount, original balance/currency, bank slip and file/sheet/row evidence remain available. Team/PIC/customer values are not inferred when absent. English/Chinese review and report tables show counts and balances separately by currency and category; CSV includes native currency and source status. Receipt-only USD series do not create fictitious invoice-aging charts or change the invoice reporting date. Customer Top 10 continues to mean invoice AR within the same currency.
 
+The alternative A:L layout ends with Status (K) and Customer Group (L) and has no PIC. Store the supplied group separately, leave the individual customer and PIC blank, and use the group in the separate Unknown Payment selector. Group names do not inherit an invoice customer's External/Group classification.
+
+The overdue ledger follows the month-end aging file. A weekly receipt publication uses the separate Unknown & Advance source and the latest actual receipt date. The aging cutoff advances with the next published invoice ledger.
+
 This source replaces only `ar:payments`, preserving both Entities' invoices, sales, teams and budgets. As before, these receipts have no Entity allocation: both DEHK and DDC edit scopes are required to upload, and their administrator permission is required to publish. India and single-Entity users cannot read/import/export the shared data. Entity and invoice-aging filters do not filter receipts. Transactional reviewed publication, idempotency, stale-preview checks, before/after history and Super Admin restoration are unchanged. This implementation release does not upload or publish the owner's real workbook; the owner will perform that action through Import Data.
 
 ## Distinct aging and receipt dates (2026-11-10)

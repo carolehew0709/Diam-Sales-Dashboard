@@ -19,6 +19,25 @@ test("W45 explicit Team/Brands and single-Nov header resolve left dimensions", (
     shifted: true,
   });
 });
+test("recognizes the inserted month at the sales anchor with blank Team and Brands headers", () => {
+  const sheet = {
+    D23: { v: "Nov" },
+    E23: { v: "Order  (Tooling including) to be delivered" },
+    F23: { v: "External or Group" },
+    G23: { v: "Customers orders" },
+    D24: { v: 42 },
+  } as Parameters<typeof orderDimensionColumns>[0];
+  assert.deepEqual(orderDimensionColumns(sheet, 22, 3), {
+    team: 1,
+    product: 2,
+    shifted: true,
+  });
+  assert.deepEqual(orderDimensionColumns({ D23: { v: "Nov" } }, 22, 3), {
+    team: 3,
+    product: 4,
+    shifted: false,
+  });
+});
 function book(overrides: Record<string, unknown> = {}) {
   const wb = X.utils.book_new(),
     row = Array(20).fill(null);

@@ -18,6 +18,8 @@ The owner explicitly confirms this October FY2026 final actuals/budget source as
 
 The owner later approves W44 Prospect from the entity weekly workbooks, superseding the paused W43 reference only for those explicitly reviewed scopes. Actual YTD and team budgets stay unchanged. The actual source also exposes source YTD, excluded DDC Group, and reported YTD for reconciliation; amounts are scoped by permission, Entity, sales type and team and remain unavailable for unsupported customer/year projections. See `docs/team-retention.md`.
 
+DDC weekly sheets can omit the Team and Brands headers when the adjacent monthly actual amount is labeled by month. When the month sits at the legacy Team position and is followed by the order description, External/Group, and customer headers, read Team and Brands from the two columns to its left. The workbook's monetary cells and historical template mapping are unchanged.
+
 ## Combined team trend (2026-11-19)
 
 The two separate actual Sales and weekly Prospect trend cards are replaced by one monthly/cumulative card. Monthly bars stack actual Sales and outstanding Prospect in distinct colors. A single gold solid cumulative line with hollow circular markers matches the main Sales chart's YTD styling. The global Scenario selects cumulative actual Sales, or cumulative Sales + Prospect. The latter carries final closed Sales YTD into later planning months. Future actual monthly/cumulative cells remain blank; they are never stored or exported as zero. A missing closed-month actual or Prospect allocation interrupts the corresponding cumulative calculation. Signed credits and full numeric precision are retained; additional P1 and budgets are not added.

@@ -547,6 +547,7 @@
   "ar.payments": "未知收款、预收款与待确认收款",
   "ar.unknownPaymentTitle": "未知收款",
   "ar.paymentFilter.unknown": "未知收款",
+  "ar.paymentCustomer": "客户／客户组",
   "ar.paymentFilter.advance": "预收款",
   "ar.paymentFilterNote": "此处筛选仅影响本区汇总，TBC 待确认收款归入未知收款。",
   "ar.advanceTotal": "预收款余额",

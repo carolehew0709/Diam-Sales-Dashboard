@@ -199,6 +199,26 @@ test("combined sheet is authoritative for whole-workbook and single-sheet upload
   }
 });
 
+test("accepts the receipt layout with Customer Group and no PIC", () => {
+  const book = fixture(false);
+  const sheet = book.Sheets["Unknown & Advance"];
+  for (let row = 1; row <= 4; row++) {
+    sheet[`K${row}`] = sheet[`L${row}`];
+    sheet[`L${row}`] = sheet[`M${row}`];
+    delete sheet[`M${row}`];
+  }
+  sheet.L1.v = "Customer Group";
+  sheet["!ref"] = "A1:L5";
+  const result = parse(book);
+  assert.deepEqual(failures(book), []);
+  const first = result.records[0];
+  assert.equal(first.customerGroup, "Customer A");
+  assert.equal(first.customer, "");
+  assert.equal(first.pic, "");
+  assert.equal(first.category, "unknown");
+  assert.equal(first.amount, 100);
+});
+
 test("invalid headers, currencies, statuses, date/cache errors and stale controls block publication", () => {
   for (const mutate of [
     (w: XLSX.WorkSheet) => {

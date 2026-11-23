@@ -409,13 +409,13 @@ export function getReceivables(
   // Keep the separate payment section independent of the invoice filters and
   // expose only the fields it uses, within the existing shared-receipt scope.
   const paymentFilterRows = permitted.flatMap<PaymentBalanceRow>(
-    ({ category, customer, amount, currency, receivedDate }) =>
+    ({ category, customer, customerGroup, amount, currency, receivedDate }) =>
       category === "invoice"
         ? []
         : [
             {
               category: category === "advance" ? "advance" : "unknown",
-              customer,
+              customer: customerGroup || customer,
               amount,
               currency,
               receivedDate,

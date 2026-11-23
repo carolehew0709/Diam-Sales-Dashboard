@@ -547,6 +547,7 @@
   "ar.payments": "Unknown, Advance & To confirm",
   "ar.unknownPaymentTitle": "Unknown Payment",
   "ar.paymentFilter.unknown": "Unknown",
+  "ar.paymentCustomer": "Customer / Customer Group",
   "ar.paymentFilter.advance": "Advance",
   "ar.paymentFilterNote": "These filters only apply to this section. Unknown includes receipts marked TBC.",
   "ar.advanceTotal": "Advance balance",

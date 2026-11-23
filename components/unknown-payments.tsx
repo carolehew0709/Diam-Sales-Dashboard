@@ -53,7 +53,7 @@ export function UnknownPayments({
         <>
           <div className={styles.paymentFilters}>
             <label className="filter-field">
-              {tr("ar.customer")}
+              {tr("ar.paymentCustomer")}
               <select
                 value={selectedCustomer}
                 onChange={(event) => setCustomer(event.target.value)}

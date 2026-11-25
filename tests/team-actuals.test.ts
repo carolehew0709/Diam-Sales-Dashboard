@@ -3,7 +3,9 @@ import assert from "node:assert/strict";
 import * as XLSX from "xlsx";
 import { parseTeamActualWorkbook } from "../lib/team-actual-parser";
 import { teamActualView, teamNamesState } from "../lib/team-actuals";
-import type { Store, User, Filters } from "../lib/types";
+import { teamBudgetDetails } from "../lib/team-budget-details";
+import { emptySnapshot } from "../lib/workbook-parser";
+import type { Store, User, Filters, OrderBookLine } from "../lib/types";
 function fixture() {
   const s = XLSX.utils.aoa_to_sheet([
     ["SALES TEAM1", "SALES TEAM2", "Jan", "Feb", "YTD"],
@@ -114,6 +116,77 @@ test("team actual scope excludes DDC Group and leaves approved weekly data untou
     null,
   );
   assert.equal(teamActualView(state, user, { ...filters, bu: "DCP" }), null);
+});
+test("team drilldown keeps authorized bill-to sales and weekly sourced brands as independent evidence", () => {
+  const snapshot = emptySnapshot("dhk", 2026, 44, 10, "Weekly.xlsx", "W44");
+  const line: OrderBookLine = {
+    id: "order-1",
+    entityId: "dhk",
+    year: 2026,
+    week: 44,
+    salesTeam: "BD",
+    customer: "Weekly customer",
+    product: "Weekly brand",
+    customerType: "External",
+    dgc: "",
+    quantity: 1,
+    total2026: 3,
+    total2027: 0,
+    monthly2026: Array(12).fill(0),
+    monthly2027: Array(12).fill(0),
+    sourceFile: "Weekly.xlsx",
+    sourceSheet: "W44",
+    sourceRow: 25,
+  };
+  const forbiddenSnapshot = emptySnapshot(
+    "ddc",
+    2026,
+    44,
+    10,
+    "Restricted.xlsx",
+    "W44",
+  );
+  const snapshots = [snapshot, forbiddenSnapshot];
+  const retained = [
+    line,
+    {
+      ...line,
+      id: "other",
+      entityId: "ddc",
+      customer: "Restricted",
+      sourceFile: "Restricted.xlsx",
+    },
+  ];
+  const state = {
+    teamActualData: { ...parse().teamActualData, reportingWeek: 44 },
+    snapshots,
+    lines: [{ ...line, product: "Live-only brand" }],
+    retainedTeamSource: { lines: retained, snapshots, retainedAt: "test" },
+  } as Store;
+  const viewer = {
+    ...user,
+    role: "viewer",
+    permissions: { dhk: ["view"] },
+  } as User;
+  const scoped = { ...filters, salesTeam: "Elly Team" };
+  const detail = teamBudgetDetails(state, viewer, scoped)!;
+  assert.deepEqual(
+    detail.actual.rows.map((row) => [row.customer, row.sales, row.budget]),
+    [["Customer", 2, 5]],
+  );
+  assert.deepEqual(
+    detail.brands.map((row) => [row.customer, row.brand, row.amount]),
+    [["Weekly customer", "Weekly brand", 3]],
+  );
+  assert.equal(
+    teamBudgetDetails(state, viewer, { ...scoped, bu: "DDC" }),
+    null,
+  );
+  assert.equal(teamBudgetDetails(state, viewer, { ...scoped, week: 43 }), null);
+  assert.equal(
+    teamBudgetDetails(state, viewer, { ...scoped, salesType: "group" }),
+    null,
+  );
 });
 test("unallocated budget stays absent on source rows, never invent monthly allocation", () => {
   const p = parse();

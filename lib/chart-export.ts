@@ -50,12 +50,14 @@ export function chartExportSvg(
     .forEach((node) => node.remove());
   original.removeAttribute("data-chart-hover");
   original.querySelectorAll("[data-chart-mark]").forEach((node) => {
+    if (node.getAttribute("role") === "button") node.setAttribute("role", "img");
     [
       "data-chart-mark",
       "data-chart-color",
       "data-chart-group",
       "data-chart-active",
       "aria-describedby",
+      "aria-haspopup",
       "tabindex",
       "style",
     ].forEach((name) => node.removeAttribute(name));

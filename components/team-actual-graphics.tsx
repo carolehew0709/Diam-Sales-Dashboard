@@ -1,12 +1,26 @@
 "use client";
+import { useState } from "react";
 import type { Dashboard } from "@/lib/dashboard";
 import { salesNumber } from "@/lib/chart-tooltip";
 import { GraphicCard } from "./graphic-card";
 import { ChartMark } from "./chart-interaction";
 import { PlotEmpty } from "./graphic-plots";
 import { useI18n } from "./i18n-provider";
-export function TeamBudgetGraphic({ data }: { data: Dashboard }) {
+import { TeamBudgetDetailDialog } from "./team-budget-detail-dialog";
+import styles from "./sales-drilldown.module.css";
+
+export function TeamBudgetGraphic({
+  data,
+  interactive,
+}: {
+  data: Dashboard;
+  interactive: boolean;
+}) {
   const { tr, display, locale } = useI18n();
+  const [selected, setSelected] = useState<{
+    team: string;
+    snapshot: Dashboard;
+  } | null>(null);
   const source = data.graphics.teamActuals;
   if (!source) return null;
   const exact = (n: number | null) => salesNumber(n, locale, 2);
@@ -36,7 +50,7 @@ export function TeamBudgetGraphic({ data }: { data: Dashboard }) {
   return (
     <>
       <GraphicCard
-        className="team-actual-budget"
+        className={`team-actual-budget ${styles.teamBudget}`}
         title={tr("teamActual.budgetTitle")}
         context={context}
         note={note}
@@ -108,8 +122,27 @@ export function TeamBudgetGraphic({ data }: { data: Dashboard }) {
                 <g key={r.name}>
                   <ChartMark
                     color="#a77a35"
+                    onActivate={
+                      interactive
+                        ? () => setSelected({ team: r.name, snapshot: data })
+                        : undefined
+                    }
+                    hit={
+                      interactive ? (
+                        <rect
+                          x="0"
+                          y={19 + i * 45}
+                          width="800"
+                          height="43"
+                          fill="white"
+                        />
+                      ) : undefined
+                    }
                     data={{
                       title: r.name,
+                      subtitle: interactive
+                        ? tr("teamActual.openDetail")
+                        : undefined,
                       rows: [
                         {
                           label: tr("teamActual.sales"),
@@ -163,6 +196,14 @@ export function TeamBudgetGraphic({ data }: { data: Dashboard }) {
           <PlotEmpty text={tr("teamActual.unavailable")} />
         )}
       </GraphicCard>
+      {interactive && selected?.snapshot === data && (
+        <TeamBudgetDetailDialog
+          team={selected.team}
+          filters={data.filters}
+          revision={data.revision}
+          onClose={() => setSelected(null)}
+        />
+      )}
     </>
   );
 }

@@ -24,6 +24,15 @@ export function isDuplicateIntercompanyOrder(line: OrderBookLine) {
   );
 }
 
+export function excludesGroupProspect(line: OrderBookLine, year: number) {
+  return (
+    year === 2026 &&
+    line.year === year &&
+    line.customerType === "Group" &&
+    (line.entityId === "ddc" || line.entityId === "dcp")
+  );
+}
+
 const subtract = (value: Amount, deduction: Amount): Amount => {
   if (value === null || deduction === null) return null;
   const result = value - deduction;
@@ -103,9 +112,7 @@ export function reportingState(state: Store, salesType: SalesType = "all") {
     lines: state.lines
       .filter((l) => !isDuplicateIntercompanyOrder(l))
       .map((l) =>
-        ["ddc", "dcp"].includes(l.entityId) &&
-        l.year === 2026 &&
-        l.customerType === "Group"
+        excludesGroupProspect(l, l.year)
           ? {
               ...l,
               total2026: 0,

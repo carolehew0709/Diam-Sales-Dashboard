@@ -45,7 +45,12 @@ export function teamNamesState(state: Store): Store {
       : undefined,
   };
 }
-export function teamActualView(state: Store, user: User, filters: Filters) {
+export function teamActualView(
+  state: Store,
+  user: User,
+  filters: Filters,
+  { includeRows = false } = {},
+) {
   const data = state.teamActualData;
   if (!data) return null;
   const allowed = entities.filter(
@@ -121,6 +126,7 @@ export function teamActualView(state: Store, user: User, filters: Filters) {
   const sales = groups.length ? groups.reduce((a, r) => a + r.sales, 0) : null,
     budget = groups.length ? groups.reduce((a, r) => a + r.budget, 0) : null;
   return {
+    detailRows: includeRows ? rows : undefined,
     sourceSales,
     excludedDdcGroup,
     reportingWeek: data.reportingWeek,

@@ -160,6 +160,8 @@ The main monthly trend uses separate Sales and Prospect segments when their allo
 
 The Entities overview uses one column per Entity, with Sales and Prospect stacked in the combined scenario. Its External/Group donut follows the same scenario and reads each split using the approved sales-type rules. The Entity selector still applies to the overview and its other calculations. The broader regional comparison is under Analysis.
 
+Key Customer Prospect ranks all named source bill-to customers by committed Prospect within the active reporting scope, with Top 4, Top 6 and Top 10 limits. Explicit spelling aliases are combined without inferring parent companies from brands. Unnamed and unknown amounts are omitted. The customer portfolio and comparable YTD charts follow their own finance source.
+
 The Sales view requests a summary without week-by-week matrix calculations and receives the latest permitted customer analysis in the same response. Choosing another customer month still requests that specific source. Session lookup reads the users field instead of transferring source workbooks and publication history on PostgreSQL.
 
 Monthly & cumulative performance uses one integer Y-axis per chart and fiscal year, reporting week and authorized Entity/team/customer scope. The bounds cover both monthly and cumulative points for Sales and Sales + Prospect across All sales, External and Group. An Entity comparison uses its own shared axis. When a new week or fiscal year is selected, the bounds are calculated from the applicable source, including only available actuals and sourced planning points. An empty scenario retains the shared scale and shows its missing-data message. PNG/SVG and chart Excel retain the displayed scale.

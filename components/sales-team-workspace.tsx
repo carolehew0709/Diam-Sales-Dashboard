@@ -152,7 +152,7 @@ function TeamSalesGraphics({
   return (
     <div ref={root} className="team-contribution-graphic">
       <TeamPerformanceGraphic data={data} />
-      <TeamBudgetGraphic data={data} />
+      <TeamBudgetGraphic data={data} interactive={!exportOnly} />
     </div>
   );
 }

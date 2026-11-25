@@ -70,6 +70,7 @@ export function retainedTeamView(state: Store, user: User, filters: Filters) {
     filters.customer,
   );
   return {
+    lines: scoped.lines,
     teams: teamOrderbookSummary(scoped.lines, filters.year),
     names: [...new Set(latestLines.map((l) => teamName(l.salesTeam)))].sort(),
     source: {

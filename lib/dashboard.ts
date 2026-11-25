@@ -3,7 +3,7 @@ import { teamReportingState, retainedTeamView } from "./team-reporting";
 import { policyState } from "./governance";
 import { reportingPeriod, availableReportingWeeks, reportingMonthClosed } from './reporting-period';
 import { lineYear, latestFiscalSnapshot, sourceYear } from "./fiscal-years";
-import { reportingState } from "./intercompany";
+import { excludesGroupProspect, reportingState } from "./intercompany";
 import {
   applyApprovedBudget,
   approvedAnnualBudget,
@@ -532,11 +532,12 @@ export function getDashboardSnapshot(
   );
   const commercial = Object.entries(
     visibleLines.reduce<Record<string, number>>((a, l) => {
-      const value = lineYear(l, filters.year).total ?? 0;
-      a[l.customer || "Unspecified customer"] =
-        (a[l.customer || "Unspecified customer"] ?? 0) + value;
+      const value = lineYear(l, filters.year).total;
+      const customer = l.customer?.trim();
+      if (customer && value != null && !excludesGroupProspect(l, filters.year))
+        a[customer] = (a[customer] ?? 0) + value;
       return a;
-    }, {}),
+    }, Object.create(null)),
   )
     .map(([customer, value]) => ({ customer, value }))
     .sort((a, b) => b.value - a.value);

@@ -20,6 +20,7 @@ export function ChartMark({
   lift = [0, -3],
   hit,
   children,
+  onActivate,
 }: {
   data: ChartTooltipData;
   color?: string;
@@ -27,6 +28,7 @@ export function ChartMark({
   lift?: [number, number];
   hit?: ReactNode;
   children: ReactNode;
+  onActivate?: () => void;
 }) {
   return (
     <g
@@ -35,7 +37,15 @@ export function ChartMark({
       data-chart-color={color}
       data-chart-group={group}
       tabIndex={0}
-      role="img"
+      role={onActivate ? "button" : "img"}
+      aria-haspopup={onActivate ? "dialog" : undefined}
+      onClick={onActivate}
+      onKeyDown={onActivate ? (event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onActivate();
+        }
+      } : undefined}
       aria-label={[
         data.title,
         data.subtitle,

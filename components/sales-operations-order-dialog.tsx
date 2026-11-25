@@ -4,6 +4,7 @@ import { useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
 import type { SalesOperationsOrder } from "@/lib/sales-operations";
 import { useI18n } from "./i18n-provider";
+import { settlementLabel } from "./sales-operations-register";
 import styles from "./commercial.module.css";
 import ops from "./sales-operations.module.css";
 
@@ -41,12 +42,6 @@ export function SalesOperationsOrderDialog({
   const money = (amount: number | null) =>
     amount === null ? "—" : nf.format(amount);
   const currency = (code: string) => (code === "CNY" ? "RMB" : code);
-  const status = (text: string) =>
-    text === "全部核销"
-      ? tr("salesOps.fullySettled")
-      : text === "未核销"
-        ? tr("salesOps.notSettled")
-        : text;
   return (
     <dialog
       ref={modal}
@@ -85,6 +80,7 @@ export function SalesOperationsOrderDialog({
               tr("salesOps.item"),
               tr("team.label"),
               tr("salesOps.quantity"),
+              tr("salesOps.openQuantity"),
               tr("salesOps.orderedAmount"),
               tr("salesOps.shippedAmount"),
               tr("salesOps.openSnapshot"),
@@ -93,8 +89,13 @@ export function SalesOperationsOrderDialog({
             rows={detail.lines.map((row) => [
               row.line,
               [row.item, row.description].filter(Boolean).join(" · "),
-              row.team ?? tr("team.unassigned"),
+              row.reportingTeam ? (
+                <span title={row.team ?? undefined}>{row.reportingTeam}</span>
+              ) : (
+                tr("team.unassigned")
+              ),
               row.quantity,
+              row.openQuantity,
               money(row.ordered),
               money(row.shipped),
               money(row.open),
@@ -125,18 +126,29 @@ export function SalesOperationsOrderDialog({
             title={tr("salesOps.receivableDetail")}
             headers={[
               tr("salesOps.document"),
-              tr("salesOps.date"),
+              tr("salesOps.receivableDate"),
+              tr("salesOps.dueDate"),
               tr("salesOps.line"),
               tr("salesOps.currency"),
-              tr("salesOps.receivableAmount"),
-              tr("salesOps.settledAmount"),
-              tr("salesOps.unsettledAmount"),
+              tr("salesOps.documentAmount"),
+              tr("salesOps.documentSettled"),
+              tr("salesOps.documentBalance"),
               tr("salesOps.settlementStatus"),
               tr("salesOps.invoiceNumbers"),
             ]}
             rows={detail.receivables.map((row) => [
-              row.document,
+              <span>
+                {row.document}
+                {row.linkedOrderCount > 1 && (
+                  <small className={ops.shared}>
+                    {tr("salesOps.sharedOrderReceivable", {
+                      count: row.linkedOrderCount,
+                    })}
+                  </small>
+                )}
+              </span>,
               row.date,
+              row.due || "—",
               detail.links
                 .filter(({ document }) => document === row.document)
                 .map(({ line }) => line)
@@ -145,7 +157,7 @@ export function SalesOperationsOrderDialog({
               money(row.amount),
               money(row.settled),
               money(row.balance),
-              status(row.status),
+              settlementLabel(row.status, tr),
               row.invoices.join(" / ") || "—",
             ])}
             empty={tr("salesOps.noReceivable")}
@@ -189,7 +201,7 @@ function DetailTable({
 }: {
   title: string;
   headers: string[];
-  rows: (string | number)[][];
+  rows: React.ReactNode[][];
   empty?: string;
   note?: string;
 }) {

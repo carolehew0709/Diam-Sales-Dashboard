@@ -3,6 +3,8 @@ import type {
   OpsOrderLine,
   SalesOperationsSnapshot,
 } from "./sales-operations-types";
+import { teamReportingName } from "./team-actuals";
+import type { Store } from "./types";
 
 const sumKnown = (amounts: (number | null)[]) =>
   amounts.some((amount) => amount !== null)
@@ -13,6 +15,24 @@ export function opsWeek(date: string) {
   const day = new Date(date + "T00:00:00Z");
   day.setUTCDate(day.getUTCDate() - ((day.getUTCDay() + 6) % 7));
   return day.toISOString().slice(0, 10);
+}
+
+export function opsWeekNumber(week: string) {
+  const thursday = new Date(week + "T00:00:00Z");
+  thursday.setUTCDate(thursday.getUTCDate() + 3);
+  const january = Date.UTC(thursday.getUTCFullYear(), 0, 1);
+  return Math.floor((thursday.getTime() - january) / 604800000) + 1;
+}
+
+function weekRange(week: string, from: string, asOf: string) {
+  const end = new Date(week + "T00:00:00Z");
+  end.setUTCDate(end.getUTCDate() + 6);
+  const sunday = end.toISOString().slice(0, 10);
+  return {
+    weekFrom: week < from ? from : week,
+    weekTo: sunday > asOf ? asOf : sunday,
+    partial: week < from || sunday > asOf,
+  };
 }
 
 function group<T>(rows: T[], identify: (row: T) => string) {
@@ -34,12 +54,73 @@ function orderTotals(lines: OpsOrderLine[]) {
     shipped: sumKnown(lines.map(({ shipped }) => shipped)),
     open: sumKnown(lines.map(({ open }) => open)),
     openLines: lines.filter(({ openQuantity }) => openQuantity > 0).length,
+    missingOrderAmounts: lines.filter(({ ordered }) => ordered === null).length,
   };
 }
 
-export function salesOperationsView(snapshot: SalesOperationsSnapshot) {
-  const { lines, shipments, payments, receivables, from, asOf, sources } =
-    snapshot;
+type TeamMappings = Store["teamActualData"];
+const ddcTeam = (line: OpsOrderLine, mappings: TeamMappings) =>
+  teamReportingName(line.team ?? undefined, mappings) || null;
+
+export function salesOperationsView(
+  snapshot: SalesOperationsSnapshot,
+  mappings?: TeamMappings,
+) {
+  const {
+    lines,
+    shipments,
+    payments,
+    receivables,
+    receivableLinks,
+    from,
+    asOf,
+    sources,
+  } = snapshot;
+  const linksByOrder = group(receivableLinks, ({ order }) => order);
+  const linksByReceivable = group(receivableLinks, ({ document }) => document);
+  const shipmentsByOrder = group(shipments, ({ order }) => order);
+  const shipmentsByDocument = group(shipments, ({ document, currency }) =>
+    JSON.stringify([document, currency]),
+  );
+  const linkedOrderIds = (rows: { order: string }[]) => [
+    ...new Set(rows.map(({ order }) => order)),
+  ];
+  const linesByOrder = group(lines, ({ order }) => order);
+  const customers = (orders: string[]) => [
+    ...new Set(
+      orders
+        .map((order) => linesByOrder.get(order)?.[0].customer ?? "")
+        .filter(Boolean),
+    ),
+  ];
+  const receivableRegister = receivables.map((row) => {
+    const orders = linkedOrderIds(linksByReceivable.get(row.document) ?? []);
+    return { ...row, orders, customers: customers(orders) };
+  });
+  const receivablesById = new Map(
+    receivableRegister.map((row) => [row.document, row]),
+  );
+  const paymentRegister = payments.map((row) => {
+    const document = receivablesById.get(row.receivable);
+    return {
+      ...row,
+      orders: document?.orders ?? [],
+      customers: document?.customers ?? [],
+    };
+  });
+  const shipmentRegister = [...shipmentsByDocument.values()].map((rows) => {
+    const { document, date, currency } = rows[0];
+    const orders = linkedOrderIds(rows);
+    return {
+      document,
+      date,
+      currency,
+      orders,
+      customers: customers(orders),
+      amount: sumKnown(rows.map(({ amount }) => amount)),
+    };
+  });
+  const paymentsByReceivable = group(payments, ({ receivable }) => receivable);
   const byWeek = group(lines, ({ date, currency }) =>
     JSON.stringify([opsWeek(date), currency]),
   );
@@ -54,6 +135,7 @@ export function salesOperationsView(snapshot: SalesOperationsSnapshot) {
       const shipmentRows = shippedByWeek.get(id) ?? [];
       return {
         week,
+        ...weekRange(week, from, asOf),
         currency,
         orders: new Set(orderRows.map(({ order }) => order)).size,
         ordered: sumKnown(orderRows.map(({ ordered }) => ordered)),
@@ -66,7 +148,10 @@ export function salesOperationsView(snapshot: SalesOperationsSnapshot) {
   const breakdown = (dimension: "customer" | "team") =>
     [
       ...group(lines, (line) =>
-        JSON.stringify([line[dimension], line.currency]),
+        JSON.stringify([
+          dimension === "team" ? ddcTeam(line, mappings) : line.customer,
+          line.currency,
+        ]),
       ),
     ]
       .map(([id, rows]) => {
@@ -78,15 +163,49 @@ export function salesOperationsView(snapshot: SalesOperationsSnapshot) {
           a.currency.localeCompare(b.currency) ||
           (b.ordered ?? -Infinity) - (a.ordered ?? -Infinity),
       );
-  const orders = [...group(lines, ({ order }) => order)]
+  const orders = [...linesByOrder]
     .map(([order, rows]) => {
       const row = rows[0];
+      const documents = [
+        ...new Set(
+          (linksByOrder.get(order) ?? []).map(({ document }) => document),
+        ),
+      ];
+      const invoiceNumbers = new Set(
+        documents.flatMap(
+          (document) => receivablesById.get(document)?.invoices ?? [],
+        ),
+      );
+      const receipts = new Set(
+        documents.flatMap((document) =>
+          (paymentsByReceivable.get(document) ?? []).map(
+            ({ receipt }) => receipt,
+          ),
+        ),
+      );
       return {
         order,
         date: row.date,
         customer: row.customer,
         currency: row.currency,
         ...orderTotals(rows),
+        teams: [...group(rows, (line) => ddcTeam(line, mappings) ?? "")].map(
+          ([name, teamRows]) => ({
+            name: name || null,
+            ...orderTotals(teamRows),
+          }),
+        ),
+        shipmentWeeks: [
+          ...group(shipmentsByOrder.get(order) ?? [], ({ date }) =>
+            opsWeek(date),
+          ),
+        ].map(([week, batches]) => ({
+          week,
+          shipped: sumKnown(batches.map(({ amount }) => amount)),
+        })),
+        receivableCount: documents.length,
+        invoiceCount: invoiceNumbers.size,
+        receiptCount: receipts.size,
       };
     })
     .sort(
@@ -105,18 +224,30 @@ export function salesOperationsView(snapshot: SalesOperationsSnapshot) {
         paymentReceivables: new Set(
           allocations.map(({ receivable }) => receivable),
         ).size,
+        groupOrders: new Set(
+          rows
+            .filter(({ customer }) =>
+              /^DE\s*HK(?:\s+LIMITED)?$/i.test(customer.trim()),
+            )
+            .map(({ order }) => order),
+        ).size,
       };
     })
     .sort((a, b) => a.currency.localeCompare(b.currency));
   return {
     from,
     asOf,
+    version: snapshot.publication?.id ?? asOf,
     sources,
     weekly,
     orders,
     currencies,
     customers: breakdown("customer"),
     teams: breakdown("team"),
+    splitTeamOrders: orders.filter((order) => order.teams.length > 1).length,
+    shipmentRegister,
+    receivableRegister,
+    paymentRegister,
     shipmentCount: new Set(shipments.map(({ document }) => document)).size,
     receivableCount: receivables.length,
     invoiceCount: new Set(receivables.flatMap(({ invoices }) => invoices)).size,
@@ -131,6 +262,7 @@ export function salesOperationsView(snapshot: SalesOperationsSnapshot) {
 export function salesOperationsOrder(
   snapshot: SalesOperationsSnapshot,
   order: string,
+  mappings?: TeamMappings,
 ) {
   const lines = snapshot.lines.filter((line) => line.order === order);
   if (!lines.length) return null;
@@ -141,14 +273,24 @@ export function salesOperationsOrder(
     date: lines[0].date,
     customer: lines[0].customer,
     currency: lines[0].currency,
-    lines,
+    lines: lines.map((line) => ({
+      ...line,
+      reportingTeam: ddcTeam(line, mappings),
+    })),
     links,
     shipments: snapshot.shipments.filter(
       (shipment) => shipment.order === order,
     ),
-    receivables: snapshot.receivables.filter(({ document }) =>
-      selected.has(document),
-    ),
+    receivables: snapshot.receivables
+      .filter(({ document }) => selected.has(document))
+      .map((row) => ({
+        ...row,
+        linkedOrderCount: new Set(
+          snapshot.receivableLinks
+            .filter(({ document }) => document === row.document)
+            .map(({ order }) => order),
+        ).size,
+      })),
     payments: snapshot.payments.filter(({ receivable }) =>
       selected.has(receivable),
     ),
@@ -156,6 +298,44 @@ export function salesOperationsOrder(
 }
 
 export type SalesOperationsView = ReturnType<typeof salesOperationsView>;
+export type OpsOrderSummary = SalesOperationsView["orders"][number];
+export type OpsOrderSelection = { currency: OpsCurrency } & (
+  | { dimension: "byWeek"; week: string }
+  | { dimension: "byCustomer" | "byTeam"; name: string | null }
+);
+
+export function opsSelectedOrders(
+  rows: OpsOrderSummary[],
+  selection?: OpsOrderSelection,
+) {
+  if (!selection) return rows;
+  return rows.flatMap((row) => {
+    if (row.currency !== selection.currency) return [];
+    if (selection.dimension === "byCustomer")
+      return row.customer === selection.name ? [row] : [];
+    if (selection.dimension === "byTeam") {
+      const team = row.teams.find(({ name }) => name === selection.name);
+      return team ? [{ ...row, ...team, teams: [team] }] : [];
+    }
+    if (selection.dimension === "byWeek") {
+      const placed = opsWeek(row.date) === selection.week;
+      const shipped = row.shipmentWeeks.find(
+        ({ week }) => week === selection.week,
+      );
+      return placed || shipped
+        ? [
+            {
+              ...row,
+              ordered: placed ? row.ordered : null,
+              open: placed ? row.open : null,
+              shipped: shipped?.shipped ?? null,
+            },
+          ]
+        : [];
+    }
+    return [];
+  });
+}
 export type SalesOperationsOrder = NonNullable<
   ReturnType<typeof salesOperationsOrder>
 >;

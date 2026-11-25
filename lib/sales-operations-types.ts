@@ -1,5 +1,12 @@
 export type OpsCurrency = "CNY" | "EUR";
 
+export const opsExportKinds = [
+  "summary",
+  "detail",
+  "receivables",
+  "receipts",
+] as const;
+
 export type OpsOrderLine = {
   order: string;
   line: number;
@@ -68,4 +75,5 @@ export type SalesOperationsSnapshot = {
   receivables: OpsReceivable[];
   receivableLinks: OpsReceivableLink[];
   payments: OpsPayment[];
+  publication?: { id: string; fingerprint: string; at: string };
 };

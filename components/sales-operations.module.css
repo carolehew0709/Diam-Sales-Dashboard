@@ -6,13 +6,218 @@
   font-size: 12px;
 }
 
-.amount small {
-  color: var(--muted);
-  font-size: 0.42em;
-  letter-spacing: normal;
+.pageHeader h1 {
+  font-size: clamp(34px, 4.8vw, 66px);
+  text-wrap: balance;
 }
 
-.orderControls,
+.headerActions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+}
+
+.metricGrid .metricCard {
+  grid-template-rows: auto 1fr auto;
+  padding: clamp(14px, 1.5vw, 22px);
+  gap: 12px;
+  border-top: 2px solid #ae854b;
+  background:
+    linear-gradient(150deg, #f4eadb 0%, transparent 60%), var(--panel);
+}
+
+.metricGrid .metricCard:nth-child(2) {
+  border-top-color: #54785f;
+  background-image: linear-gradient(150deg, #e8efe7 0%, transparent 60%);
+}
+
+.metricGrid .metricCard:nth-child(3) {
+  border-top-color: #a87743;
+  background-image: linear-gradient(150deg, #f5ede0 0%, transparent 60%);
+}
+
+.metricGrid .metricCard:nth-child(4) {
+  border-top-color: #587585;
+  background-image: linear-gradient(150deg, #e9eff2 0%, transparent 60%);
+}
+
+.metricHeading {
+  display: flex;
+  align-items: center;
+  gap: 9px;
+}
+
+.metricHeading > span {
+  flex: none;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 9px;
+  background: #ffffff96;
+  color: var(--ink);
+}
+
+.metricHeading h2 {
+  margin: 0;
+  font-size: clamp(14px, 1.2vw, 17px);
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+
+.metricFigures,
+.metricSupporting {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+}
+
+.metricFigures .metricFigure,
+.metricSupporting .metricFigure {
+  display: flex;
+  align-items: baseline;
+  gap: 7px;
+  flex-wrap: wrap;
+  font-variant-numeric: tabular-nums;
+}
+
+.metricFigures .metricFigure strong {
+  font-size: clamp(23px, 2.7vw, 40px);
+  overflow-wrap: anywhere;
+}
+
+.metricSupporting .metricFigure strong {
+  font-size: 14px;
+  font-weight: 650;
+  letter-spacing: 0;
+}
+
+.metricFigure small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.metricCard:has(.orderCount) {
+  grid-template-rows: auto auto 1fr auto;
+}
+
+.metricCaption,
+.groupSource {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.metricCaption {
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.groupSource {
+  margin-top: -8px;
+}
+
+.register {
+  scroll-margin-top: 110px;
+}
+
+.registerControls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: end;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.registerControls .field {
+  max-width: min(100%, 325px);
+}
+
+.registerControls .checkbox {
+  align-self: center;
+}
+
+.scopePill,
+.partial,
+.shared {
+  color: var(--gold-strong);
+  border-radius: 6px;
+  background: #eee4d2;
+  font-size: 11px;
+}
+
+.scopePill {
+  display: inline-flex;
+  align-self: center;
+  align-items: center;
+  gap: 6px;
+  border: 1px solid var(--line);
+  padding: 7px 9px;
+  cursor: pointer;
+}
+
+.partial {
+  display: inline-block;
+  margin: 3px 0 0 6px;
+  padding: 2px 5px;
+}
+
+.shared {
+  display: block;
+  width: fit-content;
+  margin-top: 4px;
+  padding: 3px 6px;
+}
+
+.orderLinks {
+  display: grid;
+  justify-items: start;
+  gap: 3px;
+}
+
+.activeRow {
+  background: #f8f1e5;
+}
+
+.importFields {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  padding: 0;
+  border: 0;
+  margin: 12px 0;
+}
+
+.importFields label {
+  min-width: 0;
+}
+
+.importReview {
+  margin-top: 16px;
+}
+
+.importReview button {
+  margin-top: 12px;
+}
+
+@media (max-width: 580px) {
+  .metricHeading {
+    align-items: start;
+  }
+
+  .metricHeading > span {
+    width: 26px;
+    height: 26px;
+  }
+
+  .importFields {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
 .pagination {
   display: flex;
   align-items: center;

@@ -27,6 +27,11 @@
   outline-offset: -2px;
 }
 
+.header:global(.dashboard-header) :global(.topnav-links) a[aria-current="page"] {
+  border-bottom-color: var(--gold-soft);
+  color: var(--gold-soft);
+}
+
 @media (max-width: 1000px) {
   .header:global(.topbar.dashboard-header) {
     grid-template-columns: minmax(0, 1fr) auto;

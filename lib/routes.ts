@@ -1,19 +1,34 @@
-import { isLocale, type Locale } from "./i18n";
+import { isLocale, type Locale, type MessageKey } from "./i18n";
+export const salesPages = [
+  "overview",
+  "sales-team",
+  "customer",
+  "management-checks",
+] as const;
+export type SalesPage = (typeof salesPages)[number];
+export const salesPageLabels: Record<SalesPage, MessageKey> = {
+  overview: "nav.overview",
+  "sales-team": "team.label",
+  customer: "common.customer",
+  "management-checks": "nav.checks",
+};
 export const pages = [
   "home",
-  "overview",
+  ...salesPages,
   "ar-aging",
   "pipeline",
   "sales-operations",
   "quotation",
   "analysis",
   "business-units",
-  "management-checks",
   "imports",
   "admin",
   "login",
 ] as const;
 export type Page = (typeof pages)[number];
+export function isSalesPage(value: unknown): value is SalesPage {
+  return typeof value === "string" && salesPages.includes(value as SalesPage);
+}
 export const dashboardSections = [
   "overview",
   "analysis",
@@ -27,6 +42,9 @@ export function isDashboardSection(value: string): value is DashboardSection {
   return dashboardSections.includes(value as DashboardSection);
 }
 export function sectionPath(locale: Locale, section: DashboardSection) {
+  if (section === "sales-team-section") return pagePath(locale, "sales-team");
+  if (section === "customer-section") return pagePath(locale, "customer");
+  if (isSalesPage(section)) return pagePath(locale, section);
   return `${pagePath(locale, "overview")}#${section}`;
 }
 export function isPage(value: unknown): value is Page {

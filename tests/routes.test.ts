@@ -8,6 +8,8 @@ import {
   switchLanguagePath,
   sectionPath,
   isDashboardSection,
+  salesPages,
+  isSalesPage,
 } from "../lib/routes";
 test("every page has a bilingual address", () => {
   for (const locale of ["en", "zh-CN"] as const)
@@ -55,6 +57,15 @@ test("dashboard deep links preserve anchors while sign-in starts at home", () =>
   );
   assert.equal(loginDestination("en"), "/en/home");
   assert.equal(isDashboardSection("imports"), false);
+});
+
+test("Sales subsections have independent pages and former anchors reach their destination", () => {
+  assert.deepEqual(salesPages, ["overview", "sales-team", "customer", "management-checks"]);
+  assert.equal(sectionPath("en", "sales-team-section"), "/en/sales-team");
+  assert.equal(sectionPath("en", "customer-section"), "/en/customer");
+  assert.equal(sectionPath("zh-CN", "management-checks"), "/zh-CN/management-checks");
+  assert.equal(switchLanguagePath("/en/sales-team", "zh-CN"), "/zh-CN/sales-team");
+  assert.equal(isSalesPage("analysis"), false);
 });
 
 test("home is the default login destination and retains its locale", () => {

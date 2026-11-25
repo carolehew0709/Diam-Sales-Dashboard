@@ -3,9 +3,10 @@ import { useI18n } from "@/components/i18n-provider";
 import Image from "next/image";
 import Link from "next/link";
 import {
+  isSalesPage,
   pagePath,
-  sectionPath,
-  type DashboardSection,
+  salesPageLabels,
+  salesPages,
   type Page,
 } from "@/lib/routes";
 import { useDashboardNavigation } from "./use-dashboard-navigation";
@@ -32,7 +33,9 @@ export function DashboardShell({
   children: React.ReactNode;
 }) {
   const { tr, locale } = useI18n();
-  const { header, active } = useDashboardNavigation(page, locale);
+  const header = useDashboardNavigation(page, locale);
+  const onSalesPage = isSalesPage(page);
+  const salesAccess = canAccessModule(user, "overview");
   const quotation = page === "quotation";
   const pipeline = page === "pipeline";
   const salesOps = page === "sales-operations";
@@ -69,9 +72,9 @@ export function DashboardShell({
           >
             <House size={13} aria-hidden="true" /> {tr("nav.home")}
           </Link>
-          {canAccessModule(user, "overview") && <Link
+          {salesAccess && <Link
             href={pagePath(locale, "overview")}
-            aria-current={page === "overview" ? "page" : undefined}
+            aria-current={onSalesPage ? "page" : undefined}
           >
             {tr("nav.performance")}
           </Link>}
@@ -107,47 +110,20 @@ export function DashboardShell({
             {tr("nav.salesOperations")}
           </Link>}
         </nav>
-        {page !== "home" && page !== "ar-aging" && !standalone && (
-          <nav className="topnav">
+        {onSalesPage && salesAccess && (
+          <nav className="topnav" aria-label={tr("nav.performance")}>
             <span className="topnav-links">
-              {[
-                ["overview", tr("nav.overview")],
-                ["analysis", tr("nav.analysis")],
-                ["business-units", tr("nav.entities")],
-                ["sales-team-section", tr("team.label")],
-                ["customer-section", tr("common.customer")],
-                ["management-checks", tr("nav.checks")],
-              ].map(([id, label]) => (
+              {salesPages.map((destination) => (
                 <Link
-                  key={id}
-                  href={sectionPath(locale, id as DashboardSection)}
+                  key={destination}
+                  href={pagePath(locale, destination)}
                   scroll={false}
-                  aria-current={
-                    page === "overview" && active === id
-                      ? "location"
-                      : undefined
-                  }
-                  onClick={(event) => {
-                    if (
-                      page !== "overview" ||
-                      event.metaKey ||
-                      event.ctrlKey ||
-                      event.shiftKey ||
-                      event.altKey ||
-                      event.button !== 0
-                    )
-                      return;
-                    event.preventDefault();
-                    if (window.location.hash !== `#${id}`)
-                      window.history.pushState(
-                        null,
-                        "",
-                        sectionPath(locale, id as DashboardSection),
-                      );
-                    window.dispatchEvent(new HashChangeEvent("hashchange"));
+                  aria-current={page === destination ? "page" : undefined}
+                  onNavigate={() => {
+                    if (page !== destination) window.scrollTo({ top: 0, behavior: "instant" });
                   }}
                 >
-                  {label}
+                  {tr(salesPageLabels[destination])}
                 </Link>
               ))}
             </span>
@@ -161,7 +137,7 @@ export function DashboardShell({
                 className="import-data"
                 href={
                   pagePath(locale, "imports") +
-                  `?from=${page === "ar-aging" ? "ar-aging" : "overview"}`
+                  `?from=${page === "ar-aging" || onSalesPage ? page : "overview"}`
                 }
                 title={tr("nav.import")}
                 aria-label={tr("nav.import")}

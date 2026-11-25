@@ -9,8 +9,8 @@ import {
   ShieldCheck,
   LoaderCircle,
 } from "lucide-react";
-import { pagePath, sectionPath } from "@/lib/routes";
-import { canEdit, canManageUsers, canView } from "@/lib/permissions";
+import { pagePath, salesPageLabels, salesPages } from "@/lib/routes";
+import { canAccessModule, canEdit, canManageUsers, canView } from "@/lib/permissions";
 import { entities } from "@/lib/entities";
 import type { User } from "@/lib/types";
 
@@ -130,30 +130,15 @@ export function AccountMenu({
             >
               {tr("nav.home")}
             </Link>
-            <Link
-              href={pagePath(locale, "overview")}
-              onClick={() => setOpen(false)}
-            >
-              {tr("nav.overview")}
-            </Link>
-            <Link
-              href={sectionPath(locale, "analysis")}
-              onClick={() => setOpen(false)}
-            >
-              {tr("nav.analysis")}
-            </Link>
-            <Link
-              href={sectionPath(locale, "business-units")}
-              onClick={() => setOpen(false)}
-            >
-              {tr("nav.entities")}
-            </Link>
-            <Link
-              href={sectionPath(locale, "management-checks")}
-              onClick={() => setOpen(false)}
-            >
-              {tr("nav.checks")}
-            </Link>
+            {canAccessModule(user, "overview") && salesPages.map((page) => (
+              <Link
+                key={page}
+                href={pagePath(locale, page)}
+                onClick={() => setOpen(false)}
+              >
+                {tr(salesPageLabels[page])}
+              </Link>
+            ))}
           </nav>
           {canManageUsers(user) && (
             <Link

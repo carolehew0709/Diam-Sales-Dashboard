@@ -52,8 +52,10 @@ export function ChartWorkbookExport({
       setError(tr("graphics.workbookError"));
       return;
     }
+    const workbookPage = root.dataset.workbookPage;
     const wasCurrent = () =>
       root.isConnected &&
+      root.dataset.workbookPage === workbookPage &&
       root.getAttribute("aria-busy") !== "true" &&
       !root.querySelector(
         '[data-customer-status="loading"], [data-customer-status="error"]',
@@ -185,6 +187,7 @@ export function ChartWorkbookExport({
             }}
           >
             <h2 id={titleId}>{tr("graphics.workbookLanguage")}</h2>
+            <p className={styles.exportScope}>{tr("graphics.workbookCurrentPage")}</p>
             <div
               role="group"
               aria-labelledby={titleId}

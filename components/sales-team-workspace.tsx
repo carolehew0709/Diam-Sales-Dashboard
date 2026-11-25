@@ -1,11 +1,13 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { Dashboard } from "@/lib/dashboard";
 import { dashboardFilterKey } from "@/lib/dashboard-presentation";
 import { useI18n } from "./i18n-provider";
-import { TeamContributionGraphic } from "./sales-graphics";
+import { TeamBudgetGraphic } from "./team-actual-graphics";
+import { TeamPerformanceGraphic } from "./team-performance-graphic";
 import { TeamCustomerMonthlySales } from "./sales-trend-workspace";
+import { useWorkbookGroup } from "./use-workbook-group";
 import styles from "./sales-trend-workspace.module.css";
 
 export function SalesTeamWorkspace({ data }: { data: Dashboard }) {
@@ -116,7 +118,7 @@ export function SalesTeamWorkspace({ data }: { data: Dashboard }) {
       </div>
       {pending && <p role="status">{tr("auth.updating")}</p>}
       {failed && <p role="alert">{tr("monthlyDetail.loadError")}</p>}
-      <TeamContributionGraphic data={visible} />
+      <TeamSalesGraphics data={visible} />
       <details
         className="graphics-entity-details"
         open={monthlyOpen}
@@ -131,6 +133,26 @@ export function SalesTeamWorkspace({ data }: { data: Dashboard }) {
           />
         )}
       </details>
+    </div>
+  );
+}
+
+function TeamSalesGraphics({
+  data,
+  exportOnly = false,
+}: {
+  data: Dashboard;
+  exportOnly?: boolean;
+}) {
+  const root = useRef<HTMLDivElement>(null);
+  useWorkbookGroup(
+    root,
+    exportOnly ? null : () => <TeamSalesGraphics data={data} exportOnly />,
+  );
+  return (
+    <div ref={root} className="team-contribution-graphic">
+      <TeamPerformanceGraphic data={data} />
+      <TeamBudgetGraphic data={data} />
     </div>
   );
 }

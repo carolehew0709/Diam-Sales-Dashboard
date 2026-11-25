@@ -1,5 +1,5 @@
 import type { Entity, User, WorkspaceModule } from "./types";
-import type { Page } from "./routes";
+import { isSalesPage, type Page } from "./routes";
 
 export const workspaceModules: WorkspaceModule[] = [
   "overview",
@@ -28,11 +28,10 @@ export function canAccessModule(user: User, module: WorkspaceModule) {
 }
 
 export function canAccessPage(user: User, page: Page) {
-  const module = ["analysis", "business-units", "management-checks"].includes(
-    page,
-  )
-    ? "overview"
-    : page;
+  const module =
+    isSalesPage(page) || page === "analysis" || page === "business-units"
+      ? "overview"
+      : page;
   return (
     !workspaceModules.includes(module as WorkspaceModule) ||
     canAccessModule(user, module as WorkspaceModule)

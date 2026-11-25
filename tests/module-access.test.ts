@@ -12,6 +12,7 @@ import {
   workspaceModules,
   userAccessPolicy,
 } from "../lib/permissions";
+import { salesPages } from "../lib/routes";
 import { securityChanged } from "../lib/account-management";
 import { entities } from "../lib/entities";
 import { hasPipelineAccess, pipelineForWeek } from "../lib/pipeline";
@@ -41,10 +42,9 @@ test("Finance readers have only their selected modules and China Entity scope", 
     ["dcp", "ddc", "dhk"],
   );
   for (const page of [
-    "overview",
+    ...salesPages,
     "analysis",
     "business-units",
-    "management-checks",
     "ar-aging",
     "sales-operations",
   ] as const)
@@ -60,6 +60,11 @@ test("Finance readers have only their selected modules and China Entity scope", 
     assert.equal(canEdit(finance, entity), false);
     assert.equal(canPublish(finance, entity), false);
   }
+});
+
+test("An account without Sales Performance access cannot open any Sales subpage", () => {
+  const arOnly: User = { ...finance, access: { modules: ["ar-aging"], export: true } };
+  for (const page of salesPages) assert.equal(canAccessPage(arOnly, page), false);
 });
 
 test("Account access editing preserves legacy defaults and disabled account configuration", () => {

@@ -1,6 +1,4 @@
 "use client";
-import { TeamBudgetGraphic } from "./team-actual-graphics";
-import { TeamPerformanceGraphic } from "./team-performance-graphic";
 import { integerAxis } from "@/lib/chart-axis";
 import { weeklySourceReference } from "@/lib/fiscal-years";
 import { useI18n } from "./i18n-provider";
@@ -279,8 +277,6 @@ export const TeamContributionGraphic = memo(function TeamContributionGraphic({
     .filter(({ index }) => teamRows.some((row) => row.monthly[index] !== 0));
   return (
     <div ref={root} className="team-contribution-graphic">
-      <TeamPerformanceGraphic data={data} />
-      <TeamBudgetGraphic data={data} />
       <GraphicCard
         title={tr("graphics.teamContribution")}
         context={context}

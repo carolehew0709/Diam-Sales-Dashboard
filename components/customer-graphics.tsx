@@ -24,6 +24,7 @@ import { chartAmount, salesNumber } from "@/lib/chart-tooltip";
 import { customerAnalysisQuery } from "@/lib/dashboard-presentation";
 
 type View = ReturnType<typeof customerAnalysisView>;
+type Variant = "overview" | "customer";
 const groupKeys: Record<string, MessageKey> = {
   "Key Customer": "graphics.keyCustomers",
   "Other Customers": "graphics.otherCustomers",
@@ -42,14 +43,19 @@ export const CustomerGraphics = memo(function CustomerGraphics({
   filters,
   revision,
   latest,
+  variant,
+  month,
+  setMonth,
   children,
 }: {
   filters: Filters;
   revision: number;
   latest?: View;
+  variant: Variant;
+  month: string;
+  setMonth: (month: string) => void;
   children?: ReactNode;
 }) {
-  const [month, setMonth] = useState("");
   const [renderPending, startTransition] = useTransition();
   const selectedMonth = month.startsWith(`${filters.year}-`) ? month : "";
   const query = customerAnalysisQuery(filters, selectedMonth);
@@ -92,6 +98,7 @@ export const CustomerGraphics = memo(function CustomerGraphics({
       pending={!current || renderPending}
       selectedMonth={selectedMonth}
       setMonth={setMonth}
+      variant={variant}
       orderbook={children}
     />
   );
@@ -102,6 +109,7 @@ function CustomerGraphicsView({
   pending = false,
   selectedMonth,
   setMonth,
+  variant,
   exportOnly = false,
   orderbook,
 }: {
@@ -109,6 +117,7 @@ function CustomerGraphicsView({
   pending?: boolean;
   selectedMonth: string;
   setMonth: (month: string) => void;
+  variant: Variant;
   exportOnly?: boolean;
   orderbook?: ReactNode;
 }) {
@@ -123,12 +132,14 @@ function CustomerGraphicsView({
             current={current}
             selectedMonth={selectedMonth}
             setMonth={() => {}}
+            variant={variant}
             exportOnly
           />
         ),
   );
   const view = current?.data,
     analysis = view?.analysis;
+  const isOverview = variant === "overview";
   const monthLabel = (m: string) =>
     new Intl.DateTimeFormat(locale === "zh-CN" ? "zh-CN" : "en", {
       year: "numeric",
@@ -175,7 +186,7 @@ function CustomerGraphicsView({
     metrics && metrics.keyTotal > 0
       ? salesNumber(amount / metrics.keyTotal, locale, 2, "percent")
       : "—";
-  const contributionTable = analysis && (
+  const contributionTable = !isOverview && analysis && (
     <table className="bu-table">
       <thead>
         <tr>
@@ -195,7 +206,7 @@ function CustomerGraphicsView({
       </tbody>
     </table>
   );
-  const customerTable = analysis && (
+  const customerTable = !isOverview && analysis && (
     <table className="bu-table">
       <thead>
         <tr>
@@ -258,7 +269,7 @@ function CustomerGraphicsView({
     1,
     ...(analysis?.customers.flatMap((c) => [c.prior, c.current]) ?? []),
   );
-  const customerExport: ChartTable | null = analysis
+  const customerExport: ChartTable | null = !isOverview && analysis
     ? {
         columns: [
           { label: tr("common.customer") },
@@ -292,7 +303,7 @@ function CustomerGraphicsView({
         <div>
           <p className="panel-kicker">{tr("graphics.monthlyKicker")}</p>
           <h2 id={exportOnly ? undefined : "customer-graphics-title"}>
-            {tr("graphics.customerTitle")}
+            {tr(isOverview ? "graphics.customerOverview" : "graphics.customerTitle")}
           </h2>
         </div>
         {!!view?.months.length && (
@@ -334,7 +345,7 @@ function CustomerGraphicsView({
             })}{" "}
             · {tr("graphics.customerRule")}
           </p>
-          <div className="graphics-customer-kpis">
+          {isOverview && <div className="graphics-customer-kpis">
             <div>
               <span>{tr("graphics.keyTotal")}</span>
               <strong>
@@ -357,9 +368,9 @@ function CustomerGraphicsView({
                 {monthLabel(analysis.month)}
               </strong>
             </div>
-          </div>
+          </div>}
           <div className="graphics-grid">
-            {view?.customerScoped ? (
+            {isOverview && (view?.customerScoped ? (
               <p className="graphic-wide graphic-unavailable">
                 {tr("graphics.customerBreakdownUnavailable")}
               </p>
@@ -531,8 +542,8 @@ function CustomerGraphicsView({
                   </g>
                 ))}
               </GraphicCard>
-            )}
-            <GraphicCard
+            ))}
+            {!isOverview && <><GraphicCard
               title={tr("graphics.customerPie")}
               context={context}
               note={`${tr("graphics.pieRule")} ${sourceNote}`}
@@ -637,7 +648,7 @@ function CustomerGraphicsView({
                 ]}
                 y={375}
               />
-            </GraphicCard>
+            </GraphicCard></>}
           </div>
         </>
       )}

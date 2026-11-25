@@ -3,9 +3,12 @@ import { usePathname, useRouter } from "next/navigation";
 import dynamic from "next/dynamic";
 import {
   loginDestination,
+  isSalesPage,
   pagePath,
   parsePagePath,
+  salesPageLabels,
   type Page,
+  type SalesPage,
 } from "@/lib/routes";
 import { useI18n } from "@/components/i18n-provider";
 import { matchesRegion } from "@/lib/entities";
@@ -39,6 +42,7 @@ import { SalesTeamWorkspace } from "@/components/sales-team-workspace";
 import {
   SalesGraphics,
   BusinessUnitGraphics,
+  TeamContributionGraphic,
 } from "@/components/sales-graphics";
 import { CustomerGraphics } from "@/components/customer-graphics";
 import { KeyCustomerOrders } from "@/components/key-customer-orders";
@@ -175,20 +179,10 @@ function MetricsTable({
     </div>
   );
 }
-const DashboardView = memo(function DashboardView({
-  data,
-  setFilters,
-}: {
-  data: Dashboard;
-  setFilters: Dispatch<SetStateAction<Filters>>;
-}) {
-  const { tr, display, locale } = useI18n();
+function SalesPageHeading({ data, page }: { data: Dashboard; page: SalesPage }) {
+  const { tr, display } = useI18n();
   const [readiness, setReadiness] = useState(false);
   const snapshotWrapper = useRef<HTMLDivElement>(null);
-  const customerOrders = useMemo(
-    () => <KeyCustomerOrders data={data} />,
-    [data],
-  );
   useEffect(() => {
     if (!readiness) return;
     const outside = (event: PointerEvent) => {
@@ -210,58 +204,16 @@ const DashboardView = memo(function DashboardView({
       document.removeEventListener("keydown", escape);
     };
   }, [readiness]);
-  // Keep the last complete snapshot and its source labels while filters load.
-  const filters = data.filters;
-  const t = data.totals;
-  const showForecast = showProspectForecast(filters, t);
-  const hasLegacySplit =
-    filters.year === 2026 &&
-    data.rows.some((r) => r.snapshot?.baseOverride != null);
-  const partial = (key: Dashboard["partialKeys"][number]) =>
-    data.partialKeys.includes(key) ? tr("metric.partialSource") : "";
-  const selectEntity = (id: string) =>
-    setFilters((requested) => ({
-      ...requested,
-      region: requested.region,
-      bu:
-        id === "all"
-          ? "all"
-          : (data.entities.find((e) => e.id === id)?.businessUnit ?? "all"),
-      entity: "all",
-      customer: "all",
-    }));
-  const totalRows = [
-    {
-      id: filters.region,
-      name: tr(data.graphics.teamKpiSource ? "teamKpi.subtotal" : "strip.total", { region: display(filters.region) }),
-      description: tr("notes.sources", {
-        count: data.regionRows.filter((r) => r.snapshot).length,
-        total: data.regionRows.length,
-      }),
-      metrics: data.regionTotal,
-      scenarioAmount: sumKnown(data.regionRows.map((row) => selectedSalesScenario(row, filters))),
-    },
-    ...data.regionRows.map((r) => ({
-      id: r.entity.id,
-      name: r.entity.code,
-      description: r.entity.description,
-      metrics: r.metrics,
-      scenarioAmount: selectedSalesScenario(r, filters),
-      week: r.snapshot?.week,
-    })),
-  ];
-  const dimensionScoped =
-    (!!filters.salesTeam && filters.salesTeam !== "all") ||
-    (!!filters.customer && filters.customer !== "all");
+  const { filters, totals: t } = data;
   return (
     <>
-      <section className="executive-head" id="overview">
+      <section className="executive-head" id={page === "overview" ? "overview" : undefined}>
         <div>
           <p className="eyebrow">
             {tr("overview.performance")} {filters.year}
           </p>
-          <h1>{tr("overview.salesYear", { year: filters.year })}</h1>
-          <p className="executive-subtitle">{tr("overview.subtitle")}</p>
+          <h1>{page === "overview" ? tr("overview.salesYear", { year: filters.year }) : tr(salesPageLabels[page])}</h1>
+          {page === "overview" && <p className="executive-subtitle">{tr("overview.subtitle")}</p>}
         </div>
         <div className="snapshot-wrapper" ref={snapshotWrapper}>
           <button
@@ -344,296 +296,409 @@ const DashboardView = memo(function DashboardView({
       </section>
       <DashboardFilters data={data} />
       <p className={styles.roundingNote}>{tr("graphics.roundedDisplay")}</p>
-      <>
-        {dimensionScoped && (
-          <p className="apac-notice">{tr(data.graphics.teamKpiSource ? "teamKpi.scope" : "filters.dimensionLimitation",data.graphics.teamKpiSource ?? {})}</p>
-        )}
-        {data.regionRows.length > 0 && (
-          <section
-            className="china-strip"
-            style={
-              {
-                "--summary-columns": data.regionRows.length + 1,
-              } as CSSProperties
-            }
-            aria-label={tr("strip.details", {
-              region: display(filters.region),
-            })}
-          >
-            <button
-              onClick={() => selectEntity("all")}
-              className={
-                filters.bu === "all" && filters.entity === "all"
-                  ? "selected"
-                  : ""
-              }
-            >
-              <small>
-                {tr(data.graphics.teamKpiSource ? "teamKpi.subtotal" : "strip.total", { region: display(filters.region) })}
-                {filters.year}
-              </small>
-              <strong>
-                {formatK(
-                  filters.scenario === "Sales"
-                    ? sumKnown(
-                        data.regionRows.map((r) =>
-                          chinaStripAmount(r, filters),
-                        ),
-                      )
-                    : data.regionTotal.base,
-                )}{" "}
-                <em>kEUR</em>
-              </strong>
-              <span>
-                {filters.scenario === "Sales"
-                  ? tr("metric.salesDate")
-                  : tr("china.known")}
-              </span>
-            </button>
-            {[...data.regionRows]
-              .sort(
-                (a, b) =>
-                  ["dhk", "ddc", "dcp"].indexOf(a.entity.id) -
-                  ["dhk", "ddc", "dcp"].indexOf(b.entity.id),
-              )
-              .map((r) => (
-                <button
-                  key={r.entity.id}
-                  className={
-                    filters.bu === r.entity.businessUnit ? "selected" : ""
-                  }
-                  onClick={() => selectEntity(r.entity.id)}
-                >
-                  <small>
-                    {r.entity.code} · {display(r.entity.description)}
-                  </small>
-                  <strong>
-                    {formatK(chinaStripAmount(r, filters))} <em>kEUR</em>
-                  </strong>
-                  <span>
-                    {filters.scenario === "Sales" ? (
-                      `${tr("metric.salesDate")} · `
-                    ) : (
-                      <>
-                        {r.entity.id === "ddc" &&
-                          filters.year === 2026 &&
-                          `${tr("metric.baseOB")} · `}
-                        {r.entity.id === "dcp" &&
-                          filters.year === 2026 &&
-                          r.snapshot?.sourceCells.dcpReporting &&
-                          `${tr(filters.salesType === "external" ? "metric.baseOB" : "metric.salesDate")} · `}
-                      </>
-                    )}
-                    {r.snapshot
-                      ? `W${data.graphics.teamKpiSource ? r.snapshot.teamActualSource?.week ?? r.snapshot.week : r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`
-                      : tr("china.pending")}
-                  </span>
-                </button>
-              ))}
-          </section>
-        )}
-        {!data.rows.length && (
-          <p className="apac-notice">{tr("overview.noData")}</p>
-        )}
+    </>
+  );
+}
+
+const ExecutiveOverview = memo(function ExecutiveOverview({
+  data,
+  setFilters,
+}: {
+  data: Dashboard;
+  setFilters: Dispatch<SetStateAction<Filters>>;
+}) {
+  const { tr, display, locale } = useI18n();
+  // Keep the last complete snapshot and its source labels while filters load.
+  const filters = data.filters;
+  const t = data.totals;
+  const showForecast = showProspectForecast(filters, t);
+  const hasLegacySplit =
+    filters.year === 2026 &&
+    data.rows.some((r) => r.snapshot?.baseOverride != null);
+  const partial = (key: Dashboard["partialKeys"][number]) =>
+    data.partialKeys.includes(key) ? tr("metric.partialSource") : "";
+  const selectEntity = (id: string) =>
+    setFilters((requested) => ({
+      ...requested,
+      region: requested.region,
+      bu:
+        id === "all"
+          ? "all"
+          : (data.entities.find((e) => e.id === id)?.businessUnit ?? "all"),
+      entity: "all",
+      customer: "all",
+    }));
+  const totalRows = [
+    {
+      id: filters.region,
+      name: tr(data.graphics.teamKpiSource ? "teamKpi.subtotal" : "strip.total", { region: display(filters.region) }),
+      description: tr("notes.sources", {
+        count: data.regionRows.filter((r) => r.snapshot).length,
+        total: data.regionRows.length,
+      }),
+      metrics: data.regionTotal,
+      scenarioAmount: sumKnown(data.regionRows.map((row) => selectedSalesScenario(row, filters))),
+    },
+    ...data.regionRows.map((r) => ({
+      id: r.entity.id,
+      name: r.entity.code,
+      description: r.entity.description,
+      metrics: r.metrics,
+      scenarioAmount: selectedSalesScenario(r, filters),
+      week: r.snapshot?.week,
+    })),
+  ];
+  const dimensionScoped =
+    (!!filters.salesTeam && filters.salesTeam !== "all") ||
+    (!!filters.customer && filters.customer !== "all");
+  return (
+    <>
+      {dimensionScoped && (
+        <p className="apac-notice">{tr(data.graphics.teamKpiSource ? "teamKpi.scope" : "filters.dimensionLimitation",data.graphics.teamKpiSource ?? {})}</p>
+      )}
+      {data.regionRows.length > 0 && (
         <section
-          className={`kpi-grid${showForecast ? "" : " kpi-grid-merged"}`}
-          style={{ "--kpi-columns": showForecast ? 6 : 5 } as CSSProperties}
-          id="analysis"
+          className="china-strip"
+          style={
+            {
+              "--summary-columns": data.regionRows.length + 1,
+            } as CSSProperties
+          }
+          aria-label={tr("strip.details", {
+            region: display(filters.region),
+          })}
         >
+          <button
+            onClick={() => selectEntity("all")}
+            className={
+              filters.bu === "all" && filters.entity === "all"
+                ? "selected"
+                : ""
+            }
+          >
+            <small>
+              {tr(data.graphics.teamKpiSource ? "teamKpi.subtotal" : "strip.total", { region: display(filters.region) })}
+              {filters.year}
+            </small>
+            <strong>
+              {formatK(
+                filters.scenario === "Sales"
+                  ? sumKnown(
+                      data.regionRows.map((r) =>
+                        chinaStripAmount(r, filters),
+                      ),
+                    )
+                  : data.regionTotal.base,
+              )}{" "}
+              <em>kEUR</em>
+            </strong>
+            <span>
+              {filters.scenario === "Sales"
+                ? tr("metric.salesDate")
+                : tr("china.known")}
+            </span>
+          </button>
+          {[...data.regionRows]
+            .sort(
+              (a, b) =>
+                ["dhk", "ddc", "dcp"].indexOf(a.entity.id) -
+                ["dhk", "ddc", "dcp"].indexOf(b.entity.id),
+            )
+            .map((r) => (
+              <button
+                key={r.entity.id}
+                className={
+                  filters.bu === r.entity.businessUnit ? "selected" : ""
+                }
+                onClick={() => selectEntity(r.entity.id)}
+              >
+                <small>
+                  {r.entity.code} · {display(r.entity.description)}
+                </small>
+                <strong>
+                  {formatK(chinaStripAmount(r, filters))} <em>kEUR</em>
+                </strong>
+                <span>
+                  {filters.scenario === "Sales" ? (
+                    `${tr("metric.salesDate")} · `
+                  ) : (
+                    <>
+                      {r.entity.id === "ddc" &&
+                        filters.year === 2026 &&
+                        `${tr("metric.baseOB")} · `}
+                      {r.entity.id === "dcp" &&
+                        filters.year === 2026 &&
+                        r.snapshot?.sourceCells.dcpReporting &&
+                        `${tr(filters.salesType === "external" ? "metric.baseOB" : "metric.salesDate")} · `}
+                    </>
+                  )}
+                  {r.snapshot
+                    ? `W${data.graphics.teamKpiSource ? r.snapshot.teamActualSource?.week ?? r.snapshot.week : r.snapshot.week} · ${r.metrics.budget === null ? tr("china.budgetReview") : tr("china.sourceReview")}`
+                    : tr("china.pending")}
+                </span>
+              </button>
+            ))}
+        </section>
+      )}
+      {!data.rows.length && (
+        <p className="apac-notice">{tr("overview.noData")}</p>
+      )}
+      <section
+        className={`kpi-grid${showForecast ? "" : " kpi-grid-merged"}`}
+        style={{ "--kpi-columns": showForecast ? 6 : 5 } as CSSProperties}
+        id="analysis"
+      >
+        <MetricCard
+          label={tr(data.graphics.teamKpiSource ? "teamActual.budget" : "metric.budget")}
+          value={formatK(t.budget)}
+          period={
+            t.budget !== null && !t.budgetComplete
+              ? tr(
+                  t.budget === 0
+                    ? "metric.budgetPending"
+                    : "metric.knownSubtotal",
+                )
+              : undefined
+          }
+          note={
+            t.budget === 0 && !t.budgetComplete
+              ? tr("notes.pendingBudget")
+              : tr("notes.budget", {
+                  year: filters.year,
+                  note:
+                    t.budget === null
+                      ? tr("notes.missingBudget")
+                      : !t.budgetComplete && t.budget === 0
+                        ? tr("notes.pendingBudget")
+                        : !t.budgetComplete
+                          ? tr("notes.partialBudget", {
+                              entities: data.rows
+                                .filter((r) => r.metrics.budgetComplete)
+                                .map((r) => r.entity.code)
+                                .join(" + "),
+                            })
+                          : "",
+                })
+          }
+        />
+        <MetricCard
+          label={tr("metric.baseOB")}
+          value={formatK(t.base)}
+          note={tr("notes.base", { note: partial("base") })}
+        >
+          <div className="kpi-sales-split">
+            <div>
+              <span>{tr("metric.salesDate")}</span>
+              <strong>{formatK(sumKnown(data.rows.map((row) => actualSalesForYear(row, filters))))}</strong>
+            </div>
+            <div>
+              <span>{tr("metric.ob")}</span>
+              <strong>{formatK(t.orderbook)}</strong>
+            </div>
+          </div>
+          {hasLegacySplit && <small>{tr("metric.unsplit")}</small>}
+          {!showForecast && (
+            <div className="kpi-prospect-status">
+              <span>{tr("metric.knownProspect")}</span>
+              <strong>{formatK(t.prospect)}</strong>
+              <small>
+                {tr(
+                  t.prospect === null
+                    ? "notes.prospectPending"
+                    : filters.scenario === "Sales"
+                      ? "notes.prospectExcluded"
+                      : "notes.prospectMerged",
+                )}
+              </small>
+            </div>
+          )}
+        </MetricCard>
+        {showForecast && (
           <MetricCard
-            label={tr(data.graphics.teamKpiSource ? "teamActual.budget" : "metric.budget")}
-            value={formatK(t.budget)}
+            label={tr("metric.salesProspectP1")}
+            value={formatK(t.scenario)}
+            accent
             period={
-              t.budget !== null && !t.budgetComplete
-                ? tr(
-                    t.budget === 0
-                      ? "metric.budgetPending"
-                      : "metric.knownSubtotal",
-                  )
-                : undefined
+              !t.scenarioComplete ? tr("metric.knownSubtotal") : undefined
             }
-            note={
-              t.budget === 0 && !t.budgetComplete
-                ? tr("notes.pendingBudget")
-                : tr("notes.budget", {
-                    year: filters.year,
-                    note:
-                      t.budget === null
-                        ? tr("notes.missingBudget")
-                        : !t.budgetComplete && t.budget === 0
-                          ? tr("notes.pendingBudget")
-                          : !t.budgetComplete
-                            ? tr("notes.partialBudget", {
-                                entities: data.rows
-                                  .filter((r) => r.metrics.budgetComplete)
-                                  .map((r) => r.entity.code)
-                                  .join(" + "),
-                              })
-                            : "",
-                  })
-            }
-          />
-          <MetricCard
-            label={tr("metric.baseOB")}
-            value={formatK(t.base)}
-            note={tr("notes.base", { note: partial("base") })}
+            note={`${filters.scenario === "Sales" ? tr("metric.salesSelected") : tr("metric.expected")}${partial("scenario")}`}
           >
             <div className="kpi-sales-split">
               <div>
-                <span>{tr("metric.salesDate")}</span>
-                <strong>{formatK(sumKnown(data.rows.map((row) => actualSalesForYear(row, filters))))}</strong>
-              </div>
-              <div>
-                <span>{tr("metric.ob")}</span>
-                <strong>{formatK(t.orderbook)}</strong>
-              </div>
-            </div>
-            {hasLegacySplit && <small>{tr("metric.unsplit")}</small>}
-            {!showForecast && (
-              <div className="kpi-prospect-status">
                 <span>{tr("metric.knownProspect")}</span>
                 <strong>{formatK(t.prospect)}</strong>
-                <small>
-                  {tr(
-                    t.prospect === null
-                      ? "notes.prospectPending"
-                      : filters.scenario === "Sales"
-                        ? "notes.prospectExcluded"
-                        : "notes.prospectMerged",
-                  )}
-                </small>
               </div>
-            )}
-          </MetricCard>
-          {showForecast && (
-            <MetricCard
-              label={tr("metric.salesProspectP1")}
-              value={formatK(t.scenario)}
-              accent
-              period={
-                !t.scenarioComplete ? tr("metric.knownSubtotal") : undefined
-              }
-              note={`${filters.scenario === "Sales" ? tr("metric.salesSelected") : tr("metric.expected")}${partial("scenario")}`}
-            >
-              <div className="kpi-sales-split">
-                <div>
-                  <span>{tr("metric.knownProspect")}</span>
-                  <strong>{formatK(t.prospect)}</strong>
-                </div>
-              </div>
-            </MetricCard>
-          )}
-          <MetricCard
-            label={tr("metric.coverage")}
-            period={tr("metric.byYear")}
-            periodDetail={String(filters.year)}
-            unit="FY"
-            value={display(percent(t.coverage))}
-            note={
-              tr(data.graphics.teamKpiSource ? "teamKpi.coverageNote" : "notes.coverage", { year: filters.year }) +
-              (t.coverage !== null && !t.budgetComplete
-                ? tr("notes.provisionalBudgetCalculation")
-                : "")
-            }
-          >
-            <div className="kpi-meter">
-              <span
-                style={{
-                  width: `${Math.min(100, (t.coverage ?? 0) * 100)}%`,
-                }}
-              />
             </div>
           </MetricCard>
-          <MetricCard
-            label={tr("metric.gapTitle")}
-            period={tr("metric.byYear")}
-            periodDetail={String(filters.year)}
-            value={formatK(t.gap)}
-            note={tr(data.graphics.teamKpiSource ? "teamKpi.gapNote" : "notes.gap", {
-              year: filters.year,
-              note:
-                t.gap === null
-                  ? tr("notes.reviewSuffix")
-                  : !t.budgetComplete
-                    ? tr("notes.provisionalBudgetCalculation")
-                    : "",
-            })}
-          />
-          <MetricCard
-            label={tr("metric.remaining")}
-            period={tr("metric.byMonth")}
-            periodDetail={Array.from(
-              new Set(
-                data.rows.flatMap((r) =>
-                  r.snapshot && r.metrics.remaining !== null
-                    ? [
-                        `${display(months[r.snapshot.month - 1])} ${r.snapshot.year}`,
-                      ]
-                    : [],
-                ),
-              ),
-            ).join(" / ")}
-            value={formatK(t.remaining)}
-            note={tr("notes.remaining", {
-              note: partial("remaining"),
-              future: filters.year === 2027 ? tr("notes.future") : "",
-            })}
-          />
-        </section>
-        <section className="briefing-strip">
-          <div className="briefing-title">
-            <span className="briefing-mark">↗</span>
-            <div>
-              <p>{tr("overview.summary")}</p>
-              <h2>{tr("overview.attention")}</h2>
-            </div>
-          </div>
-          <div className="briefing-points">
-            <span>
-              <b>{data.rows.filter((r) => r.metrics.budget === null).length}</b>{" "}
-              {tr("overview.budgetsMissing")}
-            </span>
-            <span>
-              <b>
-                {data.rows.filter((r) => r.metrics.prospect === null).length}
-              </b>{" "}
-              {tr("overview.prospectPending")}
-            </span>
-            <span>
-              {data.partialKeys.length
-                ? tr("overview.partial")
-                : tr("overview.available")}{" "}
-              ·{" "}
-              {data.weeks.length > 1
-                ? tr("overview.mixed")
-                : tr("overview.weekly")}
-            </span>
-          </div>
-        </section>
-        <section className="dashboard-grid dashboard-grid-main sales-overview-grid">
-          <SalesMonthlyGraphic data={data} standalone />
-        </section>
-        <SalesGraphics data={data} />
-        <section
-          className="graphics-section"
-          id="business-units"
-          aria-labelledby="bu-performance-title"
+        )}
+        <MetricCard
+          label={tr("metric.coverage")}
+          period={tr("metric.byYear")}
+          periodDetail={String(filters.year)}
+          unit="FY"
+          value={display(percent(t.coverage))}
+          note={
+            tr(data.graphics.teamKpiSource ? "teamKpi.coverageNote" : "notes.coverage", { year: filters.year }) +
+            (t.coverage !== null && !t.budgetComplete
+              ? tr("notes.provisionalBudgetCalculation")
+              : "")
+          }
         >
-          <div className="graphics-section-heading">
-            <div>
-              <p className="panel-kicker">{tr("graphics.buKicker")}</p>
-              <h2 id="bu-performance-title">{tr("graphics.buTitle")}</h2>
-            </div>
-          </div>
-          <BusinessUnitGraphics data={data} />
-          <details className="graphics-entity-details">
-            <summary>{tr("graphics.annualDetails")}</summary>
-            <MetricsTable
-              rows={totalRows}
-              onSelect={(id) => selectEntity(id === "china" ? "all" : id)}
+          <div className="kpi-meter">
+            <span
+              style={{
+                width: `${Math.min(100, (t.coverage ?? 0) * 100)}%`,
+              }}
             />
-          </details>
-        </section>
+          </div>
+        </MetricCard>
+        <MetricCard
+          label={tr("metric.gapTitle")}
+          period={tr("metric.byYear")}
+          periodDetail={String(filters.year)}
+          value={formatK(t.gap)}
+          note={tr(data.graphics.teamKpiSource ? "teamKpi.gapNote" : "notes.gap", {
+            year: filters.year,
+            note:
+              t.gap === null
+                ? tr("notes.reviewSuffix")
+                : !t.budgetComplete
+                  ? tr("notes.provisionalBudgetCalculation")
+                  : "",
+          })}
+        />
+        <MetricCard
+          label={tr("metric.remaining")}
+          period={tr("metric.byMonth")}
+          periodDetail={Array.from(
+            new Set(
+              data.rows.flatMap((r) =>
+                r.snapshot && r.metrics.remaining !== null
+                  ? [
+                      `${display(months[r.snapshot.month - 1])} ${r.snapshot.year}`,
+                    ]
+                  : [],
+              ),
+            ),
+          ).join(" / ")}
+          value={formatK(t.remaining)}
+          note={tr("notes.remaining", {
+            note: partial("remaining"),
+            future: filters.year === 2027 ? tr("notes.future") : "",
+          })}
+        />
+      </section>
+      <section className="briefing-strip">
+        <div className="briefing-title">
+          <span className="briefing-mark">↗</span>
+          <div>
+            <p>{tr("overview.summary")}</p>
+            <h2>{tr("overview.attention")}</h2>
+          </div>
+        </div>
+        <div className="briefing-points">
+          <span>
+            <b>{data.rows.filter((r) => r.metrics.budget === null).length}</b>{" "}
+            {tr("overview.budgetsMissing")}
+          </span>
+          <span>
+            <b>
+              {data.rows.filter((r) => r.metrics.prospect === null).length}
+            </b>{" "}
+            {tr("overview.prospectPending")}
+          </span>
+          <span>
+            {data.partialKeys.length
+              ? tr("overview.partial")
+              : tr("overview.available")}{" "}
+            ·{" "}
+            {data.weeks.length > 1
+              ? tr("overview.mixed")
+              : tr("overview.weekly")}
+          </span>
+        </div>
+      </section>
+      <section className="dashboard-grid dashboard-grid-main sales-overview-grid">
+        <SalesMonthlyGraphic data={data} standalone />
+      </section>
+      <SalesGraphics data={data} />
+      <section
+        className="graphics-section"
+        id="business-units"
+        aria-labelledby="bu-performance-title"
+      >
+        <div className="graphics-section-heading">
+          <div>
+            <p className="panel-kicker">{tr("graphics.buKicker")}</p>
+            <h2 id="bu-performance-title">{tr("graphics.buTitle")}</h2>
+          </div>
+        </div>
+        <BusinessUnitGraphics data={data} />
+        <details className="graphics-entity-details">
+          <summary>{tr("graphics.annualDetails")}</summary>
+          <MetricsTable
+            rows={totalRows}
+            onSelect={(id) => selectEntity(id === "china" ? "all" : id)}
+          />
+        </details>
+      </section>
+      <TeamContributionGraphic data={data} />
+    </>
+  );
+});
+
+function ManagementChecks({ data }: { data: Dashboard }) {
+  const { tr, display } = useI18n();
+  return (
+      <section className="quality-panel" id="management-checks">
+        <details open>
+          <summary>
+            <div>
+              <p className="panel-kicker">{tr("checks.controls")}</p>
+              <h2>{tr("nav.checks")}</h2>
+            </div>
+            <span>{tr("checks.count", { count: data.checks.length })}</span>
+          </summary>
+          <p className="quality-intro">{tr("checks.note")}</p>
+          <div className="quality-grid">
+            {data.rows.map((r) => (
+              <article className="apac-check" key={r.entity.id}>
+                <strong>
+                  {r.entity.code} ·{" "}
+                  {r.snapshot ? tr("common.review") : tr("snapshot.missing")}
+                </strong>
+                <ul>
+                  {(
+                    r.snapshot?.findings ?? [tr("snapshot.workbookMissing")]
+                  ).map((f, i) => (
+                    <li key={i}>{display(f)}</li>
+                  ))}
+                </ul>
+              </article>
+            ))}
+          </div>
+        </details>
+      </section>
+  );
+}
+
+const DashboardView = memo(function DashboardView({
+  data,
+  page,
+  setFilters,
+}: {
+  data: Dashboard;
+  page: SalesPage;
+  setFilters: Dispatch<SetStateAction<Filters>>;
+}) {
+  const { tr, locale } = useI18n();
+  const [customerMonth, setCustomerMonth] = useState("");
+  const filters = data.filters;
+  return (
+    <>
+      <SalesPageHeading data={data} page={page} />
+      {page === "overview" && <ExecutiveOverview data={data} setFilters={setFilters} />}
+      {page === "sales-team" && (
         <section
           id="sales-team-section"
           className={`graphics-section ${styles.section}`}
@@ -650,61 +715,36 @@ const DashboardView = memo(function DashboardView({
             data={data}
           />
         </section>
-        <div id="customer-section" className={styles.section}>
-          <CustomerGraphics
-            filters={filters}
-            revision={data.revision}
-            latest={data.latestCustomerAnalysis}
-          >
-            {customerOrders}
-          </CustomerGraphics>
-        </div>
-        <section className="quality-panel" id="management-checks">
-          <details open>
-            <summary>
-              <div>
-                <p className="panel-kicker">{tr("checks.controls")}</p>
-                <h2>{tr("nav.checks")}</h2>
-              </div>
-              <span>{tr("checks.count", { count: data.checks.length })}</span>
-            </summary>
-            <p className="quality-intro">{tr("checks.note")}</p>
-            <div className="quality-grid">
-              {data.rows.map((r) => (
-                <article className="apac-check" key={r.entity.id}>
-                  <strong>
-                    {r.entity.code} ·{" "}
-                    {r.snapshot ? tr("common.review") : tr("snapshot.missing")}
-                  </strong>
-                  <ul>
-                    {(
-                      r.snapshot?.findings ?? [tr("snapshot.workbookMissing")]
-                    ).map((f, i) => (
-                      <li key={i}>{display(f)}</li>
-                    ))}
-                  </ul>
-                </article>
-              ))}
-            </div>
-          </details>
-        </section>
-        <footer className="apac-footer">
-          <span>{tr("footer.title")}</span>
-          <span>
-            {tr("footer.latestUpdate", {
-              date: formatUpdateDate(data.latestDataUpdate, locale),
-            })}
-          </span>
-          <span>
-            {data.latestPublish
-              ? tr("notes.lastPublish", {
-                  date: new Date(data.latestPublish).toLocaleString(locale),
-                })
-              : tr("snapshot.baseline")}{" "}
-            · kEUR
-          </span>
-        </footer>
-      </>
+      )}
+      {(page === "overview" || page === "customer") && (
+        <CustomerGraphics
+          filters={filters}
+          revision={data.revision}
+          latest={data.latestCustomerAnalysis}
+          variant={page}
+          month={customerMonth}
+          setMonth={setCustomerMonth}
+        >
+          {page === "customer" && <KeyCustomerOrders data={data} />}
+        </CustomerGraphics>
+      )}
+      {page === "management-checks" && <ManagementChecks data={data} />}
+      <footer className="apac-footer">
+        <span>{tr("footer.title")}</span>
+        <span>
+          {tr("footer.latestUpdate", {
+            date: formatUpdateDate(data.latestDataUpdate, locale),
+          })}
+        </span>
+        <span>
+          {data.latestPublish
+            ? tr("notes.lastPublish", {
+                date: new Date(data.latestPublish).toLocaleString(locale),
+              })
+            : tr("snapshot.baseline")}{" "}
+          · kEUR
+        </span>
+      </footer>
     </>
   );
 });
@@ -728,7 +768,9 @@ export default function Home() {
   const [renderPending, startTransition] = useTransition();
   const contentRoot = useRef<HTMLDivElement>(null);
   useDataReveal(contentRoot, data, ".china-strip, .kpi-card");
-  const requiresDashboard = !["home", "login", "ar-aging", "imports", "quotation", "pipeline", "sales-operations"].includes(view);
+  const onSalesPage = isSalesPage(view);
+  const requiresDashboard = onSalesPage || view === "admin";
+  const dashboardAccess = !!user && requiresDashboard && canAccessPage(user, view);
   const pending =
     loading ||
     renderPending ||
@@ -755,7 +797,7 @@ export default function Home() {
     }
   }, [sessionChecked, user, view, pathname, locale, router]);
   useEffect(() => {
-    if (!user || !requiresDashboard || !canAccessPage(user, view)) return;
+    if (!dashboardAccess) return;
     const controller = new AbortController();
     setLoading(true);
     setError("");
@@ -802,7 +844,7 @@ export default function Home() {
         if (!controller.signal.aborted) setLoading(false);
       });
     return () => controller.abort();
-  }, [user, filters, revision, requiresDashboard, view]);
+  }, [user, filters, revision, dashboardAccess]);
   const login = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -879,7 +921,7 @@ export default function Home() {
   return (
     <DashboardShell
       user={user}
-      salesExport={requiresDashboard && view !== "admin" && canAccessPage(user, view)
+      salesExport={onSalesPage && view !== "management-checks" && dashboardAccess
         ? <ChartWorkbookExport dashboardRoot={contentRoot} disabled={!data || pending || !!error} />
         : undefined}
       onLogout={logout}
@@ -908,7 +950,10 @@ export default function Home() {
             <ImportPortal
               currentUser={user}
               writable={writable}
-            onClose={() => setView(new URLSearchParams(window.location.search).get('from')==='ar-aging'?'ar-aging':'overview')}
+              onClose={() => {
+                const from = new URLSearchParams(window.location.search).get("from");
+                setView(from === "ar-aging" || isSalesPage(from) ? from : "overview");
+              }}
               onPublished={() => setRevision((v) => v + 1)}
             />
           ) : view === "admin" ? (
@@ -925,15 +970,16 @@ export default function Home() {
             ) : (
               <p role="alert">{tr("common.noAccess")}</p>
             )
-          ) : data ? (
+          ) : onSalesPage && data ? (
             <div
               ref={contentRoot}
               aria-busy={pending}
+              data-workbook-page={view}
               className={`dashboard-route dashboard-route-${view} ${styles.sales}`}
             >
               <DashboardFilterState.Provider value={filterState}>
                 <SalesChartPresentation.Provider value>
-                  <DashboardView data={data} setFilters={setFilters} />
+                  <DashboardView page={view} data={data} setFilters={setFilters} />
                 </SalesChartPresentation.Provider>
               </DashboardFilterState.Provider>
             </div>

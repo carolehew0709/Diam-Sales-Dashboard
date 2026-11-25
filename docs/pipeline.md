@@ -17,7 +17,11 @@ In Pipeline, an authorized publisher selects an XLSX export, enters the export's
 
 ## Sales Operation Management
 
-The home module shows Order → Shipment → Invoice → Payment and the planned Team, Week and Customer Group views. The page uses an empty state until ERP data is connected.
+The existing Sales Operations route reads the DDC demo snapshot from the private store. Access requires the Sales Operations module and DDC view permission. Run `npx tsx scripts/prepare-sales-operations-demo.ts <summary> <detail> <finance> <receipts>` to review the four ERP exports. Add `--publish-demo` before the paths and set `DIAM_DATA_PATH` to the isolated local store to activate the reviewed snapshot there. The loader only writes the local file adapter. ERP files and generated snapshots stay outside Git.
+
+The summary export owns gross order values and unshipped balances at the Entity/order/line grain. Outbound facts from the detail export reconcile against the summary per line. Weekly orders use order dates, weekly shipments use outbound business dates, and weekly unshipped balances are the current snapshot grouped by the original order week. The current snapshot includes only the approved order-period cohort. Customer labels come from orders. A team is shown when linked financial receivable lines provide one unambiguous ERP sales group. CNY and EUR remain separate.
+
+The order drill-down shows source lines, outbound documents, receivables, invoice references and matched sales receipt allocations. Receivable document amounts are shown once per document within an order. Receipts are matched by their detail-level source receivable and retain the source entry ID. The page keeps actual cash and settled amounts separate and does not attribute the entire amount of a common receivable to each of its orders. Unmatched money stays unavailable. The demo does not derive weekly actual invoice amounts, payment rates, promised shipment delays, or a Customer Group mapping.
 
 ## Project-based reporting (2026-11-19)
 

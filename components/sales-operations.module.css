@@ -1,0 +1,127 @@
+.field {
+  display: grid;
+  gap: 4px;
+  min-width: 145px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.amount small {
+  color: var(--muted);
+  font-size: 0.42em;
+  letter-spacing: normal;
+}
+
+.orderControls,
+.pagination {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.search,
+.checkbox {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.search {
+  padding: 0 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel);
+}
+
+.search input {
+  border: 0;
+  height: 38px;
+  padding-inline: 4px;
+  max-width: 60vw;
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+}
+
+.orderButton {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  border: 0;
+  padding: 1px 0;
+  background: transparent;
+  color: var(--gold-strong);
+  font: inherit;
+  cursor: pointer;
+}
+
+.orderButton:hover {
+  text-decoration: underline;
+}
+
+.pagination {
+  justify-content: flex-end;
+  margin-top: 12px;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.sources {
+  padding: 10px 14px;
+  color: var(--muted);
+  font-size: 12px;
+  overflow-wrap: anywhere;
+}
+
+.sources summary {
+  cursor: pointer;
+}
+
+.dialog {
+  width: min(1160px, calc(100% - 28px));
+  max-height: 90dvh;
+  padding: clamp(15px, 3vw, 28px);
+  border: 1px solid var(--line);
+  border-radius: 16px;
+  color: var(--ink);
+  background: var(--panel);
+  overflow: auto;
+}
+
+.dialog::backdrop {
+  background: rgba(23, 24, 19, 0.55);
+}
+
+.dialogHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 12px;
+}
+
+.dialogHeader h2,
+.detail h3 {
+  margin: 0;
+}
+
+.dialogHeader h2 {
+  overflow-wrap: anywhere;
+  font-size: clamp(18px, 3vw, 26px);
+}
+
+.dialogHeader p {
+  margin: 5px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.detail {
+  margin-top: 22px;
+}
+
+.detail :global(td) {
+  overflow-wrap: anywhere;
+}

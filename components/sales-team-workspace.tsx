@@ -3,27 +3,36 @@
 import { useEffect, useRef, useState } from "react";
 import type { Dashboard } from "@/lib/dashboard";
 import { dashboardFilterKey } from "@/lib/dashboard-presentation";
+import { DashboardFilters } from "./dashboard-filters";
 import { useI18n } from "./i18n-provider";
 import { TeamBudgetGraphic } from "./team-actual-graphics";
 import { TeamPerformanceGraphic } from "./team-performance-graphic";
 import { TeamCustomerMonthlySales } from "./sales-trend-workspace";
 import { useWorkbookGroup } from "./use-workbook-group";
+import pageStyles from "./sales-performance.module.css";
 import styles from "./sales-trend-workspace.module.css";
 
 export function SalesTeamWorkspace({ data }: { data: Dashboard }) {
   const { tr } = useI18n();
-  const [team, setTeam] = useState("all");
-  const [customerSelection, setCustomerSelection] = useState<{
-    entity: string;
-    value: string;
-  }>();
+  const { bu, entity: entityId, region, year, salesType } = data.filters;
+  const scopeKey = JSON.stringify([region, year, salesType]);
+  const entity = `${bu}/${entityId}`;
+  const [selection, setSelection] = useState({
+    scopeKey,
+    entity,
+    team: "all",
+    customer: "all",
+  });
   const [monthlyOpen, setMonthlyOpen] = useState(false);
-  const entity = `${data.filters.bu}/${data.filters.entity}`;
+  const scopeChanged = selection.scopeKey !== scopeKey;
+  const team = scopeChanged ? "all" : selection.team;
   const customer =
-    customerSelection?.entity === entity ? customerSelection.value : "all";
-  useEffect(() => {
-    setCustomerSelection(undefined);
-  }, [entity]);
+    scopeChanged || selection.entity !== entity ? "all" : selection.customer;
+  // Reset dependent values without remounting the top bar and losing focus.
+  if (scopeChanged || selection.entity !== entity) {
+    setSelection({ scopeKey, entity, team, customer });
+    if (scopeChanged) setMonthlyOpen(false);
+  }
   const isScoped = team !== "all" || customer !== "all";
   const scope = `${dashboardFilterKey(data.filters)}|${data.revision}`;
   const query = new URLSearchParams({
@@ -73,67 +82,101 @@ export function SalesTeamWorkspace({ data }: { data: Dashboard }) {
         : []),
     ...(customer === "all" ? [] : [customer]),
   ]);
-  return (
-    <div
-      className={styles.workspace}
-      aria-busy={pending}
-      data-customer-status={failed ? "error" : pending ? "loading" : undefined}
-    >
-      <div className={styles.filters} aria-label={tr("team.scopeFilters")}>
-        <label>
-          {tr("team.label")}
-          <select
-            id="sales-team"
-            value={team}
-            onChange={(event) => {
-              setTeam(event.target.value);
-              setCustomerSelection(undefined);
-            }}
-          >
-            <option value="all">{tr("team.all")}</option>
-            {[...teams].sort().map((name) => (
-              <option key={name} value={name}>
-                {name === "__unassigned__" ? tr("team.unassigned") : name}
-              </option>
-            ))}
-          </select>
-        </label>
-        <label>
-          {tr("common.customer")}
-          <select
-            id="customer"
-            title={tr("filters.customerSource")}
-            value={customer}
-            disabled={team !== "all" && pending && previous?.team !== team}
-            onChange={(event) =>
-              setCustomerSelection({ entity, value: event.target.value })
-            }
-          >
-            <option value="all">{tr("filters.allAvailable")}</option>
-            {[...customers].sort().map((name) => (
-              <option key={name}>{name}</option>
-            ))}
-          </select>
-        </label>
+  const teamFilters = (
+    <>
+      <div className="filter-field">
+        <label htmlFor="sales-team">{tr("team.label")}</label>
+        <select
+          id="sales-team"
+          value={team}
+          onChange={(event) =>
+            setSelection({
+              ...selection,
+              team: event.target.value,
+              customer: "all",
+            })
+          }
+        >
+          <option value="all">{tr("team.all")}</option>
+          {[...teams].sort().map((name) => (
+            <option key={name} value={name}>
+              {name === "__unassigned__" ? tr("team.unassigned") : name}
+            </option>
+          ))}
+        </select>
       </div>
-      {pending && <p role="status">{tr("auth.updating")}</p>}
-      {failed && <p role="alert">{tr("monthlyDetail.loadError")}</p>}
-      <TeamSalesGraphics data={visible} />
-      <details
-        className="graphics-entity-details"
-        open={monthlyOpen}
-        onToggle={(event) => setMonthlyOpen(event.currentTarget.open)}
+      <div className="filter-field">
+        <label htmlFor="customer">{tr("common.customer")}</label>
+        <select
+          id="customer"
+          title={tr("filters.customerSource")}
+          value={customer}
+          disabled={team !== "all" && pending && previous?.team !== team}
+          onChange={(event) =>
+            setSelection({ ...selection, customer: event.target.value })
+          }
+        >
+          <option value="all">{tr("filters.allAvailable")}</option>
+          {[...customers].sort().map((name) => (
+            <option key={name}>{name}</option>
+          ))}
+        </select>
+      </div>
+    </>
+  );
+  return (
+    <>
+      <DashboardFilters data={data} teamFilters={teamFilters} />
+      <section
+        id="sales-team-section"
+        className={`graphics-section ${pageStyles.section}`}
+        aria-labelledby="orderbook-graphics-title"
       >
-        <summary>{tr("monthlyDetail.title")}</summary>
-        {monthlyOpen && (
-          <TeamCustomerMonthlySales
-            data={data}
-            team={team}
-            customer={customer}
-          />
-        )}
-      </details>
-    </div>
+        <div className="graphics-section-heading">
+          <div>
+            <p className="panel-kicker">
+              {tr(
+                data.graphics.teamActuals
+                  ? "teamActual.sectionKicker"
+                  : "graphics.obKicker",
+              )}
+            </p>
+            <h2 id="orderbook-graphics-title">
+              {tr(
+                data.graphics.teamActuals
+                  ? "teamActual.sectionTitle"
+                  : "graphics.obTitle",
+              )}
+            </h2>
+          </div>
+        </div>
+        <div
+          className={styles.workspace}
+          aria-busy={pending}
+          data-customer-status={
+            failed ? "error" : pending ? "loading" : undefined
+          }
+        >
+          {pending && <p role="status">{tr("auth.updating")}</p>}
+          {failed && <p role="alert">{tr("monthlyDetail.loadError")}</p>}
+          <TeamSalesGraphics data={visible} />
+          <details
+            className="graphics-entity-details"
+            open={monthlyOpen}
+            onToggle={(event) => setMonthlyOpen(event.currentTarget.open)}
+          >
+            <summary>{tr("monthlyDetail.title")}</summary>
+            {monthlyOpen && (
+              <TeamCustomerMonthlySales
+                data={data}
+                team={team}
+                customer={customer}
+              />
+            )}
+          </details>
+        </div>
+      </section>
+    </>
   );
 }
 

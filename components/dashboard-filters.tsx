@@ -6,6 +6,7 @@ import {
   useRef,
   type CSSProperties,
   type Dispatch,
+  type ReactNode,
   type SetStateAction,
 } from "react";
 import { useI18n } from "./i18n-provider";
@@ -60,7 +61,13 @@ export function Segmented({
   );
 }
 /** Draft controls update immediately; the memoized dashboard keeps its applied snapshot. */
-export function DashboardFilters({ data }: { data: Dashboard }) {
+export function DashboardFilters({
+  data,
+  teamFilters,
+}: {
+  data: Dashboard;
+  teamFilters?: ReactNode;
+}) {
   const state = useContext(DashboardFilterState);
   if (!state) throw new Error("DashboardFilterState is required");
   const { filters: requestedFilters, setFilters, pending } = state;
@@ -90,7 +97,7 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
   return (
     <>
       <section
-        className={`filter-bar sales-filter-bar ${styles.globalFilters}`}
+        className={`filter-bar sales-filter-bar ${styles.globalFilters}${teamFilters ? ` ${styles.teamFilters}` : ""}`}
         ref={filterBar}
         data-updating={pending || undefined}
         aria-label={tr("filters.global")}
@@ -145,6 +152,7 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
             ))}
           </select>
         </div>
+        {teamFilters}
         <Segmented
           label={tr("filters.years")}
           value={String(requestedFilters.year)}
@@ -203,6 +211,7 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
         />
         <UpdateStatus pending={pending} />
       </section>
+      <p className={styles.roundingNote}>{tr("graphics.roundedDisplay")}</p>
     </>
   );
 }

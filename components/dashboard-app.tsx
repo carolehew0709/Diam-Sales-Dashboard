@@ -294,8 +294,6 @@ function SalesPageHeading({ data, page }: { data: Dashboard; page: SalesPage }) 
           )}
         </div>
       </section>
-      <DashboardFilters data={data} />
-      <p className={styles.roundingNote}>{tr("graphics.roundedDisplay")}</p>
     </>
   );
 }
@@ -697,25 +695,12 @@ const DashboardView = memo(function DashboardView({
   return (
     <>
       <SalesPageHeading data={data} page={page} />
-      {page === "overview" && <ExecutiveOverview data={data} setFilters={setFilters} />}
-      {page === "sales-team" && (
-        <section
-          id="sales-team-section"
-          className={`graphics-section ${styles.section}`}
-          aria-labelledby="orderbook-graphics-title"
-        >
-          <div className="graphics-section-heading">
-            <div>
-              <p className="panel-kicker">{tr(data.graphics.teamActuals ? "teamActual.sectionKicker" : "graphics.obKicker")}</p>
-              <h2 id="orderbook-graphics-title">{tr(data.graphics.teamActuals ? "teamActual.sectionTitle" : "graphics.obTitle")}</h2>
-            </div>
-          </div>
-          <SalesTeamWorkspace
-            key={JSON.stringify([filters.region, filters.year, filters.salesType])}
-            data={data}
-          />
-        </section>
+      {page === "sales-team" ? (
+        <SalesTeamWorkspace data={data} />
+      ) : (
+        <DashboardFilters data={data} />
       )}
+      {page === "overview" && <ExecutiveOverview data={data} setFilters={setFilters} />}
       {(page === "overview" || page === "customer") && (
         <CustomerGraphics
           filters={filters}

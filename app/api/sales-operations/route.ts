@@ -14,6 +14,8 @@ import {
 } from "@/lib/sales-operations-types";
 import { archiveWorkbook } from "@/lib/workbook-intake";
 import type { User } from "@/lib/types";
+import { operationsWorkflowView } from "@/lib/sales-operations-workflow";
+import type { OperationsEntity } from "@/lib/sales-operations-workflow-types";
 
 const ddc = entities.find(({ id }) => id === "ddc")!;
 const dehk = entities.find(({ id }) => id === "dhk")!;
@@ -26,12 +28,36 @@ export const dynamic = "force-dynamic";
 export async function GET(request: Request) {
   return api(async () => {
     const user = await currentUser();
-    if (!canAccessModule(user, "sales-operations") || !canView(user, ddc))
+    const canSeeDdc = canView(user, ddc),
+      canSeeDehk = canView(user, dehk);
+    const params = new URL(request.url).searchParams;
+    const wantsWorkflow =
+      params.get("view") === "workflow" && !params.has("order");
+    if (
+      !canAccessModule(user, "sales-operations") ||
+      (!canSeeDdc && !(wantsWorkflow && canSeeDehk))
+    )
       throw new ApiError(403, "common.noAccess");
     const state = await storage.read();
     const snapshot = state.salesOperations;
     const publishable = storageStatus().writable && canPublish(user, ddc);
-    const params = new URL(request.url).searchParams;
+    if (wantsWorkflow && state.salesOperationsWorkflow) {
+      const scopes: OperationsEntity[] = [];
+      if (canSeeDdc) scopes.push("DDC");
+      if (canSeeDehk) scopes.push("DEHK");
+      return {
+        ok: true,
+        publishable,
+        data: null,
+        workflow: operationsWorkflowView(
+          state.salesOperationsWorkflow,
+          snapshot,
+          scopes,
+          state.teamActualData,
+        ),
+      };
+    }
+    if (!canSeeDdc) throw new ApiError(403, "common.noAccess");
     const order = params.get("order");
     const originalPricingAvailable = Boolean(
       snapshot?.originalPricing && canView(user, dehk),

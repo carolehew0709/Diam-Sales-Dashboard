@@ -212,6 +212,7 @@ export type AuditEvent = {
 };
 export type Store = {
   salesOperations?: import("./sales-operations-types").SalesOperationsSnapshot;
+  salesOperationsWorkflow?: import("./sales-operations-workflow-types").OperationsWorkflowSources;
   pipelineSnapshots?: import("./pipeline").PipelineSnapshot[];
   monthlySalesCloses?: MonthlySalesClose[];
   teamActualData?: TeamActualData;

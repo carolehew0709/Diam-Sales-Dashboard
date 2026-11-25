@@ -9,6 +9,16 @@ import type {
   OpsOrderLine,
   SalesOperationsSnapshot,
 } from "../lib/sales-operations-types";
+import {
+  filterOperationsWorkflow,
+  operationsStageTotals,
+  operationsWorkflowView,
+} from "../lib/sales-operations-workflow";
+import type {
+  OperationsEntity,
+  OperationsWorkflowDataset,
+  OperationsWorkflowRecord,
+} from "../lib/sales-operations-workflow-types";
 
 const line: OpsOrderLine = {
   order: "order-1",
@@ -95,6 +105,133 @@ const snapshot: SalesOperationsSnapshot = {
     },
   ],
 };
+
+test("the workflow uses independent order, outbound, invoice and receipt Entity scope", () => {
+  const external: OperationsWorkflowRecord = {
+    entity: "DDC",
+    date: line.date,
+    document: "direct-1",
+    customer: line.customer,
+    team: line.team,
+    amount: 20,
+    currency: "CNY",
+    sourceRow: 2,
+  };
+  const internal = {
+    ...external,
+    document: "internal-1",
+    customer: "DEHK LIMITED",
+  };
+  const hk = {
+    ...external,
+    entity: "DEHK" as const,
+    document: "hk-1",
+    customer: "Customer B",
+    currency: "USD" as const,
+  };
+  const batch = (
+    entity: OperationsEntity,
+    records: OperationsWorkflowRecord[],
+  ): OperationsWorkflowDataset => ({
+    entity,
+    file: "synthetic.xlsx",
+    sheet: "sheet1",
+    fingerprint: "synthetic",
+    from: snapshot.from,
+    asOf: snapshot.asOf,
+    records,
+  });
+  const sources = {
+    orders: [batch("DDC", [external, internal]), batch("DEHK", [hk])],
+    invoices: [batch("DDC", [external, internal]), batch("DEHK", [hk])],
+    receipts: [
+      batch("DDC", [
+        { ...external, division: "external" },
+        { ...internal, division: "internal" },
+      ]),
+      batch("DEHK", [{ ...hk, division: "unknown" }]),
+    ],
+  };
+  const data: SalesOperationsSnapshot = {
+    ...snapshot,
+    lines: [
+      { ...line, customer: "DEHK LIMITED" },
+      { ...line, line: 2 },
+    ],
+    shipments: [snapshot.shipments[0], { ...snapshot.shipments[1], line: 2 }],
+    originalPricing: {
+      id: "price-review",
+      sources: [],
+      prices: [
+        {
+          order: line.order,
+          line: 1,
+          originalOrder: "hk-1",
+          sourceRows: [2],
+          currency: "USD",
+          grossUnitPrice: 40,
+        },
+      ],
+    },
+  };
+  const view = operationsWorkflowView(sources, data, ["DDC", "DEHK"])!;
+  assert.deepEqual(
+    view.stages.orders.records.map(({ document }) => document),
+    ["direct-1", "hk-1"],
+  );
+  assert.deepEqual(
+    view.stages.invoices.records.map(({ document }) => document),
+    ["direct-1", "hk-1"],
+  );
+  assert.deepEqual(
+    view.stages.receipts.records.map(({ document }) => document),
+    ["direct-1"],
+  );
+  assert.deepEqual(
+    view.stages.shipments.records.map(({ quantity, amount, originalOrder }) => [
+      quantity,
+      amount,
+      originalOrder,
+    ]),
+    [
+      [1, 40, "hk-1"],
+      [1, null, undefined],
+    ],
+  );
+  assert.deepEqual(operationsStageTotals(view.stages.shipments.records), {
+    documents: 2,
+    missing: 1,
+    amounts: [["USD", 40]],
+  });
+  const ddcSelection = filterOperationsWorkflow(view, "DDC");
+  assert.ok(
+    ddcSelection.stages.orders.records.every((row) => row.entity === "DDC"),
+  );
+  assert.deepEqual(ddcSelection.stages.shipments, view.stages.shipments);
+  assert.deepEqual(ddcSelection.stages.receipts.expected, ["DDC"]);
+  const dehkSelection = filterOperationsWorkflow(view, "DEHK");
+  assert.ok(
+    dehkSelection.stages.orders.records.every((row) => row.entity === "DEHK"),
+  );
+  assert.deepEqual(dehkSelection.stages.shipments, {
+    records: [],
+    sources: [],
+    expected: [],
+  });
+  assert.deepEqual(dehkSelection.stages.receipts.expected, ["DEHK"]);
+  const onlyHk = operationsWorkflowView(sources, data, ["DEHK"])!;
+  assert.equal(onlyHk.stages.shipments.records.length, 0);
+  assert.deepEqual(
+    onlyHk.stages.orders.records.map(({ entity }) => entity),
+    ["DEHK"],
+  );
+  const onlyDdc = operationsWorkflowView(sources, data, ["DDC"])!;
+  assert.ok(
+    onlyDdc.stages.shipments.records.every(
+      (row) => row.amount === null && !row.originalOrder,
+    ),
+  );
+});
 
 test("weekly shipments follow outbound dates while open balances follow the original order cohort", () => {
   const view = salesOperationsView(snapshot);

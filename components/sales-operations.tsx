@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowDownRight,
   ClipboardList,
@@ -20,6 +20,12 @@ import type {
 import { useI18n } from "./i18n-provider";
 import { SalesOperationsOrderDialog } from "./sales-operations-order-dialog";
 import { SalesOperationsImport } from "./sales-operations-import";
+import { SalesOperationsWorkflow } from "./sales-operations-workflow";
+import {
+  filterOperationsWorkflow,
+  type OperationsWorkflowView,
+} from "@/lib/sales-operations-workflow";
+import type { OperationsEntity } from "@/lib/sales-operations-workflow-types";
 import {
   DocumentRegister,
   OrderRegister,
@@ -36,6 +42,13 @@ export function SalesOperations() {
   const { tr, locale } = useI18n();
   const register = useRef<HTMLElement>(null);
   const [data, setData] = useState<SalesOperationsView | null>();
+  const [workflow, setWorkflow] = useState<OperationsWorkflowView | null>(null);
+  const [entity, setEntity] = useState<OperationsEntity | "">("");
+  const filteredWorkflow = useMemo(
+    () => workflow && filterOperationsWorkflow(workflow, entity),
+    [entity, workflow],
+  );
+  const [refresh, setRefresh] = useState(0);
   const [publishable, setPublishable] = useState(false);
   const [importOpen, setImportOpen] = useState(false);
   const [error, setError] = useState<"access" | "load">();
@@ -49,7 +62,7 @@ export function SalesOperations() {
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(`/api/sales-operations?basis=${basis}`, {
+    void fetch(`/api/sales-operations?basis=${basis}&view=workflow`, {
       signal: controller.signal,
     })
       .then(async (response) => {
@@ -59,6 +72,7 @@ export function SalesOperations() {
         const result = await response.json();
         if (!controller.signal.aborted) {
           setData(result.data);
+          setWorkflow(result.workflow ?? null);
           setError(undefined);
           setPublishable(result.publishable === true);
           setPricingAvailable(result.originalPricingAvailable === true);
@@ -68,7 +82,7 @@ export function SalesOperations() {
         if (!controller.signal.aborted) setError("load");
       });
     return () => controller.abort();
-  }, [basis]);
+  }, [basis, refresh]);
 
   const precise = new Intl.NumberFormat(locale, {
     minimumFractionDigits: 2,
@@ -107,12 +121,32 @@ export function SalesOperations() {
         <div>
           <h1>{tr("salesOps.title")}</h1>
           <p>
-            {data
-              ? `DDC · ${data.from} – ${data.asOf}`
-              : tr("salesOps.homeDescription")}
+            {filteredWorkflow
+              ? `${filteredWorkflow.entities.join(" + ")} · ${filteredWorkflow.from} – ${filteredWorkflow.asOf}`
+              : data
+                ? `DDC · ${data.from} – ${data.asOf}`
+                : tr("salesOps.homeDescription")}
           </p>
         </div>
         <div className={ops.headerActions}>
+          {workflow && workflow.entities.length > 1 && (
+            <label className={ops.field}>
+              {tr("common.entity")}
+              <select
+                value={entity}
+                onChange={(event) =>
+                  setEntity(event.target.value as OperationsEntity | "")
+                }
+              >
+                <option value="">{tr("filters.allEntities")}</option>
+                {workflow.entities.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
           {pricingAvailable && (
             <label className={ops.field}>
               {tr("salesOps.amountBasis")}
@@ -163,7 +197,11 @@ export function SalesOperations() {
               aria-expanded={importOpen}
               onClick={() => setImportOpen(!importOpen)}
             >
-              {tr("salesOps.importTitle")}
+              {tr(
+                workflow
+                  ? "salesOps.workflowImportExecution"
+                  : "salesOps.importTitle",
+              )}
             </button>
           )}
         </div>
@@ -171,6 +209,10 @@ export function SalesOperations() {
       {importOpen && (
         <SalesOperationsImport
           onPublish={(snapshot) => {
+            if (workflow) {
+              setRefresh((latest) => latest + 1);
+              return;
+            }
             clearSelection();
             setCurrency("all");
             setStage("orders");
@@ -184,6 +226,8 @@ export function SalesOperations() {
         <p role="alert" className={styles.panel}>
           {tr(error === "access" ? "common.noAccess" : "salesOps.loadError")}
         </p>
+      ) : filteredWorkflow ? (
+        <SalesOperationsWorkflow data={filteredWorkflow} />
       ) : !data ? (
         <p role="status" className={styles.panel}>
           {tr(data === undefined ? "auth.loading" : "salesOps.empty")}

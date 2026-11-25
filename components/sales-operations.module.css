@@ -14,7 +14,7 @@
 .headerActions {
   display: flex;
   flex-wrap: wrap;
-  align-items: end;
+  align-items: flex-end;
   gap: 10px;
 }
 
@@ -129,6 +129,31 @@
   color: var(--ink);
   font-size: 13px;
   line-height: 1.5;
+}
+
+.currentStage {
+  outline: 2px solid var(--gold);
+  outline-offset: -2px;
+}
+
+.workflowTab {
+  background: transparent;
+  color: inherit;
+  border: 0;
+  padding: 4px 0;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.workflowTab:hover {
+  text-decoration: underline;
+}
+
+.stageFigures {
+  display: grid;
+  gap: 8px;
+  align-content: start;
 }
 
 .register {

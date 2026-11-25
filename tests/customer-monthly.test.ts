@@ -6,8 +6,10 @@ import {
   monthlyDetailPoints,
   monthlyDetailRows,
   customerMonthlyView,
+  monthlySalesComparison,
 } from "../lib/customer-monthly";
-import { defaultFilters } from "../lib/dashboard";
+import { defaultFilters, getDashboardSnapshot } from "../lib/dashboard";
+import snapshots from "../data/apac-dashboard.json";
 import type { CustomerAnalysis } from "../lib/graphics-types";
 import type { Store, User } from "../lib/types";
 
@@ -178,6 +180,30 @@ test("Monthly details require complete China permission and compatible Entity/te
       .length,
     6,
   );
+  const comparison = monthlySalesComparison(
+    customerMonthlyView(state, user, defaultFilters).source,
+    2026,
+  );
+  assert.equal(comparison?.prior[9].ytd, 150);
+  assert.equal(comparison?.current[9].ytd, 300);
+  assert.equal(comparison?.current[10].monthly, null);
+  assert.equal(comparison?.prior[10].monthly, null);
+  const chinaSnapshots = (snapshots.snapshots as Store["snapshots"])
+    .filter((row) => row.year === 2026 && source.entityIds.includes(row.entityId))
+    .map((row) => ({ ...row, month: 11, week: 47 }));
+  const dashboardState: Store = {
+    version: 2, revision: 1, users: [], snapshots: chinaSnapshots,
+    lines: [], batches: [], audit: [], customerAnalyses: [source],
+  };
+  assert.ok(getDashboardSnapshot(dashboardState, user, defaultFilters).graphics.salesComparison);
+  for (const patch of [{ bu: "DDC" }, { region: "APAC" }, { year: 2027 }, { salesType: "external" as const }])
+    assert.equal(getDashboardSnapshot(dashboardState, user, { ...defaultFilters, ...patch }).graphics.salesComparison, undefined);
+  assert.equal(getDashboardSnapshot(dashboardState, { ...user, permissions: { dhk: ["view"] } }, defaultFilters).graphics.salesComparison, undefined);
+  const beforeClose: Store = {
+    ...dashboardState,
+    snapshots: chinaSnapshots.map((row) => ({ ...row, month: 10, week: 43 })),
+  };
+  assert.equal(getDashboardSnapshot(beforeClose, user, defaultFilters).graphics.salesComparison, undefined);
   for (const patch of [
     { bu: "DDC" },
     { entity: "dhk" },

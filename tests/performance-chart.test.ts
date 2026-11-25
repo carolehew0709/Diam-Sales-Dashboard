@@ -4,9 +4,22 @@ import {
   firstOpenMonth,
   performanceChartSeries,
   monthlyPerformanceSeries,
+  monthlySalesParts,
   teamMonthlyPerformance,
 } from "../lib/performance-chart";
 import type { Metric } from "../lib/dashboard";
+
+test("monthly stacks show sourced Prospect, keep closed totals whole and skip unreconciled splits", () => {
+  assert.deepEqual(monthlySalesParts({ sales: 14, orderbook: 6, base: 20 }), {
+    sales: 14, prospect: 6,
+  });
+  assert.deepEqual(monthlySalesParts({ sales: 14, orderbook: 6, base: 14 }), {
+    sales: 14, prospect: 0,
+  });
+  assert.deepEqual(monthlySalesParts({ sales: null, orderbook: 8, base: 9 }), {
+    sales: null, prospect: null,
+  });
+});
 
 test("local team trend sums delivery months and accumulates only the selected teams' OB", () => {
   const a = { monthly: [0, 12.25, -2, ...Array(9).fill(0)] };

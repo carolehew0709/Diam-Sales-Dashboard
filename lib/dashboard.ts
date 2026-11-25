@@ -21,6 +21,7 @@ import {
 } from "./sales-teams";
 import { salesGraphicSeries } from "./sales-graphics";
 import { customerAnalysisView } from "./customer-analysis";
+import { customerMonthlyView, monthlySalesComparison } from "./customer-monthly";
 import { monthlyPerformanceAxis } from "./performance-chart";
 import type {
   Amount,
@@ -468,6 +469,21 @@ export function getDashboardSnapshot(
     matchesRegion(r.entity, filters.region),
   );
   const regionTotal = combineSelected(regionRows.map((r) => r.metrics));
+  const comparisonSource =
+    filters.region === "China"
+      ? customerMonthlyView(state, user, filters).source
+      : null;
+  const salesComparison =
+    comparisonSource &&
+    selected.every(
+      ({ snapshot }) =>
+        snapshot?.year === filters.year &&
+        (snapshot.month > comparisonSource.details.cutoffMonth ||
+          (snapshot.month === comparisonSource.details.cutoffMonth &&
+            reportingMonthClosed(snapshot))),
+    )
+      ? monthlySalesComparison(comparisonSource, filters.year)
+      : undefined;
   const salesTypes = ["all", "external", "group"] as const;
   // Reuse the scoped source snapshots. entityMetric reapplies the sales-type
   // rules (including the preserved DCP External source), and the monthly close is All-only.
@@ -583,6 +599,14 @@ export function getDashboardSnapshot(
       .sort((a, b) => a.week - b.week)
       .map((s) => ({ week: s.week, value: entityMetric(s, filters).scenario })),
   })) : [];
+  const salesTypeTotal = (salesType: "external" | "group") => {
+    const scope = { ...filters, salesType };
+    return sumKnown(selected.map(({ snapshot }) =>
+      snapshot
+        ? selectedSalesScenario({ snapshot, metrics: entityMetric(snapshot, scope) }, scope)
+        : null,
+    ));
+  };
   return {
     availableWeeks,
     latestCustomerAnalysis: customerAnalysisView(state, user, filters),
@@ -596,6 +620,7 @@ export function getDashboardSnapshot(
     filters,
     graphics: {
       performanceAxes,
+      salesComparison,
       series: salesGraphicSeries(
         state,
         selected.map((r) => r.entity),
@@ -632,20 +657,8 @@ export function getDashboardSnapshot(
     latestPublish:
       state.audit.filter((a) => a.action === "publish").at(-1)?.at ?? null,
     sourceCount: selected.filter((r) => r.snapshot).length,
-    external: sumKnown(
-      selected.map((r) =>
-        r.snapshot
-          ? entityMetric(r.snapshot, { ...filters, salesType: "external" }).base
-          : null,
-      ),
-    ),
-    group: sumKnown(
-      selected.map((r) =>
-        r.snapshot
-          ? entityMetric(r.snapshot, { ...filters, salesType: "group" }).base
-          : null,
-      ),
-    ),
+    external: salesTypeTotal("external"),
+    group: salesTypeTotal("group"),
   };
 }
 export type Dashboard = ReturnType<typeof getDashboardSnapshot>;

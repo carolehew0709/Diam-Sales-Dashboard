@@ -82,18 +82,41 @@ export function monthlyPerformanceSeries(
   };
 }
 
+/** Keep the source-backed orderbook separate from closed actuals and adjustments. */
+export function monthlySalesParts(
+  month: Pick<Metric["monthly"][number], "sales" | "orderbook" | "base">,
+) {
+  const sales = month.sales;
+  if (month.base === null) return { sales, prospect: null };
+  const outstanding = month.base - (sales ?? 0);
+  const prospect =
+    Math.abs(outstanding) < 1e-8
+      ? 0
+      : month.orderbook !== null && Math.abs(outstanding - month.orderbook) < 1e-8
+        ? month.orderbook
+        : null;
+  return { sales, prospect };
+}
+
 /** Fit the axis to the actual plotted points from both scenarios of each sales type. */
 export function monthlyPerformanceAxis(
   variants: readonly Pick<Metric, "monthly" | "cumulative">[],
   dimensionScoped: boolean,
 ) {
   return integerAxis(
-    variants.flatMap((metrics) =>
-      (["Sales", "Sales + Prospect"] as const).flatMap((scenario) =>
+    variants.flatMap((metrics) => [
+      ...(["Sales", "Sales + Prospect"] as const).flatMap((scenario) =>
         monthlyPerformanceSeries(metrics, scenario, dimensionScoped).points
           .flatMap(({ monthly, ytd }) => [monthly, ytd]),
       ),
-    ),
+      ...metrics.monthly.flatMap((month) => {
+        const { sales, prospect } = monthlySalesParts(month);
+        return [
+          Math.min(0, sales ?? 0) + Math.min(0, prospect ?? 0),
+          Math.max(0, sales ?? 0) + Math.max(0, prospect ?? 0),
+        ];
+      }),
+    ]),
   );
 }
 

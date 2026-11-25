@@ -95,6 +95,10 @@
   font-size: 12px;
 }
 
+.globalFilters:global(.sales-filter-bar) {
+  grid-template-columns: minmax(90px, 1fr) minmax(125px, 1fr) minmax(110px, 0.8fr) minmax(220px, 1.5fr) minmax(195px, 1.3fr);
+}
+
 .sales :global(.graphic-heading h3) {
   font: 600 16px/1.5 var(--font-display);
   letter-spacing: normal;
@@ -106,6 +110,9 @@
 }
 
 @media (max-width: 640px) {
+  .globalFilters:global(.sales-filter-bar) {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
   .section {
     scroll-margin-top: 16px;
   }

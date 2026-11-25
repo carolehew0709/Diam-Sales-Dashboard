@@ -8,11 +8,11 @@ import type { Store, User } from "../lib/types";
 const admin: User = { id: "test", name: "Test", email: "test@example.com", role: "superadmin", region: "APAC", crossRegionView: false, permissions: {} };
 const state: Store = { version: 2, revision: 1, users: [], snapshots: source.snapshots as Store["snapshots"], lines: source.lines as Store["lines"], batches: [], audit: [] };
 
-test("Explore shows the other authorized regional BUs while the primary view keeps the selected BU", () => {
+test("Entities compares the entire authorized region while the primary view keeps the selected Entity", () => {
   const data = getDashboardSnapshot(state, admin, { ...defaultFilters, bu: "DCP" });
   const before = JSON.stringify(data);
   const rows = exploreBusinessUnitRows(data.regionRows, data.filters);
-  assert.deepEqual(rows.map((row) => row.entity.code).sort(), ["DDC", "DEHK"]);
+  assert.deepEqual(rows.map((row) => row.entity.code).sort(), ["DCP", "DDC", "DEHK"]);
   assert.deepEqual(data.rows.map((row) => row.entity.code), ["DCP"]);
   for (const row of rows) {
     assert.equal(row, data.regionRows.find((r) => r.entity.id === row.entity.id));
@@ -33,19 +33,23 @@ test("Explore preserves year, scenario, type, team and External customer project
   }
 });
 
-test("single-BU regions and single-BU permissions hide Explore without exposing other countries", () => {
+test("single-Entity countries hide comparison and China only includes accessible Entities", () => {
   for (const region of ["India", "Japan", "Singapore"]) {
     const data = getDashboardSnapshot(state, admin, { ...defaultFilters, region });
     assert.deepEqual(exploreBusinessUnitRows(data.regionRows, data.filters), []);
   }
   const viewer: User = { ...admin, role: "viewer", permissions: { dcp: ["view"] } };
   const data = getDashboardSnapshot(state, viewer, { ...defaultFilters, bu: "DCP" });
-  assert.deepEqual(exploreBusinessUnitRows(data.regionRows, data.filters), []);
+  assert.deepEqual(exploreBusinessUnitRows(data.regionRows, data.filters).map((r) => r.entity.code), ["DCP"]);
 });
 
-test("All BUs decomposes the aggregate; explicit entity and legacy DEHK alias exclude that BU", () => {
-  const data = getDashboardSnapshot(state, admin, defaultFilters);
-  assert.equal(exploreBusinessUnitRows(data.regionRows, defaultFilters).length, 3);
-  assert.deepEqual(exploreBusinessUnitRows(data.regionRows, { bu: "all", entity: "dcp" }).map((row) => row.entity.code).sort(), ["DDC", "DEHK"]);
-  assert.deepEqual(exploreBusinessUnitRows(data.regionRows, { bu: "DHK", entity: "all" }).map((row) => row.entity.code).sort(), ["DCP", "DDC"]);
+test("APAC comparison includes all authorized Entities regardless of the selected Entity", () => {
+  const filters = { ...defaultFilters, region: "APAC", entity: "dcp" };
+  const data = getDashboardSnapshot(state, admin, filters);
+  assert.deepEqual(exploreBusinessUnitRows(data.regionRows, filters).map((row) => row.entity.code).sort(), [
+    "DCP", "DDC", "DDI", "DDJ", "DEHK", "DSI",
+  ]);
+  const viewer: User = { ...admin, role: "viewer", permissions: { dcp: ["view"], ddi: ["view"] } };
+  const scoped = getDashboardSnapshot(state, viewer, filters);
+  assert.deepEqual(exploreBusinessUnitRows(scoped.regionRows, filters).map((row) => row.entity.code).sort(), ["DCP", "DDI"]);
 });

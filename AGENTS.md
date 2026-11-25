@@ -188,3 +188,7 @@ Pipeline display counts distinct Entity/project codes. Weekly status uses projec
 ## Owner team naming decision 2026-11-19
 
 Panny Team-L and Panny Team-S supersede the earlier combined Panny reporting rule. Keep explicit subteam labels in Sales, monthly customer charts, AR and their exports. Use the original LVMH Team / LVMH+Exclusive Team and Sephora Team evidence for the legacy China split. Never allocate a source record labeled only Panny Team to a subteam. Preserve source rows, approved budgets and the independently retained Prospect snapshot; reconcile any label-only re-publication to the previous amounts.
+
+## Owner Sales presentation decisions (2026-11-25)
+
+Sales Team and Customer filters apply only in the Sales Team section, superseding the global-filter decision. Main monthly columns use distinct sourced Sales and Prospect segments. Compare to Last Year uses comparable China finance actuals through the same source cutoff for both years, in the fully authorized China All Entities and All sales view. Analysis compares all authorized Entities in its region regardless of the Entity selector, superseding the earlier Explore rule. Hide comparison in single-Entity countries. The Entities overview shows one stack per Entity in Sales + Prospect, and its External/Group chart follows the same scenario. Use the existing invoice-plan source and calculation. See `docs/graphics.md`.

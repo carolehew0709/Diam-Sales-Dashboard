@@ -1,5 +1,6 @@
 "use client";
-import { memo, useRef } from "react";
+
+import { memo, useRef, useState } from "react";
 import { useI18n } from "./i18n-provider";
 import { GraphicCard } from "./graphic-card";
 import { ComboPlot } from "./graphic-plots";
@@ -7,112 +8,163 @@ import { useWorkbookGroup } from "./use-workbook-group";
 import { months, type Dashboard } from "@/lib/dashboard";
 import { weeklySourceReference } from "@/lib/fiscal-years";
 import {
-  firstOpenMonth,
   monthlyPerformanceSeries,
+  monthlySalesParts,
 } from "@/lib/performance-chart";
+import styles from "./sales-trend-workspace.module.css";
 
 export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
   data,
-  index = 0,
   standalone = false,
   exportOnly = false,
   comparisonRow,
+  compare = false,
 }: {
   data: Dashboard;
-  index?: number;
   standalone?: boolean;
   exportOnly?: boolean;
   comparisonRow?: Dashboard["rows"][number];
+  compare?: boolean;
 }) {
   const { tr, display } = useI18n();
   const root = useRef<HTMLDivElement>(null);
+  const [compareEnabled, setCompareEnabled] = useState(compare);
+  const availableComparison = standalone
+    ? data.graphics.salesComparison
+    : undefined;
+  const comparison = compareEnabled ? availableComparison : undefined;
   useWorkbookGroup(
     root,
     standalone && !exportOnly
       ? () => (
           <SalesMonthlyGraphic
             data={data}
-            index={index}
             standalone
             exportOnly
-            comparisonRow={comparisonRow}
+            compare={!!comparison}
           />
         )
       : null,
   );
-  const series = comparisonRow ? { id: comparisonRow.entity.id, name: comparisonRow.entity.code } : data.graphics.series[index];
-  const selectedRows =
-    comparisonRow ? [comparisonRow] : index === 0
-      ? data.rows
-      : data.rows.filter((r) => r.entity.id === series.id);
-  const metrics = comparisonRow?.metrics ?? (index === 0 ? data.totals : selectedRows[0].metrics);
-  const axis =
-    comparisonRow || index !== 0
-      ? data.graphics.performanceAxes?.byEntity[series.id]
-      : data.graphics.performanceAxes?.total;
-  const openMonth = firstOpenMonth(
-    data.filters.year,
-    selectedRows.map((r) => r.snapshot),
-  );
-  const actualScoped = !!data.graphics.teamKpiSource && selectedRows.length>0 && selectedRows.every(r=>r.snapshot?.teamActualSource);
-  const dimensionScoped = !!(data.filters.salesTeam && data.filters.salesTeam !== "all") ||
-    !!(data.filters.customer && data.filters.customer !== "all");
-  const view = monthlyPerformanceSeries(
-    metrics,
-    data.filters.scenario,
-    dimensionScoped,
-  );
-  const prospectOnly = view.key === "orderbook";
-  const salesOnly = view.key === "sales";
-  const monthlyLabel = tr(
-    salesOnly ? "graphics.monthlySales" : prospectOnly
-      ? "graphics.monthlyScopedOB"
-      : "graphics.monthlyConfirmed",
-  );
-  const cumulativeLabel = tr(
-    salesOnly ? "graphics.cumulativeSales" : prospectOnly
-      ? "graphics.cumulativeScopedOB"
+  const selected = comparisonRow ? [comparisonRow] : data.rows;
+  const metrics = comparisonRow?.metrics ?? data.totals;
+  const axis = comparison
+    ? undefined
+    : comparisonRow
+      ? data.graphics.performanceAxes.byEntity[comparisonRow.entity.id]
+      : data.graphics.performanceAxes.total;
+  const filters = data.filters;
+  const view = monthlyPerformanceSeries(metrics, filters.scenario);
+  const showProspect = !comparison && filters.scenario === "Sales + Prospect";
+  const sales = tr("graphics.monthlySales");
+  const cumulative = tr(
+    comparison || !showProspect
+      ? "graphics.cumulativeSales"
       : "graphics.cumulativeConfirmed",
   );
+  const monthlyLabel = comparison ? sales + " · " + filters.year : sales;
+  const ytdLabel = comparison ? cumulative + " · " + filters.year : cumulative;
+  const prospectLabel = tr("graphics.monthlyProspect");
+  const prior = comparison && {
+    points: comparison.prior,
+    monthlyLabel: sales + " · " + comparison.priorYear,
+    ytdLabel: cumulative + " · " + comparison.priorYear,
+  };
+  const points = view.points.map((point, i) => {
+    const amounts = monthlySalesParts(metrics.monthly[i]);
+    return {
+      label: display(months[i]),
+      monthly: comparison ? comparison.current[i].monthly : amounts.sales,
+      prospect: showProspect ? amounts.prospect : null,
+      ytd: comparison ? comparison.current[i].ytd : point.ytd,
+      estimated: null,
+    };
+  });
   const week =
-    [...new Set(selectedRows.flatMap((row) => row.snapshot ? [actualScoped ? row.snapshot.teamActualSource?.week ?? row.snapshot.week : row.snapshot.week] : []))].sort((a, b) => a - b).map((w) => `W${w}`).join(" / ") || tr("snapshot.none");
-  const filters = comparisonRow ? { ...data.filters, bu: comparisonRow.entity.businessUnit, entity: comparisonRow.entity.id } : data.filters;
-  const context = `${tr("graphics.weekly", { week })} · ${filters.year} · ${display(filters.region)} · ${filters.bu === "all" ? tr("filters.allBU") : filters.bu} · ${filters.salesType === "all" ? tr("filters.allSales") : display(filters.salesType)} · ${prospectOnly ? "" : `${display(filters.scenario)} · `}${filters.salesTeam === "all" || !filters.salesTeam ? tr("team.all") : filters.salesTeam} · ${filters.customer && filters.customer !== "all" ? filters.customer + " · " : ""}kEUR`;
-  const sources = [
-    ...new Set(
-      selectedRows.flatMap((r) => (r.snapshot ? [r.snapshot.sourceFile] : [])),
-    ),
-  ].join("; ");
-  const closeFiles = [...new Set(selectedRows.flatMap((r) =>
-    r.monthlyClose ? [r.monthlyClose.sourceFile] : [],
-  ))];
-  const sourceFor = (monthIndex: number) =>
-    selectedRows
-      .map(
-        (r) => r.monthlyClose && monthIndex < r.monthlyClose.monthly.length
-          ? `${r.entity.code}: ${r.monthlyClose.year}-${String(monthIndex + 1).padStart(2, "0")} · ${r.monthlyClose.sourceFile} · ${r.monthlyClose.sourceSheet} · ${r.monthlyClose.sourceRange}`
-          : `${r.entity.code}: ${r.snapshot?.teamActualSource ? `${tr("teamTrend.actualSource")} W${r.snapshot.teamActualSource.week??"—"} · ${r.snapshot.teamActualSource.sourceFile} · ${r.snapshot.teamActualSource.sourceSheet}; ` : ""}${r.snapshot ? weeklySourceReference(r.snapshot) : "—"}`,
-      )
-      .join("; ");
-  const scopeName =
-    filters.entity !== "all"
-      ? (selectedRows[0]?.entity.code ?? filters.entity)
+    [
+      ...new Set(
+        selected.flatMap((row) =>
+          row.snapshot ? ["W" + row.snapshot.week] : [],
+        ),
+      ),
+    ].join(" / ") || tr("snapshot.none");
+  const name =
+    comparisonRow?.entity.code ??
+    (filters.entity !== "all"
+      ? (selected[0]?.entity.code ?? filters.entity)
       : filters.bu !== "all"
         ? filters.bu
-        : display(filters.region);
-  const title = tr(
-    prospectOnly ? "graphics.scopedPerformanceFor" : "graphics.performanceFor",
-    {
-      name: comparisonRow ? comparisonRow.entity.code : index === 0 ? scopeName : series.name,
-    },
-  );
-  const closeNote = closeFiles.length ? tr("graphics.monthlyCloseRule", { source: closeFiles.join(" · ") }) : "";
-  const rule = tr(salesOnly ? "graphics.salesRule" : prospectOnly ? "graphics.scopedOBRule" : "graphics.planningRule");
-  const note = `${closeNote} ${actualScoped ? tr("teamKpi.scope",data.graphics.teamKpiSource!) : ""} ${rule} ${prospectOnly ? "" : tr("graphics.periodColorsRule")} ${tr("graphics.weeklyRule")} ${tr("graphics.source", { source: sources || tr("common.review") })}`;
-  const exact = (v: number | null) =>
-    v === null
-      ? "—"
-      : v.toLocaleString(undefined, { maximumFractionDigits: 2 });
+        : display(filters.region));
+  const salesType =
+    filters.salesType === "all"
+      ? tr("filters.allSales")
+      : display(filters.salesType);
+  const context = comparison
+    ? [
+        display(filters.region),
+        comparison.priorYear + " / " + filters.year,
+        salesType,
+        tr("monthlyDetail.cutoff", {
+          month: display(months[comparison.cutoffMonth - 1]),
+        }),
+        "kEUR",
+      ].join(" · ")
+    : [
+        tr("graphics.weekly", { week }),
+        filters.year,
+        display(filters.region),
+        comparisonRow?.entity.code ??
+          (filters.bu === "all" ? tr("filters.allBU") : filters.bu),
+        salesType,
+        display(filters.scenario),
+        "kEUR",
+      ].join(" · ");
+  const financeSource = comparison
+    ? [
+        comparison.sourceFile,
+        comparison.sourceSheet + "!" + comparison.sourceRange,
+      ].join(" · ")
+    : "";
+  const sourceFor = (i: number) =>
+    comparison
+      ? i < comparison.cutoffMonth
+        ? financeSource
+        : ""
+      : selected
+          .map(({ entity, snapshot, monthlyClose }) => {
+            const source =
+              monthlyClose && i < monthlyClose.monthly.length
+                ? monthlyClose.sourceFile +
+                  " · " +
+                  monthlyClose.sourceSheet +
+                  "!" +
+                  monthlyClose.sourceRange
+                : snapshot
+                  ? weeklySourceReference(snapshot)
+                  : "—";
+            return entity.code + ": " + source;
+          })
+          .join("; ");
+  const note = comparison
+    ? tr("graphics.lastYearSource", { source: financeSource })
+    : tr(showProspect ? "graphics.planningRule" : "graphics.salesRule") +
+      " " +
+      tr("graphics.weeklyRule") +
+      " " +
+      tr("graphics.source", {
+        source:
+          selected
+            .flatMap((r) =>
+              r.snapshot ? [weeklySourceReference(r.snapshot)] : [],
+            )
+            .join(" · ") || tr("common.review"),
+      });
+  const measures = [
+    monthlyLabel,
+    ...(showProspect ? [prospectLabel] : []),
+    ytdLabel,
+    ...(prior ? [prior.monthlyLabel, prior.ytdLabel] : []),
+  ];
   return (
     <div
       ref={root}
@@ -122,63 +174,50 @@ export const SalesMonthlyGraphic = memo(function SalesMonthlyGraphic({
           : "monthly-sales-graphic"
       }
     >
+      {availableComparison && !exportOnly && (
+        <div className={styles.modes}>
+          <button
+            type="button"
+            aria-pressed={!!comparison}
+            onClick={() => setCompareEnabled((on) => !on)}
+          >
+            {tr("graphics.compareLastYear")}
+          </button>
+        </div>
+      )}
       <GraphicCard
-        title={title}
+        title={tr(
+          comparison ? "graphics.actualByYear" : "graphics.performanceFor",
+          { name },
+        )}
         context={context}
         note={note}
-        exportNote={note}
         height={395}
         exportTable={{
           columns: [
             { label: tr("common.month") },
-            { label: `${monthlyLabel} (kEUR)` },
-            { label: `${cumulativeLabel} (kEUR)` },
+            ...measures.map((label) => ({ label: label + " (kEUR)" })),
             { label: tr("common.source") },
           ],
-          rows: view.points.map((p, i) => [
-            display(months[i]),
+          rows: points.map((p, i) => [
+            p.label,
             p.monthly,
+            ...(showProspect ? [p.prospect] : []),
             p.ytd,
+            ...(prior ? [prior.points[i].monthly, prior.points[i].ytd] : []),
             sourceFor(i),
           ]),
         }}
-        table={
-          <table className="bu-table">
-            <thead>
-              <tr>
-                <th>{tr("common.month")}</th>
-                <th className="numeric">{monthlyLabel}</th>
-                <th className="numeric">{cumulativeLabel}</th>
-                <th>{tr("common.source")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {view.points.map((p, i) => (
-                <tr key={i}>
-                  <td>{display(months[i])}</td>
-                  <td className="numeric">{exact(p.monthly)}</td>
-                  <td className="numeric">{exact(p.ytd)}</td>
-                  <td>{sourceFor(i)}</td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        }
       >
         <ComboPlot
           axis={axis}
-          points={view.points.map((p, i) => ({
-            ...p,
-            label: display(months[i]),
-            estimated: actualScoped && data.filters.scenario === "Sales" ? i >= data.graphics.teamKpiSource!.month : openMonth === null ? null : i >= openMonth,
-          }))}
+          points={points}
           monthlyLabel={monthlyLabel}
-          ytdLabel={cumulativeLabel}
-          empty={tr(
-            salesOnly ? "graphics.noSales" : prospectOnly
-              ? "graphics.noTeam"
-              : "graphics.noPlanning",
-          )}
+          ytdLabel={ytdLabel}
+          prospectLabel={showProspect ? prospectLabel : undefined}
+          previous={prior}
+          showPeriodLegend={false}
+          empty={tr(showProspect ? "graphics.noPlanning" : "graphics.noSales")}
         />
       </GraphicCard>
     </div>

@@ -83,3 +83,26 @@ export function monthlyDetailPoints(
     return { month: i + 1, monthly, ytd: known ? ytd : null };
   });
 }
+
+export function monthlySalesComparison(
+  source: ReturnType<typeof customerMonthlyView>["source"],
+  year: number,
+) {
+  const priorYear = year - 1;
+  if (!source || ![year, priorYear].every((period) => source.details.years.includes(period)))
+    return undefined;
+  const scope = { team: "", category: "", subgroup: "", customer: "" };
+  const current = monthlyDetailPoints(source.details, { ...scope, year });
+  const prior = monthlyDetailPoints(source.details, { ...scope, year: priorYear });
+  const last = source.details.cutoffMonth - 1;
+  if (current[last]?.ytd == null || prior[last]?.ytd == null) return undefined;
+  return {
+    current,
+    prior,
+    priorYear,
+    cutoffMonth: source.details.cutoffMonth,
+    sourceFile: source.sourceFile,
+    sourceSheet: source.details.sourceSheet,
+    sourceRange: source.details.sourceRange,
+  };
+}

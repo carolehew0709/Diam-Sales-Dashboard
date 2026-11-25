@@ -1,4 +1,5 @@
 "use client";
+import { useId } from "react";
 import { integerAxis } from "@/lib/chart-axis";
 import { formatK } from "@/lib/dashboard";
 import type { Amount } from "@/lib/types";
@@ -97,152 +98,151 @@ export function Legend({
     </>
   );
 }
+
+type TrendValues = { monthly: Amount; ytd: Amount };
+
 export function ComboPlot({
   points,
   monthlyLabel,
   ytdLabel,
   empty,
   axis,
+  showPeriodLegend = true,
+  prospectLabel,
+  previous,
 }: {
-  points: {
-    label: string;
-    monthly: Amount;
-    ytd: Amount;
-    estimated: boolean | null;
-  }[];
+  points: (TrendValues & { label: string; estimated: boolean | null; prospect?: Amount })[];
   monthlyLabel: string;
   ytdLabel: string;
   empty: string;
   axis?: ReturnType<typeof integerAxis>;
+  showPeriodLegend?: boolean;
+  prospectLabel?: string;
+  previous?: { points: TrendValues[]; monthlyLabel: string; ytdLabel: string };
 }) {
   const { locale, tr } = useI18n();
-  const values = points
-    .flatMap((p) => [p.monthly, p.ytd])
-    .filter((v): v is number => v !== null);
-  if (!values.length)
+  const id = useId();
+  const values = [
+    ...points.flatMap((p) => [p.monthly, p.ytd, p.prospect ?? null]),
+    ...(previous?.points.flatMap((p) => [p.monthly, p.ytd]) ?? []),
+  ];
+  if (!values.some((v) => v !== null))
     return (
       <>
         {axis && <PlotGrid min={axis.min} max={axis.max} ticks={axis.ticks} />}
         <PlotEmpty text={empty} />
       </>
     );
-  const earlierColor = "#d0bd93",
-    openColor = "#718699";
-  const knownPeriods = points.some((p) => p.estimated !== null);
-  const monthlyLegends = knownPeriods
-    ? [
-        ...(points.some((p) => p.monthly !== null && p.estimated === false)
-          ? [
-              {
-                name: `${monthlyLabel} · ${tr("graphics.earlierMonths")}`,
-                color: earlierColor,
-              },
-            ]
-          : []),
-        ...(points.some((p) => p.monthly !== null && p.estimated === true)
-          ? [
-              {
-                name: `${monthlyLabel} · ${tr("graphics.openMonths")}`,
-                color: openColor,
-              },
-            ]
-          : []),
-      ]
-    : points.some((p) => p.monthly !== null)
-      ? [{ name: monthlyLabel, color: earlierColor }]
-      : [];
+  const salesColor = "#d0bd93", prospectColor = "#718699";
+  const currentLine = "#a77a35", priorLine = "#526d64", priorBar = "#9aada5";
+  const knownPeriods = showPeriodLegend && points.some((p) => p.estimated !== null);
+  const monthlyLegend = [
+    ...(points.some((p) => p.monthly !== null && (!knownPeriods || p.estimated === false))
+      ? [{ name: knownPeriods ? monthlyLabel + " · " + tr("graphics.earlierMonths") : monthlyLabel, color: salesColor }]
+      : []),
+    ...(knownPeriods && points.some((p) => p.monthly !== null && p.estimated === true)
+      ? [{ name: monthlyLabel + " · " + tr("graphics.openMonths"), color: prospectColor }]
+      : []),
+    ...(prospectLabel && points.some((p) => p.prospect != null && p.prospect !== 0)
+      ? [{ name: prospectLabel, color: prospectColor }]
+      : []),
+    ...(previous ? [{ name: previous.monthlyLabel, color: priorBar }] : []),
+  ];
   const { max, min, ticks } = axis ?? integerAxis(values);
-  const y = (v: number) => 285 - ((v - min) / (max - min)) * 250,
-    x = (i: number) => 98 + i * 58;
-  let path = "",
-    active = false;
-  points.forEach((p, i) => {
-    if (p.ytd === null) {
-      active = false;
-      return;
-    }
-    path += `${active ? "L" : "M"}${x(i)},${y(p.ytd)} `;
-    active = true;
-  });
+  const y = (v: number) => 285 - ((v - min) / (max - min)) * 250;
+  const x = (i: number) => 98 + i * 58;
+  const line = (series: TrendValues[]) => {
+    let active = false;
+    return series.map((p, i) => {
+      if (p.ytd === null) {
+        active = false;
+        return "";
+      }
+      const point = (active ? "L" : "M") + x(i) + "," + y(p.ytd);
+      active = true;
+      return point;
+    }).join(" ");
+  };
   return (
     <>
       <PlotGrid max={max} min={min} ticks={ticks} />
-      <path d={path} stroke="#a77a35" strokeWidth="3" fill="none" />
-      {points.map((p, i) => (
-        <g key={i}>
-          {(p.monthly !== null || p.ytd !== null) && (
-            <ChartMark
-              color={p.estimated ? openColor : "#a77a35"}
-              data={{
-                title: p.label,
-                subtitle:
-                  p.estimated === null
-                    ? undefined
-                    : tr(
-                        p.estimated
-                          ? "graphics.openMonths"
-                          : "graphics.earlierMonths",
-                      ),
-                rows: [
-                  {
-                    label: monthlyLabel,
-                    value: chartAmount(p.monthly, locale),
-                  },
-                  { label: ytdLabel, value: chartAmount(p.ytd, locale) },
-                ],
-              }}
-              hit={
-                <rect
-                  x={x(i) - 24}
-                  y="28"
-                  width="48"
-                  height="266"
-                  fill="white"
-                />
-              }
-            >
-              {p.monthly !== null && (
-                <rect
-                  x={x(i) - 15}
-                  y={Math.min(y(p.monthly), y(0))}
-                  width="30"
-                  height={Math.max(1, Math.abs(y(0) - y(p.monthly)))}
-                  rx="3"
-                  fill={p.estimated ? openColor : earlierColor}
-                />
-              )}
-              {p.ytd !== null && (
-                <circle
-                  cx={x(i)}
-                  cy={y(p.ytd)}
-                  r="4"
-                  fill="#fffefa"
-                  stroke="#a77a35"
-                  strokeWidth="2"
-                />
-              )}
-            </ChartMark>
-          )}
-          <text
-            x={x(i)}
-            y="308"
-            textAnchor="middle"
-            fontSize="12"
-            fill="#706f67"
-          >
-            {p.label}
-          </text>
-        </g>
-      ))}
-      <Legend labels={monthlyLegends} />
-      <Legend
-        y={375}
-        labels={
-          points.some((p) => p.ytd !== null)
-            ? [{ name: ytdLabel, color: "#a77a35" }]
-            : []
-        }
-      />
+      {previous && <path d={line(previous.points)} stroke={priorLine} strokeDasharray="5 4" strokeWidth="2" fill="none" />}
+      <path d={line(points)} stroke={currentLine} strokeWidth="3" fill="none" />
+      {points.map((p, i) => {
+        const prior = previous?.points[i];
+        const sales = p.monthly;
+        const forecast = p.prospect ?? null;
+        const start = forecast !== null && forecast < 0 ? Math.min(0, sales ?? 0) : Math.max(0, sales ?? 0);
+        const stacked = sales !== null && forecast !== null && sales * forecast > 0;
+        const combined = (sales ?? 0) + (forecast ?? 0);
+        const clip = id + "-bar-" + i;
+        const center = x(i);
+        const hasPoint = [sales, forecast, p.ytd, prior?.monthly ?? null, prior?.ytd ?? null].some((v) => v !== null);
+        const valueRow = (label: string, value: Amount) => ({ label, value: chartAmount(value, locale) });
+        return (
+          <g key={p.label}>
+            {hasPoint && (
+              <ChartMark
+                color={currentLine}
+                data={{
+                  title: p.label,
+                  subtitle: knownPeriods && p.estimated !== null
+                    ? tr(p.estimated ? "graphics.openMonths" : "graphics.earlierMonths")
+                    : undefined,
+                  rows: [
+                    valueRow(monthlyLabel, sales),
+                    ...(prospectLabel ? [valueRow(prospectLabel, forecast)] : []),
+                    valueRow(ytdLabel, p.ytd),
+                    ...(previous && prior
+                      ? [valueRow(previous.monthlyLabel, prior.monthly), valueRow(previous.ytdLabel, prior.ytd)]
+                      : []),
+                  ],
+                }}
+                hit={<rect x={center - 24} y="28" width="48" height="266" fill="white" />}
+              >
+                {stacked && (
+                  <clipPath id={clip}>
+                    <rect x={center - 15} width="30" y={Math.min(y(combined), y(0))} height={Math.abs(y(combined) - y(0))} rx="3" />
+                  </clipPath>
+                )}
+                {prior?.monthly != null && prior.monthly !== 0 && (
+                  <rect x={center + 1} width="14" y={Math.min(y(prior.monthly), y(0))} height={Math.abs(y(prior.monthly) - y(0))} rx="3" fill={priorBar} />
+                )}
+                {sales !== null && sales !== 0 && (
+                  <rect
+                    x={center - 15}
+                    width={previous ? 14 : 30}
+                    y={Math.min(y(sales), y(0))}
+                    height={Math.abs(y(sales) - y(0))}
+                    rx={stacked ? 0 : 3}
+                    clipPath={stacked ? "url(#" + clip + ")" : undefined}
+                    fill={knownPeriods && p.estimated ? prospectColor : salesColor}
+                  />
+                )}
+                {forecast !== null && forecast !== 0 && (
+                  <rect
+                    x={center - 15}
+                    width="30"
+                    y={Math.min(y(start + forecast), y(start))}
+                    height={Math.abs(y(start + forecast) - y(start))}
+                    rx={stacked ? 0 : 3}
+                    clipPath={stacked ? "url(#" + clip + ")" : undefined}
+                    fill={prospectColor}
+                  />
+                )}
+                {prior?.ytd != null && <circle cx={center} cy={y(prior.ytd)} r="3" fill="#fffefa" stroke={priorLine} strokeWidth="2" />}
+                {p.ytd !== null && <circle cx={center} cy={y(p.ytd)} r="4" fill="#fffefa" stroke={currentLine} strokeWidth="2" />}
+              </ChartMark>
+            )}
+            <text x={center} y="308" textAnchor="middle" fontSize="12" fill="#706f67">{p.label}</text>
+          </g>
+        );
+      })}
+      <Legend labels={monthlyLegend} />
+      <Legend y={375} labels={[
+        ...(points.some((p) => p.ytd !== null) ? [{ name: ytdLabel, color: currentLine }] : []),
+        ...(previous ? [{ name: previous.ytdLabel, color: priorLine }] : []),
+      ]} />
     </>
   );
 }

@@ -54,6 +54,10 @@ export function ChartDownloads({
   }, [exportAllowed, svg, title, context, note, exportTable, sheetName]);
   const download = async (format: "png" | "svg") => {
     if (!exportAllowed || !svg.current) return;
+    if (svg.current.closest('[data-customer-status="error"]')) {
+      setError(true);
+      return;
+    }
     if (
       svg.current.closest(
         '[aria-busy="true"], [data-customer-status="loading"]',

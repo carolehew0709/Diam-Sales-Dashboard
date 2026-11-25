@@ -55,6 +55,9 @@ export function ChartWorkbookExport({
     const wasCurrent = () =>
       root.isConnected &&
       root.getAttribute("aria-busy") !== "true" &&
+      !root.querySelector(
+        '[data-customer-status="loading"], [data-customer-status="error"]',
+      ) &&
       sourceCharts.every(
         (c) =>
           c.svg.isConnected &&

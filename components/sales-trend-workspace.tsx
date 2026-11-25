@@ -1,6 +1,5 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
-import { SalesMonthlyGraphic } from "./sales-monthly-graphic";
 import { GraphicCard } from "./graphic-card";
 import { ComboPlot } from "./graphic-plots";
 import { useI18n } from "./i18n-provider";
@@ -132,9 +131,16 @@ function MonthlyDetailChart({
   );
 }
 
-export function SalesTrendWorkspace({ data }: { data: Dashboard }) {
+export function TeamCustomerMonthlySales({
+  data,
+  team,
+  customer,
+}: {
+  data: Dashboard;
+  team: string;
+  customer: string;
+}) {
   const { tr } = useI18n();
-  const [mode, setMode] = useState("entity");
   const query = customerAnalysisQuery(data.filters, "");
   const [response, setResponse] = useState<{
     key: string;
@@ -150,7 +156,6 @@ export function SalesTrendWorkspace({ data }: { data: Dashboard }) {
   });
   const key = `${query}|${data.revision}`;
   useEffect(() => {
-    if (mode !== "detail") return;
     const c = new AbortController();
     void fetch(`/api/sales-monthly-details?${query}`, { signal: c.signal })
       .then(async (r) => {
@@ -162,12 +167,14 @@ export function SalesTrendWorkspace({ data }: { data: Dashboard }) {
         if (!c.signal.aborted) setResponse({ key, error: true });
       });
     return () => c.abort();
-  }, [mode, query, key]);
+  }, [query, key]);
   const current = response?.key === key ? response : undefined,
-    source = (current ?? response)?.view?.source;
+    source = current?.view?.source;
   const effective = source
     ? {
         ...selection,
+        team: team === "all" ? selection.team : team,
+        customer: customer === "all" ? selection.customer : customer,
         year: source.details.years.includes(selection.year)
           ? selection.year
           : source.year,
@@ -217,40 +224,10 @@ export function SalesTrendWorkspace({ data }: { data: Dashboard }) {
   return (
     <div
       className={styles.workspace}
-      aria-busy={mode === "detail" && !current}
-      data-customer-status={
-        mode === "detail"
-          ? !current
-            ? "loading"
-            : current.error
-              ? "error"
-              : undefined
-          : undefined
-      }
+      aria-busy={!current}
+      data-customer-status={!current ? "loading" : current.error ? "error" : undefined}
     >
-      <div
-        className={styles.modes}
-        role="group"
-        aria-label={tr("monthlyDetail.basis")}
-      >
-        <button
-          type="button"
-          aria-pressed={mode === "entity"}
-          onClick={() => setMode("entity")}
-        >
-          {tr("monthlyDetail.entityTrend")}
-        </button>
-        <button
-          type="button"
-          aria-pressed={mode === "detail"}
-          onClick={() => setMode("detail")}
-        >
-          {tr("monthlyDetail.title")}
-        </button>
-      </div>
-      {mode === "entity" ? (
-        <SalesMonthlyGraphic data={data} standalone />
-      ) : !current && !source ? (
+      {!current ? (
         <p role="status">{tr("auth.updating")}</p>
       ) : !source ? (
         <p className="apac-notice" role={current?.error ? "alert" : undefined}>
@@ -284,8 +261,10 @@ export function SalesTrendWorkspace({ data }: { data: Dashboard }) {
             </label>
             {(["team", "category", "subgroup", "customer"] as const).map(
               (field) =>
-                field === "subgroup" &&
-                (!effective.category || !options("subgroup").length) ? null : (
+                (field === "team" && team !== "all") ||
+                (field === "customer" && customer !== "all") ||
+                (field === "subgroup" &&
+                  (!effective.category || !options("subgroup").length)) ? null : (
                   <label key={field}>
                     {tr(
                       field === "team"

@@ -12,7 +12,7 @@ import {
   PlotGrid,
   graphicColors,
 } from "./graphic-plots";
-import { formatK, months, percent, type Dashboard } from "@/lib/dashboard";
+import { actualSalesForYear, formatK, months, percent, selectedSalesScenario, type Dashboard } from "@/lib/dashboard";
 import type { ChartTable } from "@/lib/chart-workbook-types";
 import { memo, useRef } from "react";
 import { useWorkbookGroup } from "./use-workbook-group";
@@ -116,11 +116,7 @@ export const SalesGraphics = memo(function SalesGraphics({
       {exploreRows.length > 0 && (
         <details className="graphics-entity-details bu-explore">
           <summary>
-            {tr(
-              data.filters.bu !== "all" || data.filters.entity !== "all"
-                ? "graphics.otherEntityCharts"
-                : "graphics.entityCharts",
-            )}
+            {tr("graphics.entityCharts")}
           </summary>
           <div className="graphics-grid">
             {exploreRows.map((row) => (
@@ -229,7 +225,6 @@ export const SalesGraphics = memo(function SalesGraphics({
         <InvoiceProgress data={data} />
       </div>
 
-      <p className="graphics-limitation">{tr("graphics.missingYoY")}</p>
     </section>
   );
 });
@@ -436,41 +431,35 @@ export const BusinessUnitGraphics = memo(function BusinessUnitGraphics({
         ),
       ].join("; ") || tr("common.review"),
   });
-  const max = Math.max(1, ...rows.map((r) => Math.abs(r.metrics.base ?? 0)));
-  const shares = businessUnitShares(rows.map((r) => r.metrics.base));
-  const shareLabel = (value: number | null, digits = 0) =>
-    salesNumber(value, locale, digits, "percent");
-  const detail = (value: number | null) => salesNumber(value, locale, 2);
-  const table = (
-    <table className="bu-table">
-      <thead>
-        <tr>
-          <th>{tr("common.buEntity")}</th>
-          <th className="numeric">{tr("graphics.annualBudget")}</th>
-          <th className="numeric">{tr("graphics.invoiced")}</th>
-          <th className="numeric">{tr("metric.ob")}</th>
-          <th className="numeric">{tr("graphics.annualBase")}</th>
-          <th className="numeric">{tr("graphics.buShare")}</th>
-          <th className="numeric">{tr("metric.coverage")}</th>
-          <th className="numeric">{tr("metric.gap")}</th>
-        </tr>
-      </thead>
-      <tbody>
-        {rows.map((r, i) => (
-          <tr key={r.entity.id}>
-            <td>{r.entity.code}</td>
-            <td className="numeric">{detail(r.metrics.budget)}</td>
-            <td className="numeric">{detail(r.metrics.sales)}</td>
-            <td className="numeric">{detail(r.metrics.orderbook)}</td>
-            <td className="numeric">{detail(r.metrics.base)}</td>
-            <td className="numeric">{shareLabel(shares[i], 2)}</td>
-            <td className="numeric">{salesNumber(r.metrics.coverage, locale, 2, "percent")}</td>
-            <td className="numeric">{detail(r.metrics.gap)}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  );
+
+  const salesOnly = data.filters.scenario === "Sales";
+  const scenarioLabel = tr(salesOnly ? "graphics.invoiced" : "graphics.annualBase");
+  const salesColor = "#a77a35";
+  const prospectColor = "#718699";
+  const adjustmentColor = "#887768";
+  const entries = rows.map((row) => {
+    const sales = actualSalesForYear(row, data.filters);
+    const total = selectedSalesScenario(row, data.filters);
+    const prospect = salesOnly ? null : row.metrics.orderbook;
+    const difference = total === null ? 0 : total - (sales ?? 0) - (prospect ?? 0);
+    return {
+      sales,
+      prospect,
+      total,
+      adjustment: Math.abs(difference) > 1e-6 ? difference : null,
+    };
+  });
+  const hasAdjustment = entries.some((entry) => entry.adjustment !== null);
+  const values = entries.flatMap((entry) => {
+    if (entry.total === null) return [];
+    const segments = [entry.sales ?? 0, entry.prospect ?? 0, entry.adjustment ?? 0];
+    return [segments.reduce((n, v) => n + Math.min(0, v), 0), segments.reduce((n, v) => n + Math.max(0, v), 0)];
+  });
+  const min = Math.min(0, ...values);
+  const max = Math.max(1, ...values);
+  const x = (v: number) => 100 + ((v - min) / (max - min)) * 430;
+  const shares = businessUnitShares(entries.map((entry) => entry.total));
+  const shareLabel = (value: number | null) => salesNumber(value, locale, 0, "percent");
   const exportTable: ChartTable = {
     columns: [
       { label: tr("common.buEntity") },
@@ -478,6 +467,8 @@ export const BusinessUnitGraphics = memo(function BusinessUnitGraphics({
       { label: `${tr("graphics.invoiced")} (kEUR)` },
       { label: `${tr("metric.ob")} (kEUR)` },
       { label: `${tr("graphics.annualBase")} (kEUR)` },
+      ...(hasAdjustment ? [{ label: tr("graphics.adjustment") + " (kEUR)" }] : []),
+      { label: `${scenarioLabel} · ${tr("filters.scenario")} (kEUR)` },
       { label: tr("graphics.buShare"), format: "0.0%" },
       { label: tr("metric.coverage"), format: "0.0%" },
       { label: `${tr("metric.gap")} (kEUR)` },
@@ -486,9 +477,11 @@ export const BusinessUnitGraphics = memo(function BusinessUnitGraphics({
     rows: rows.map((r, i) => [
       r.entity.code,
       r.metrics.budget,
-      r.metrics.sales,
+      entries[i].sales,
       r.metrics.orderbook,
       r.metrics.base,
+      ...(hasAdjustment ? [entries[i].adjustment] : []),
+      entries[i].total,
       shares[i],
       r.metrics.coverage,
       r.metrics.gap,
@@ -499,74 +492,61 @@ export const BusinessUnitGraphics = memo(function BusinessUnitGraphics({
   };
   return (
     <div className="graphics-grid bu-graphics" ref={root}>
+
       <GraphicCard
-        title={tr("graphics.buContribution")}
+        title={tr(salesOnly ? "graphics.buSalesContribution" : "graphics.buContribution")}
         context={context}
-        note={`${tr("graphics.buRule")} ${sourceNote}`}
-        table={table}
+        note={tr("graphics.buScenarioRule") + " " + sourceNote}
         exportTable={exportTable}
-        height={Math.max(300, rows.length * 52 + 60)}
+        height={Math.max(300, rows.length * 52 + 68)}
       >
-        {rows.map((r, i) => (
-          <g key={r.entity.id} transform={`translate(0,${35 + i * 50})`}>
-            <ChartMark
-              color={graphicColors[i]}
-              lift={[3, 0]}
-              data={{
-                title: r.entity.code,
-                rows: [
-                  {
-                    label: tr("graphics.annualBase"),
-                    value: chartAmount(r.metrics.base, locale),
-                  },
-                  {
-                    label: tr("graphics.buShare"),
-                    value: shareLabel(shares[i]),
-                  },
-                  {
-                    label: tr("graphics.annualBudget"),
-                    value: chartAmount(r.metrics.budget, locale),
-                  },
-                  {
-                    label: tr("metric.coverage"),
-                    value: percent(r.metrics.coverage),
-                  },
-                  {
-                    label: tr("metric.gap"),
-                    value: chartAmount(r.metrics.gap, locale),
-                  },
-                ],
-              }}
-              hit={<rect x="20" y="-8" width="760" height="44" fill="white" />}
-            >
-              <text x="28" y="19">
-                {r.entity.code}
-              </text>
-              <rect x="100" width="470" height="28" rx="4" fill="#f0ece4" />
-              {r.metrics.base !== null && r.metrics.base >= 0 && (
-                <rect
-                  x="100"
-                  width={(r.metrics.base / max) * 470}
-                  height="28"
-                  rx="4"
-                  fill={graphicColors[i]}
-                />
-              )}
-              <text x="690" y="19" textAnchor="end">
-                {formatK(r.metrics.base)} kEUR
-              </text>
-              <text
-                x="770"
-                y="19"
-                textAnchor="end"
-                fontWeight="600"
-                fill="#a77a35"
+        {rows.map((row, i) => {
+          const { sales, prospect, total, adjustment } = entries[i];
+          const labels = [
+            { label: tr("graphics.invoiced"), amount: sales, color: salesColor },
+            ...(salesOnly ? [] : [{ label: tr("metric.ob"), amount: prospect, color: prospectColor }]),
+            ...(adjustment !== null ? [{ label: tr("graphics.adjustment"), amount: adjustment, color: adjustmentColor }] : []),
+          ];
+          let positive = 0, negative = 0;
+          return (
+            <g key={row.entity.id} transform={"translate(0," + (35 + i * 50) + ")"}>
+              <ChartMark
+                color={salesColor}
+                lift={[3, 0]}
+                data={{
+                  title: row.entity.code,
+                  rows: [
+                    ...labels.map(({ label, amount }) => ({ label, value: chartAmount(amount, locale) })),
+                    ...(salesOnly ? [] : [{ label: scenarioLabel, value: chartAmount(total, locale) }]),
+                    { label: tr("graphics.buShare"), value: shareLabel(shares[i]) },
+                    { label: tr("graphics.annualBudget"), value: chartAmount(row.metrics.budget, locale) },
+                    { label: tr("metric.coverage"), value: percent(row.metrics.coverage) },
+                    { label: tr("metric.gap"), value: chartAmount(row.metrics.gap, locale) },
+                  ],
+                }}
+                hit={<rect x="20" y="-8" width="760" height="44" fill="white" />}
               >
-                {shareLabel(shares[i])}
-              </text>
-            </ChartMark>
-          </g>
-        ))}
+                <text x="28" y="19">{row.entity.code}</text>
+                <rect x="100" width="430" height="28" rx="4" fill="#f0ece4" />
+                {total !== null && labels.map(({ label, amount, color }) => {
+                  if (amount === null || amount === 0) return null;
+                  const start = amount > 0 ? positive : negative;
+                  const end = start + amount;
+                  if (amount > 0) positive = end;
+                  else negative = end;
+                  return <rect key={label} x={Math.min(x(start), x(end))} width={Math.abs(x(end) - x(start))} height="28" fill={color} rx="2" />;
+                })}
+                <text x="690" y="19" textAnchor="end">{formatK(total)} kEUR</text>
+                <text x="770" y="19" textAnchor="end" fontWeight="600" fill="#a77a35">{shareLabel(shares[i])}</text>
+              </ChartMark>
+            </g>
+          );
+        })}
+        <Legend y={Math.max(278, rows.length * 50 + 49)} labels={[
+          { name: tr("graphics.invoiced"), color: salesColor },
+          ...(salesOnly ? [] : [{ name: tr("metric.ob"), color: prospectColor }]),
+          ...(hasAdjustment ? [{ name: tr("graphics.adjustment"), color: adjustmentColor }] : []),
+        ]} />
       </GraphicCard>
       <SalesMixGraphic data={data} context={context} sourceNote={sourceNote} />
     </div>
@@ -582,7 +562,9 @@ function SalesMixGraphic({
   context: string;
   sourceNote: string;
 }) {
-  const { tr } = useI18n();
+  const { tr, display } = useI18n();
+  const salesOnly = data.filters.scenario === "Sales";
+  const measure = tr(salesOnly ? "graphics.invoiced" : "graphics.annualBase");
   const rows = [
     ...(data.filters.salesType !== "group"
       ? [{ name: tr("common.external"), value: data.external }]
@@ -594,10 +576,10 @@ function SalesMixGraphic({
   return (
     <GraphicCard
       title={tr("chart.externalGroup")}
-      context={context}
-      note={`${tr("graphics.mixRule")} ${sourceNote}`}
+      context={context + " · " + display(data.filters.scenario)}
+      note={tr(salesOnly ? "graphics.salesMixRule" : "graphics.mixRule") + " " + sourceNote}
       exportTable={{
-        columns: [{ label: tr("filters.type") }, { label: "kEUR" }],
+        columns: [{ label: tr("filters.type") }, { label: measure + " (kEUR)" }],
         rows: rows.map((r) => [r.name, r.value]),
       }}
     >
@@ -606,7 +588,7 @@ function SalesMixGraphic({
           r.value === null ? [] : [{ name: r.name, value: r.value }],
         )}
         empty={tr("graphics.incompleteAnnual")}
-        totalLabel={tr("graphics.annualBase")}
+        totalLabel={measure}
         otherLabel={tr("graphics.other")}
       />
     </GraphicCard>

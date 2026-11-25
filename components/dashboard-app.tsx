@@ -34,11 +34,11 @@ import { hasReceivablesAccess } from "@/lib/receivables";
 import { canAccessPage } from "@/lib/permissions";
 import { ImportPortal } from "@/components/import-portal";
 import { AdminPanel } from "@/components/admin-panel";
-import { SalesTrendWorkspace } from "@/components/sales-trend-workspace";
+import { SalesMonthlyGraphic } from "@/components/sales-monthly-graphic";
+import { SalesTeamWorkspace } from "@/components/sales-team-workspace";
 import {
   SalesGraphics,
   BusinessUnitGraphics,
-  TeamContributionGraphic,
 } from "@/components/sales-graphics";
 import { CustomerGraphics } from "@/components/customer-graphics";
 import { KeyCustomerOrders } from "@/components/key-customer-orders";
@@ -611,7 +611,7 @@ const DashboardView = memo(function DashboardView({
           </div>
         </section>
         <section className="dashboard-grid dashboard-grid-main sales-overview-grid">
-          <SalesTrendWorkspace data={data} />
+          <SalesMonthlyGraphic data={data} standalone />
         </section>
         <SalesGraphics data={data} />
         <section
@@ -645,7 +645,10 @@ const DashboardView = memo(function DashboardView({
               <h2 id="orderbook-graphics-title">{tr(data.graphics.teamActuals ? "teamActual.sectionTitle" : "graphics.obTitle")}</h2>
             </div>
           </div>
-          <TeamContributionGraphic data={data} />
+          <SalesTeamWorkspace
+            key={JSON.stringify([filters.region, filters.year, filters.salesType])}
+            data={data}
+          />
         </section>
         <div id="customer-section" className={styles.section}>
           <CustomerGraphics

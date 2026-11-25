@@ -13,6 +13,7 @@ import { UpdateStatus } from "./update-status";
 import { matchesRegion } from "@/lib/entities";
 import type { Dashboard } from "@/lib/dashboard";
 import type { Filters } from "@/lib/types";
+import styles from "./sales-performance.module.css";
 
 export const DashboardFilterState = createContext<{
   filters: Filters;
@@ -64,12 +65,6 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
   if (!state) throw new Error("DashboardFilterState is required");
   const { filters: requestedFilters, setFilters, pending } = state;
   const { tr, display } = useI18n();
-  // Keep the explicit team scope visible even when this Entity has no matching rows.
-  const selectedTeam = requestedFilters.salesTeam ?? "all";
-  const salesTeams =
-    selectedTeam !== "all" && !data.salesTeams.includes(selectedTeam)
-      ? [selectedTeam, ...data.salesTeams]
-      : data.salesTeams;
   const t = data.totals;
   const filterBar = useRef<HTMLElement>(null);
   useEffect(() => {
@@ -95,7 +90,7 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
   return (
     <>
       <section
-        className="filter-bar sales-filter-bar"
+        className={`filter-bar sales-filter-bar ${styles.globalFilters}`}
         ref={filterBar}
         data-updating={pending || undefined}
         aria-label={tr("filters.global")}
@@ -147,45 +142,6 @@ export function DashboardFilters({ data }: { data: Dashboard }) {
               ),
             ].map((b) => (
               <option key={b}>{b}</option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-field">
-          <label htmlFor="sales-team">{tr("team.label")}</label>
-          <select
-            id="sales-team"
-            value={requestedFilters.salesTeam ?? "all"}
-            onChange={(event) =>
-              setFilters({
-                ...requestedFilters,
-                salesTeam: event.target.value,
-                customer: "all",
-              })
-            }
-          >
-            <option value="all">{tr("team.all")}</option>
-            {salesTeams.map((team) => (
-              <option key={team} value={team}>
-                {team === "__unassigned__" ? tr("team.unassigned") : team}
-              </option>
-            ))}
-          </select>
-        </div>
-        <div className="filter-field">
-          <label htmlFor="customer">{tr("common.customer")}</label>
-          <select
-            id="customer"
-            title={tr("filters.customerSource")}
-            value={requestedFilters.customer ?? "all"}
-            onChange={(event) =>
-              setFilters({ ...requestedFilters, customer: event.target.value })
-            }
-          >
-            <option value="all">{tr("filters.allAvailable")}</option>
-            {data.customers.map((customer) => (
-              <option key={customer} value={customer}>
-                {customer}
-              </option>
             ))}
           </select>
         </div>

@@ -120,6 +120,17 @@
   margin-top: -8px;
 }
 
+.valuationNote {
+  margin: 0;
+  padding: 10px 14px;
+  border: 1px solid var(--line);
+  border-radius: 9px;
+  background: var(--panel-soft);
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
 .register {
   scroll-margin-top: 110px;
 }

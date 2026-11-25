@@ -2,7 +2,7 @@
 
 import { useState, type ReactNode } from "react";
 import { CircleChevronRight, Search, X } from "lucide-react";
-import type { OpsCurrency } from "@/lib/sales-operations-types";
+import type { OpsValueCurrency } from "@/lib/sales-operations-types";
 import {
   opsSelectedOrders,
   opsWeek,
@@ -22,7 +22,13 @@ export const registerStages = [
   "payments",
 ] as const;
 export type RegisterStage = (typeof registerStages)[number];
-export const opsCurrencyLabel = { CNY: "RMB", EUR: "EUR" };
+export const opsCurrencyLabel = {
+  CNY: "RMB",
+  EUR: "EUR",
+  USD: "USD",
+  HKD: "HKD",
+  PENDING: "—",
+};
 const pageSize = 20;
 
 export function orderSelectionLabel(
@@ -38,7 +44,7 @@ export function orderSelectionLabel(
 
 type RegisterProps = {
   data: SalesOperationsView;
-  currency: OpsCurrency | "all";
+  currency: OpsValueCurrency | "all";
   onOrder: (order: string) => void;
 };
 
@@ -123,7 +129,7 @@ export function OrderRegister({
         rows={orders
           .slice(page * pageSize, (page + 1) * pageSize)
           .map((row) => ({
-            key: row.order,
+            key: `${row.order}/${row.currency}`,
             cells: [
               <OrderLink key={row.order} order={row.order} onOrder={onOrder} />,
               row.date,
@@ -131,7 +137,9 @@ export function OrderRegister({
               row.teams
                 .map(({ name }) => name ?? tr("team.unassigned"))
                 .join(" · "),
-              opsCurrencyLabel[row.currency],
+              row.currency === "PENDING"
+                ? tr("salesOps.pricePending")
+                : opsCurrencyLabel[row.currency],
               money(row.ordered),
               money(row.shipped),
               money(row.open),
@@ -147,7 +155,7 @@ export function OrderRegister({
         count={orders.length}
         page={page}
         onPage={setPage}
-        orders
+        orders={!data.coverage}
       />
       {openOnly && <p className={styles.note}>{tr("salesOps.noDueDate")}</p>}
     </>
@@ -290,7 +298,10 @@ export function DocumentRegister({
           ],
         }))
     : matches.slice(page * pageSize, (page + 1) * pageSize).map((row) => {
-        const code = opsCurrencyLabel[row.currency];
+        const code =
+          row.currency === "PENDING"
+            ? tr("salesOps.pricePending")
+            : opsCurrencyLabel[row.currency];
         const context = [
           row.customers.join(" · ") || "—",
           reference(row.orders),
@@ -379,6 +390,15 @@ export function DocumentRegister({
         />
       </div>
       <p className={styles.note}>{tr(`salesOps.${stage}Note`)}</p>
+      {data.coverage && (
+        <p className={styles.note}>
+          {tr(
+            stage === "shipments"
+              ? "salesOps.originalShipmentBasis"
+              : "salesOps.financeOriginalBasis",
+          )}
+        </p>
+      )}
       <RegisterTable
         headers={[
           tr(`salesOps.${headers[0]}`),

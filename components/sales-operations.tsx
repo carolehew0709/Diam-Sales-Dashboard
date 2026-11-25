@@ -13,7 +13,10 @@ import {
   type OpsOrderSelection,
   type SalesOperationsView,
 } from "@/lib/sales-operations";
-import type { OpsCurrency } from "@/lib/sales-operations-types";
+import type {
+  OpsAmountBasis,
+  OpsValueCurrency,
+} from "@/lib/sales-operations-types";
 import { useI18n } from "./i18n-provider";
 import { SalesOperationsOrderDialog } from "./sales-operations-order-dialog";
 import { SalesOperationsImport } from "./sales-operations-import";
@@ -37,14 +40,18 @@ export function SalesOperations() {
   const [importOpen, setImportOpen] = useState(false);
   const [error, setError] = useState<"access" | "load">();
   const [view, setView] = useState<(typeof dimensions)[number]>("byWeek");
-  const [currency, setCurrency] = useState<OpsCurrency | "all">("all");
+  const [currency, setCurrency] = useState<OpsValueCurrency | "all">("all");
+  const [basis, setBasis] = useState<OpsAmountBasis>("dehk");
+  const [pricingAvailable, setPricingAvailable] = useState(false);
   const [stage, setStage] = useState<RegisterStage>("orders");
   const [selection, setSelection] = useState<OpsOrderSelection>();
   const [order, setOrder] = useState<string>();
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch("/api/sales-operations", { signal: controller.signal })
+    void fetch(`/api/sales-operations?basis=${basis}`, {
+      signal: controller.signal,
+    })
       .then(async (response) => {
         if (controller.signal.aborted) return;
         if (response.status === 403) return setError("access");
@@ -52,14 +59,16 @@ export function SalesOperations() {
         const result = await response.json();
         if (!controller.signal.aborted) {
           setData(result.data);
+          setError(undefined);
           setPublishable(result.publishable === true);
+          setPricingAvailable(result.originalPricingAvailable === true);
         }
       })
       .catch(() => {
         if (!controller.signal.aborted) setError("load");
       });
     return () => controller.abort();
-  }, []);
+  }, [basis]);
 
   const precise = new Intl.NumberFormat(locale, {
     minimumFractionDigits: 2,
@@ -67,7 +76,7 @@ export function SalesOperations() {
   });
   const money = (amount: number | null) =>
     amount === null ? "—" : precise.format(amount);
-  const inCurrency = (row: { currency: OpsCurrency }) =>
+  const inCurrency = (row: { currency: OpsValueCurrency }) =>
     currency === "all" || row.currency === currency;
   const currencyTotals = data?.currencies.filter(inCurrency) ?? [];
   const rows = data
@@ -81,6 +90,10 @@ export function SalesOperations() {
     ({ groupOrders }) => groupOrders > 0,
   );
   const clearSelection = () => setSelection(undefined);
+  const activeBasis = data?.coverage ? "dehk" : "ddc";
+  const switchingBasis = pricingAvailable && basis !== activeBasis && !error;
+  const currencyName = (code: OpsValueCurrency) =>
+    code === "PENDING" ? tr("salesOps.pricePending") : opsCurrencyLabel[code];
   function seeOrders(scope: OpsOrderSelection) {
     setSelection(scope);
     setStage("orders");
@@ -100,6 +113,24 @@ export function SalesOperations() {
           </p>
         </div>
         <div className={ops.headerActions}>
+          {pricingAvailable && (
+            <label className={ops.field}>
+              {tr("salesOps.amountBasis")}
+              <select
+                value={basis}
+                aria-busy={switchingBasis}
+                onChange={(event) => {
+                  setCurrency("all");
+                  setOrder(undefined);
+                  clearSelection();
+                  setBasis(event.target.value as OpsAmountBasis);
+                }}
+              >
+                <option value="dehk">{tr("salesOps.dehkAmountBasis")}</option>
+                <option value="ddc">{tr("salesOps.ddcAmountBasis")}</option>
+              </select>
+            </label>
+          )}
           {data && (
             <label className={ops.field}>
               {tr("salesOps.currency")}
@@ -110,10 +141,16 @@ export function SalesOperations() {
                   clearSelection();
                 }}
               >
-                <option value="all">{tr("salesOps.allCurrencies")}</option>
+                <option value="all">
+                  {tr(
+                    data.coverage
+                      ? "salesOps.allOriginalCurrencies"
+                      : "salesOps.allCurrencies",
+                  )}
+                </option>
                 {data.currencies.map(({ currency: code }) => (
                   <option key={code} value={code}>
-                    {opsCurrencyLabel[code]}
+                    {currencyName(code)}
                   </option>
                 ))}
               </select>
@@ -137,6 +174,8 @@ export function SalesOperations() {
             clearSelection();
             setCurrency("all");
             setStage("orders");
+            setPricingAvailable(Boolean(snapshot.coverage));
+            setBasis(snapshot.coverage ? "dehk" : "ddc");
             setData(snapshot);
           }}
         />
@@ -151,8 +190,16 @@ export function SalesOperations() {
         </p>
       ) : (
         <>
+          {data.coverage && (
+            <p className={ops.valuationNote}>
+              {tr("salesOps.originalPriceCoverage", {
+                confirmed: data.coverage.confirmed,
+                pending: data.coverage.pending,
+              })}
+            </p>
+          )}
           <OpsSummary data={data} totals={currencyTotals} currency={currency} />
-          {hasGroupOrders && (
+          {!data.coverage && hasGroupOrders && (
             <p className={ops.groupSource}>{tr("salesOps.groupSource")}</p>
           )}
           <section className={styles.panel}>
@@ -194,7 +241,7 @@ export function SalesOperations() {
                       0,
                     ) - data.assignedLines,
                   split: data.splitTeamOrders,
-                  total: data.orders.length,
+                  total: data.orderCount,
                 },
               )}
             </p>
@@ -253,7 +300,7 @@ export function SalesOperations() {
                             onClick={() => seeOrders(scope)}
                             aria-label={tr("salesOps.viewOrdersFor", {
                               name,
-                              currency: opsCurrencyLabel[row.currency],
+                              currency: currencyName(row.currency),
                             })}
                           >
                             {name}
@@ -270,7 +317,7 @@ export function SalesOperations() {
                             </small>
                           )}
                         </th>
-                        <td>{opsCurrencyLabel[row.currency]}</td>
+                        <td>{currencyName(row.currency)}</td>
                         <td>{row.orders}</td>
                         <td>{money(row.ordered)}</td>
                         <td>{money(row.shipped)}</td>
@@ -322,7 +369,9 @@ export function SalesOperations() {
                 key={`${stage}/${currency}/${data.version}`}
                 stage={stage}
                 data={data}
-                currency={currency}
+                currency={
+                  data.coverage && stage !== "shipments" ? "all" : currency
+                }
                 onOrder={setOrder}
               />
             )}
@@ -346,8 +395,9 @@ export function SalesOperations() {
           </details>
           {order && (
             <SalesOperationsOrderDialog
-              key={order}
+              key={`${order}/${activeBasis}`}
               order={order}
+              basis={activeBasis}
               onClose={() => setOrder(undefined)}
             />
           )}
@@ -364,7 +414,7 @@ function OpsSummary({
 }: {
   data: SalesOperationsView;
   totals: SalesOperationsView["currencies"];
-  currency: OpsCurrency | "all";
+  currency: OpsValueCurrency | "all";
 }) {
   const { tr, locale } = useI18n();
   const number = new Intl.NumberFormat(locale);
@@ -380,6 +430,9 @@ function OpsSummary({
     (total, row) => total + row.missingOrderAmounts,
     0,
   );
+  const displayedAmounts = totals.filter(
+    (total) => total.currency !== "PENDING",
+  );
   const cards = [
     {
       key: "orderCount",
@@ -393,7 +446,11 @@ function OpsSummary({
       key: "shippedAmount",
       measure: "shipped",
       Icon: Truck,
-      caption: tr("salesOps.knownAmounts"),
+      caption: tr(
+        data.coverage
+          ? "salesOps.originalShipmentBasis"
+          : "salesOps.knownAmounts",
+      ),
     },
     {
       key: "openSnapshot",
@@ -407,11 +464,11 @@ function OpsSummary({
       Icon: Wallet,
       caption: tr("salesOps.receiptCoverage", {
         receipts:
-          currency === "all"
+          currency === "all" || data.coverage
             ? data.receiptCount
             : (totals[0]?.receiptCount ?? 0),
         receivables:
-          currency === "all"
+          currency === "all" || data.coverage
             ? data.paymentReceivables
             : (totals[0]?.paymentReceivables ?? 0),
       }),
@@ -432,7 +489,9 @@ function OpsSummary({
           </header>
           {key === "orderCount" && (
             <strong className={ops.orderCount}>
-              {number.format(totals.reduce((sum, row) => sum + row.orders, 0))}
+              {number.format(
+                currency === "all" ? data.orderCount : (totals[0]?.orders ?? 0),
+              )}
             </strong>
           )}
           <div
@@ -440,14 +499,23 @@ function OpsSummary({
               key === "orderCount" ? ops.metricSupporting : ops.metricFigures
             }
           >
-            {totals.map((row) => (
+            {(measure === "matchedCash" && data.coverage
+              ? data.receiptTotals.map((row) => ({
+                  currency: row.currency,
+                  amount: row.matchedCash,
+                }))
+              : displayedAmounts.map((row) => ({
+                  currency: row.currency,
+                  amount: row[measure],
+                }))
+            ).map((row) => (
               <div className={ops.metricFigure} key={row.currency}>
                 <strong>
-                  {row[measure] === null
+                  {row.amount === null
                     ? "—"
                     : measure === "matchedCash"
-                      ? cash.format(row[measure])
-                      : kFormat.format(row[measure] / 1000)}
+                      ? cash.format(row.amount)
+                      : kFormat.format(row.amount / 1000)}
                 </strong>
                 <small>
                   {measure === "matchedCash" ? "" : "k"}
@@ -455,6 +523,11 @@ function OpsSummary({
                 </small>
               </div>
             ))}
+            {measure !== "matchedCash" && !displayedAmounts.length && (
+              <div className={ops.metricFigure}>
+                <strong>—</strong>
+              </div>
+            )}
           </div>
           <p className={ops.metricCaption}>{caption}</p>
         </article>

@@ -3,6 +3,7 @@
 import { useEffect, useId, useRef, useState } from "react";
 import { X } from "lucide-react";
 import type { SalesOperationsOrder } from "@/lib/sales-operations";
+import type { OpsAmountBasis } from "@/lib/sales-operations-types";
 import { useI18n } from "./i18n-provider";
 import { settlementLabel } from "./sales-operations-register";
 import styles from "./commercial.module.css";
@@ -10,9 +11,11 @@ import ops from "./sales-operations.module.css";
 
 export function SalesOperationsOrderDialog({
   order,
+  basis,
   onClose,
 }: {
   order: string;
+  basis: OpsAmountBasis;
   onClose: () => void;
 }) {
   const { tr, locale } = useI18n();
@@ -23,7 +26,7 @@ export function SalesOperationsOrderDialog({
   useEffect(() => {
     if (!modal.current?.open) modal.current?.showModal();
     const controller = new AbortController();
-    const params = new URLSearchParams({ order });
+    const params = new URLSearchParams({ order, basis });
     void fetch(`/api/sales-operations?${params}`, { signal: controller.signal })
       .then(async (response) => {
         if (!response.ok) throw new Error();
@@ -34,14 +37,20 @@ export function SalesOperationsOrderDialog({
         if (!controller.signal.aborted) setError(true);
       });
     return () => controller.abort();
-  }, [order]);
+  }, [order, basis]);
   const nf = new Intl.NumberFormat(locale, {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   });
   const money = (amount: number | null) =>
     amount === null ? "—" : nf.format(amount);
-  const currency = (code: string) => (code === "CNY" ? "RMB" : code);
+  const currency = (code: string) =>
+    code === "CNY"
+      ? "RMB"
+      : code === "PENDING"
+        ? tr("salesOps.pricePending")
+        : code;
+  const unitPrice = new Intl.NumberFormat(locale, { maximumFractionDigits: 8 });
   return (
     <dialog
       ref={modal}
@@ -54,7 +63,8 @@ export function SalesOperationsOrderDialog({
           <h2 id={heading}>{order}</h2>
           {detail && (
             <p>
-              {detail.customer} · {detail.date} · {currency(detail.currency)}
+              {detail.customer} · {detail.date} ·{" "}
+              {detail.currencies.map(currency).join(" / ")}
             </p>
           )}
         </div>
@@ -81,6 +91,13 @@ export function SalesOperationsOrderDialog({
               tr("team.label"),
               tr("salesOps.quantity"),
               tr("salesOps.openQuantity"),
+              ...(detail.useOriginalPrices
+                ? [
+                    tr("salesOps.currency"),
+                    tr("salesOps.originalOrder"),
+                    tr("salesOps.originalUnitPrice"),
+                  ]
+                : []),
               tr("salesOps.orderedAmount"),
               tr("salesOps.shippedAmount"),
               tr("salesOps.openSnapshot"),
@@ -96,6 +113,17 @@ export function SalesOperationsOrderDialog({
               ),
               row.quantity,
               row.openQuantity,
+              ...(detail.useOriginalPrices
+                ? [
+                    currency(row.currency),
+                    row.originalPrice
+                      ? `${row.originalPrice.originalOrder} · ${tr("salesOps.sourceRow")} ${row.originalPrice.sourceRows.join(", ")}`
+                      : "—",
+                    row.originalPrice
+                      ? unitPrice.format(row.originalPrice.grossUnitPrice)
+                      : "—",
+                  ]
+                : []),
               money(row.ordered),
               money(row.shipped),
               money(row.open),
@@ -109,6 +137,7 @@ export function SalesOperationsOrderDialog({
               tr("salesOps.date"),
               tr("salesOps.line"),
               tr("salesOps.quantity"),
+              ...(detail.useOriginalPrices ? [tr("salesOps.currency")] : []),
               tr("salesOps.shippedAmount"),
               tr("salesOps.sourceRow"),
             ]}
@@ -117,6 +146,7 @@ export function SalesOperationsOrderDialog({
               row.date,
               row.line,
               row.quantity,
+              ...(detail.useOriginalPrices ? [currency(row.currency)] : []),
               money(row.amount),
               row.sourceRow,
             ])}

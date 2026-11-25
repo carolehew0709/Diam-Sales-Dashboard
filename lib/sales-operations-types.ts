@@ -1,4 +1,22 @@
 export type OpsCurrency = "CNY" | "EUR";
+export type OpsOriginalCurrency = OpsCurrency | "USD" | "HKD";
+export type OpsValueCurrency = OpsOriginalCurrency | "PENDING";
+export type OpsAmountBasis = "dehk" | "ddc";
+
+export type OpsOriginalPrice = {
+  order: string;
+  line: number;
+  originalOrder: string;
+  sourceRows: number[];
+  currency: OpsOriginalCurrency;
+  grossUnitPrice: number;
+};
+
+export type OpsOriginalPricing = {
+  id: string;
+  sources: { file: string; sheet: string; sha256: string }[];
+  prices: OpsOriginalPrice[];
+};
 
 export const opsExportKinds = [
   "summary",
@@ -75,5 +93,6 @@ export type SalesOperationsSnapshot = {
   receivables: OpsReceivable[];
   receivableLinks: OpsReceivableLink[];
   payments: OpsPayment[];
+  originalPricing?: OpsOriginalPricing;
   publication?: { id: string; fingerprint: string; at: string };
 };

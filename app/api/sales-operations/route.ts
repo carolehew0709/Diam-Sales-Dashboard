@@ -16,6 +16,7 @@ import { archiveWorkbook } from "@/lib/workbook-intake";
 import type { User } from "@/lib/types";
 
 const ddc = entities.find(({ id }) => id === "ddc")!;
+const dehk = entities.find(({ id }) => id === "dhk")!;
 const canPublishOperations = (user: User) =>
   canAccessModule(user, "sales-operations") && canPublish(user, ddc);
 const maxUpload = 20 * 1024 * 1024;
@@ -30,19 +31,35 @@ export async function GET(request: Request) {
     const state = await storage.read();
     const snapshot = state.salesOperations;
     const publishable = storageStatus().writable && canPublish(user, ddc);
-    const order = new URL(request.url).searchParams.get("order");
+    const params = new URL(request.url).searchParams;
+    const order = params.get("order");
+    const originalPricingAvailable = Boolean(
+      snapshot?.originalPricing && canView(user, dehk),
+    );
+    const useOriginalPrices =
+      originalPricingAvailable && params.get("basis") !== "ddc";
     if (!order)
       return {
         ok: true,
         publishable,
+        originalPricingAvailable,
         data:
           snapshot?.entityId === "ddc"
-            ? salesOperationsView(snapshot, state.teamActualData)
+            ? salesOperationsView(
+                snapshot,
+                state.teamActualData,
+                useOriginalPrices,
+              )
             : null,
       };
     const detail =
       snapshot?.entityId === "ddc"
-        ? salesOperationsOrder(snapshot, order, state.teamActualData)
+        ? salesOperationsOrder(
+            snapshot,
+            order,
+            state.teamActualData,
+            useOriginalPrices,
+          )
         : null;
     if (!detail) throw new ApiError(404, "salesOps.orderUnavailable");
     return { ok: true, data: detail };
@@ -157,7 +174,14 @@ export async function POST(request: Request) {
       if (previous?.publication?.fingerprint === fingerprint)
         return {
           ok: true,
-          data: salesOperationsView(previous, state.teamActualData),
+          originalPricingAvailable: Boolean(
+            previous.originalPricing && canView(actor, dehk),
+          ),
+          data: salesOperationsView(
+            previous,
+            state.teamActualData,
+            canView(actor, dehk),
+          ),
         };
       if (review !== reviewToken(previous))
         throw new ApiError(409, "salesOps.importRefresh");
@@ -176,6 +200,7 @@ export async function POST(request: Request) {
       });
       return {
         ok: true,
+        originalPricingAvailable: false,
         data: salesOperationsView(next, state.teamActualData),
       };
     });

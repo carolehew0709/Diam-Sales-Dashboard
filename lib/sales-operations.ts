@@ -1,10 +1,14 @@
 import type {
-  OpsCurrency,
+  OpsValueCurrency,
   OpsOrderLine,
   SalesOperationsSnapshot,
 } from "./sales-operations-types";
 import { teamReportingName } from "./team-actuals";
 import type { Store } from "./types";
+import {
+  isDehkOrder,
+  projectOperationsAmounts,
+} from "./sales-operations-pricing";
 
 const sumKnown = (amounts: (number | null)[]) =>
   amounts.some((amount) => amount !== null)
@@ -46,7 +50,9 @@ function group<T>(rows: T[], identify: (row: T) => string) {
   return groups;
 }
 
-function orderTotals(lines: OpsOrderLine[]) {
+type ValuedLine = ReturnType<typeof projectOperationsAmounts>["lines"][number];
+
+function orderTotals(lines: ValuedLine[]) {
   return {
     lineCount: lines.length,
     orders: new Set(lines.map(({ order }) => order)).size,
@@ -59,26 +65,30 @@ function orderTotals(lines: OpsOrderLine[]) {
 }
 
 type TeamMappings = Store["teamActualData"];
-const ddcTeam = (line: OpsOrderLine, mappings: TeamMappings) =>
+const ddcTeam = (line: Pick<OpsOrderLine, "team">, mappings: TeamMappings) =>
   teamReportingName(line.team ?? undefined, mappings) || null;
 
 export function salesOperationsView(
   snapshot: SalesOperationsSnapshot,
   mappings?: TeamMappings,
+  useOriginalPrices = false,
 ) {
-  const {
-    lines,
-    shipments,
-    payments,
-    receivables,
-    receivableLinks,
-    from,
-    asOf,
-    sources,
-  } = snapshot;
+  const { payments, receivables, receivableLinks, from, asOf, sources } =
+    snapshot;
+  const { lines, shipments, coverage } = projectOperationsAmounts(
+    snapshot,
+    useOriginalPrices,
+  );
   const linksByOrder = group(receivableLinks, ({ order }) => order);
   const linksByReceivable = group(receivableLinks, ({ document }) => document);
-  const shipmentsByOrder = group(shipments, ({ order }) => order);
+  const orderCurrencyKey = ({
+    order,
+    currency,
+  }: {
+    order: string;
+    currency: OpsValueCurrency;
+  }) => JSON.stringify([order, currency]);
+  const shipmentsByOrder = group(shipments, orderCurrencyKey);
   const shipmentsByDocument = group(shipments, ({ document, currency }) =>
     JSON.stringify([document, currency]),
   );
@@ -130,7 +140,7 @@ export function salesOperationsView(
   const weekly = [...new Set([...byWeek.keys(), ...shippedByWeek.keys()])]
     .sort()
     .map((id) => {
-      const [week, currency] = JSON.parse(id) as [string, OpsCurrency];
+      const [week, currency] = JSON.parse(id) as [string, OpsValueCurrency];
       const orderRows = byWeek.get(id) ?? [];
       const shipmentRows = shippedByWeek.get(id) ?? [];
       return {
@@ -155,7 +165,10 @@ export function salesOperationsView(
       ),
     ]
       .map(([id, rows]) => {
-        const [name, currency] = JSON.parse(id) as [string | null, OpsCurrency];
+        const [name, currency] = JSON.parse(id) as [
+          string | null,
+          OpsValueCurrency,
+        ];
         return { name, currency, ...orderTotals(rows) };
       })
       .sort(
@@ -163,9 +176,10 @@ export function salesOperationsView(
           a.currency.localeCompare(b.currency) ||
           (b.ordered ?? -Infinity) - (a.ordered ?? -Infinity),
       );
-  const orders = [...linesByOrder]
-    .map(([order, rows]) => {
+  const orders = [...group(lines, orderCurrencyKey)]
+    .map(([orderScope, rows]) => {
       const row = rows[0];
+      const { order } = row;
       const documents = [
         ...new Set(
           (linksByOrder.get(order) ?? []).map(({ document }) => document),
@@ -196,7 +210,7 @@ export function salesOperationsView(
           }),
         ),
         shipmentWeeks: [
-          ...group(shipmentsByOrder.get(order) ?? [], ({ date }) =>
+          ...group(shipmentsByOrder.get(orderScope) ?? [], ({ date }) =>
             opsWeek(date),
           ),
         ].map(([week, batches]) => ({
@@ -217,7 +231,7 @@ export function salesOperationsView(
         (payment) => payment.currency === currency,
       );
       return {
-        currency: currency as OpsCurrency,
+        currency: currency as OpsValueCurrency,
         ...orderTotals(rows),
         matchedCash: sumKnown(allocations.map(({ received }) => received)),
         receiptCount: new Set(allocations.map(({ receipt }) => receipt)).size,
@@ -226,9 +240,7 @@ export function salesOperationsView(
         ).size,
         groupOrders: new Set(
           rows
-            .filter(({ customer }) =>
-              /^DE\s*HK(?:\s+LIMITED)?$/i.test(customer.trim()),
-            )
+            .filter(({ customer }) => isDehkOrder({ customer }))
             .map(({ order }) => order),
         ).size,
       };
@@ -237,14 +249,26 @@ export function salesOperationsView(
   return {
     from,
     asOf,
-    version: snapshot.publication?.id ?? asOf,
-    sources,
+    version: coverage
+      ? snapshot.originalPricing!.id
+      : (snapshot.publication?.id ?? asOf),
+    coverage,
+    sources: coverage ? [...sources, ...coverage.sources] : sources,
+    receiptTotals: [...group(payments, ({ currency }) => currency)].map(
+      ([currency, rows]) => ({
+        currency: currency as "CNY" | "EUR",
+        matchedCash: sumKnown(rows.map(({ received }) => received)),
+      }),
+    ),
     weekly,
     orders,
     currencies,
     customers: breakdown("customer"),
     teams: breakdown("team"),
-    splitTeamOrders: orders.filter((order) => order.teams.length > 1).length,
+    orderCount: linesByOrder.size,
+    splitTeamOrders: [...linesByOrder.values()].filter(
+      (rows) => new Set(rows.map((line) => ddcTeam(line, mappings))).size > 1,
+    ).length,
     shipmentRegister,
     receivableRegister,
     paymentRegister,
@@ -263,8 +287,18 @@ export function salesOperationsOrder(
   snapshot: SalesOperationsSnapshot,
   order: string,
   mappings?: TeamMappings,
+  useOriginalPrices = false,
 ) {
-  const lines = snapshot.lines.filter((line) => line.order === order);
+  const { lines, shipments, coverage } = projectOperationsAmounts(
+    {
+      ...snapshot,
+      lines: snapshot.lines.filter((line) => line.order === order),
+      shipments: snapshot.shipments.filter(
+        (shipment) => shipment.order === order,
+      ),
+    },
+    useOriginalPrices,
+  );
   if (!lines.length) return null;
   const links = snapshot.receivableLinks.filter((link) => link.order === order);
   const selected = new Set(links.map(({ document }) => document));
@@ -273,14 +307,14 @@ export function salesOperationsOrder(
     date: lines[0].date,
     customer: lines[0].customer,
     currency: lines[0].currency,
+    currencies: [...new Set(lines.map((line) => line.currency))],
+    useOriginalPrices: coverage !== null,
     lines: lines.map((line) => ({
       ...line,
       reportingTeam: ddcTeam(line, mappings),
     })),
     links,
-    shipments: snapshot.shipments.filter(
-      (shipment) => shipment.order === order,
-    ),
+    shipments,
     receivables: snapshot.receivables
       .filter(({ document }) => selected.has(document))
       .map((row) => ({
@@ -299,7 +333,7 @@ export function salesOperationsOrder(
 
 export type SalesOperationsView = ReturnType<typeof salesOperationsView>;
 export type OpsOrderSummary = SalesOperationsView["orders"][number];
-export type OpsOrderSelection = { currency: OpsCurrency } & (
+export type OpsOrderSelection = { currency: OpsValueCurrency } & (
   | { dimension: "byWeek"; week: string }
   | { dimension: "byCustomer" | "byTeam"; name: string | null }
 );

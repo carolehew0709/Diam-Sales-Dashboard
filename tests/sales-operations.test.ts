@@ -193,6 +193,60 @@ test("shared receivables and allocations appear once in the register with a whol
   );
 });
 
+test("DEHK pricing values the DDC order and actual shipment quantities in the source currency", () => {
+  const priced: SalesOperationsSnapshot = {
+    ...snapshot,
+    lines: snapshot.lines.map((row) =>
+      row.order === line.order ? { ...row, customer: "DEHK LIMITED" } : row,
+    ),
+    originalPricing: {
+      id: "review-1",
+      sources: [],
+      prices: [
+        {
+          order: line.order,
+          line: 1,
+          originalOrder: "dehk-1",
+          sourceRows: [10],
+          currency: "USD",
+          grossUnitPrice: 50,
+        },
+      ],
+    },
+  };
+  const view = salesOperationsView(priced, undefined, true);
+  assert.equal(view.orderCount, 2);
+  assert.equal(view.orders.length, 3);
+  assert.deepEqual(view.coverage, { confirmed: 1, pending: 1, sources: [] });
+  const corrected = view.orders.find(({ currency }) => currency === "USD")!;
+  assert.deepEqual(
+    [corrected.ordered, corrected.shipped, corrected.open],
+    [150, 100, 50],
+  );
+  const pending = view.orders.find(({ currency }) => currency === "PENDING")!;
+  assert.deepEqual(
+    [pending.ordered, pending.shipped, pending.open, pending.openLines],
+    [null, null, null, 1],
+  );
+  assert.deepEqual(view.receiptTotals, [{ currency: "CNY", matchedCash: 8 }]);
+  assert.equal(view.receivableRegister[0].currency, "CNY");
+  assert.equal(view.receivableRegister[0].amount, 60);
+  const shipmentWeek = view.weekly.find(
+    ({ week, currency }) => week === "2026-10-05" && currency === "USD",
+  );
+  assert.equal(shipmentWeek?.shipped, 100);
+  assert.equal(
+    salesOperationsOrder(priced, line.order, undefined, true)?.lines[0]
+      .originalPrice?.originalOrder,
+    "dehk-1",
+  );
+  assert.equal(
+    salesOperationsOrder(priced, line.order)?.lines[0].originalPrice,
+    undefined,
+  );
+  assert.equal(salesOperationsView(priced).currencies[0].ordered, 90);
+});
+
 test("multiple line links do not duplicate receivable amounts or actual cash in the order drill-down", () => {
   const detail = salesOperationsOrder(snapshot, line.order)!;
   assert.equal(detail.links.length, 2);

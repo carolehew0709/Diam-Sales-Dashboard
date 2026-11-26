@@ -41,11 +41,38 @@ export function operationsWorkflowView(
     kind: keyof OperationsWorkflowSources,
     filter: (row: OperationsWorkflowRecord) => boolean,
   ): StageView => {
-    const available = sources[kind].filter(
+    const covering = sources[kind].filter(
       (source) =>
+        !source.supplemental &&
         entities.includes(source.entity) &&
         source.from <= from &&
         source.asOf >= asOf,
+    );
+    const available =
+      kind === "receipts"
+        ? [
+            ...covering,
+            ...sources.receipts.filter(
+              (source) =>
+                source.supplemental &&
+                covering.some(({ entity }) => entity === source.entity) &&
+                source.from <= asOf &&
+                source.asOf >= from,
+            ),
+          ]
+        : covering;
+    const receiptDocuments = new Set<string>();
+    const records = available.flatMap((source) =>
+      source.records.filter((row) => {
+        if (!inPeriod(row) || row.date < source.from || row.date > source.asOf)
+          return false;
+        if (kind === "receipts") {
+          const key = JSON.stringify([row.entity, row.document]);
+          if (receiptDocuments.has(key)) return false;
+          receiptDocuments.add(key);
+        }
+        return filter(row);
+      }),
     );
     return {
       expected: entities,
@@ -56,14 +83,10 @@ export function operationsWorkflowView(
         from,
         asOf,
       })),
-      records: available
-        .flatMap(({ records }) =>
-          records.filter((row) => inPeriod(row) && filter(row)),
-        )
-        .map((row) => ({
-          ...row,
-          team: teamReportingName(row.team ?? undefined, mappings) || null,
-        })),
+      records: records.map((row) => ({
+        ...row,
+        team: teamReportingName(row.team ?? undefined, mappings) || null,
+      })),
     };
   };
   const orders = documentStage(

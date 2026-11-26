@@ -233,6 +233,61 @@ test("the workflow uses independent order, outbound, invoice and receipt Entity 
   );
 });
 
+test("partial receipt exports add verified documents without replacing the covered period", () => {
+  const receipt: OperationsWorkflowRecord = {
+    entity: "DDC",
+    date: "2026-11-10",
+    document: "receipt-1",
+    customer: "Customer A",
+    team: null,
+    amount: 20,
+    currency: "CNY",
+    sourceRow: 2,
+    division: "external",
+  };
+  const base: OperationsWorkflowDataset = {
+    entity: "DDC",
+    from: snapshot.from,
+    asOf: snapshot.asOf,
+    file: "original-receipts.xlsx",
+    sheet: "sheet1",
+    fingerprint: "original",
+    records: [receipt],
+  };
+  const supplemental: OperationsWorkflowDataset = {
+    ...base,
+    from: "2026-11-02",
+    file: "new-receipts.xlsx",
+    fingerprint: "partial",
+    supplemental: true,
+    records: [
+      { ...receipt, sourceRow: 3 },
+      { ...receipt, document: "receipt-2", date: "2026-11-25", amount: 12 },
+    ],
+  };
+  const partialOnly = operationsWorkflowView(
+    { orders: [], invoices: [], receipts: [supplemental] },
+    snapshot,
+    ["DDC"],
+  )!;
+  assert.deepEqual(partialOnly.stages.receipts.records, []);
+  assert.deepEqual(partialOnly.stages.receipts.sources, []);
+  const combined = operationsWorkflowView(
+    { orders: [], invoices: [], receipts: [supplemental, base] },
+    snapshot,
+    ["DDC"],
+  )!;
+  assert.deepEqual(
+    combined.stages.receipts.sources.map(({ file }) => file),
+    [base.file, supplemental.file],
+  );
+  assert.deepEqual(operationsStageTotals(combined.stages.receipts.records), {
+    documents: 2,
+    missing: 0,
+    amounts: [["CNY", 32]],
+  });
+});
+
 test("weekly shipments follow outbound dates while open balances follow the original order cohort", () => {
   const view = salesOperationsView(snapshot);
   const weeks = view.weekly.filter(({ currency }) => currency === "CNY");

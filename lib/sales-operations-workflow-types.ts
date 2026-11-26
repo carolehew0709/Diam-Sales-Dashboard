@@ -33,6 +33,8 @@ export type OperationsWorkflowDataset = {
   file: string;
   sheet: string;
   fingerprint: string;
+  /** A reviewed partial receipt export can extend an existing covered window. */
+  supplemental?: true;
   records: OperationsWorkflowRecord[];
 };
 
